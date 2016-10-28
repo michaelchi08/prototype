@@ -7,6 +7,7 @@
 - [Rank](#docs/maths/linear_algebra/rank)
 - [Determinants](#docs/maths/linear_algebra/determinants)
 - [Covariance matrix](#docs/maths/linear_algebra/covariance_matrix)
+- [Skew Symmetric matrix](#docs/maths/linear_algebra/skew_symmetric_matrix)
 
 
 ## Statistics
@@ -34,6 +35,20 @@
 
 ## Optimization
 
+
+## Planner
+
+- [Planning](#docs/planning/planning)
+- [Bug Algorithm](#docs/planning/reactive_methods/bug_algorithm)
+- [Potential Fields](#docs/planning/reactive_methods/potential_fields)
+
+
+## SLAM
+
+- [Representating Scenes](#docs/slam/representing_scenes)
+- [3D Reconstruction](#docs/slam/3d_reconstruction)
+- [Perspective Projection](#docs/slam/perspective_projection)
+- [Point Correspondence](#docs/slam/point_correspondence)
 
 
 ## Probabilistic Robotics
