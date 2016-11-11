@@ -8,6 +8,7 @@
 - [Determinants](#docs/maths/linear_algebra/determinants)
 - [Covariance matrix](#docs/maths/linear_algebra/covariance_matrix)
 - [Skew Symmetric matrix](#docs/maths/linear_algebra/skew_symmetric_matrix)
+- [SVD](#docs/maths/linear_algebra/svd)
 
 
 ## Statistics
@@ -15,7 +16,6 @@
 - [Variance](#docs/maths/statistics/variance)
 - [Covariance](#docs/maths/statistics/covariance)
 - [Gaussian Distribution](#docs/maths/statistics/gaussian_distribution)
-- [Least Squares](#docs/maths/statistics/least_squares)
 - [Probability Basics](#docs/maths/statistics/basic_concepts)
 - [Bayes Theorem](#docs/maths/statistics/bayes_theorem)
 
@@ -35,6 +35,13 @@
 
 ## Optimization
 
+- [RANSAC](#docs/optimization/ransac)
+- [Linear Least Squares](#docs/optimization/linear_least_squares)
+- [Nonlinear Least Squares](#docs/optimization/nonlinear_least_squares)
+- [Gradient Descent](#docs/optimization/gradient_descent)
+- [Newton's Method](#docs/optimization/newtons_method)
+- [Gauss-Newton Algorithm](#docs/optimization/gauss_newton_algorithm)
+
 
 ## Planner
 
@@ -49,6 +56,14 @@
 - [3D Reconstruction](#docs/slam/3d_reconstruction)
 - [Perspective Projection](#docs/slam/perspective_projection)
 - [Point Correspondence](#docs/slam/point_correspondence)
+- [Reconstruction From Two Views](#docs/slam/reconstruction_from_two_views)
+- [Bundle Adjustment](#docs/slam/bundle_adjustment)
+
+
+## Multiview Geometry
+
+- [Eight Point Algorithm](#docs/multiview_geometry/eight_point_algorithm)
+- [Linear Triangulation](#docs/multiview_geometry/linear_triangulation)
 
 
 ## Probabilistic Robotics

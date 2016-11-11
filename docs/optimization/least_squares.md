@@ -6,7 +6,7 @@ which there are more equations than unknowns. Least squares means that the
 overal solution minimizes the sum of the squares of the errors made in the
 results of every single equation.
 
-The most important application is in ddata fitting. The best fit in the
+The most important application is in data fitting. The best fit in the
 least-squares sense minimizes the sum of the squared residuals (aka errors),
 a residual being the difference between an observed value and the fitted value
 provided by a model. When the problem has substantial uncertainties in the
@@ -64,18 +64,3 @@ The smallest error is when the derivative of the error is 0, and so:
 
 where $A^{\dagger}$ is the **Pseudo Inverse** $A^{\dagger} = (A^{T} A)^{-1}
 A^{T}$
-
-
-
-
-## Example: Data Fitting
-
-Suppose we have this test function:
-
-\begin{equation}
-    g(t) = \frac{1}{1 + 25t^{2}}
-\end{equation}
-
-This produces a plot that looks like the following:
-
-![test function](images/least_squares_test_function.jpg)
