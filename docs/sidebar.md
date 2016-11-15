@@ -58,6 +58,7 @@
 - [Point Correspondence](#docs/slam/point_correspondence)
 - [Reconstruction From Two Views](#docs/slam/reconstruction_from_two_views)
 - [Bundle Adjustment](#docs/slam/bundle_adjustment)
+- [Visual Odometry](#docs/slam/visual_odometry)
 
 
 ## Multiview Geometry
@@ -72,5 +73,12 @@
 2. [Recursive State Estimation](#docs/probabilistic_robotics/2_recursive_state_estimation)
 3. [Gaussian Filters](#docs/probabilistic_robotics/3_gaussian_filters)
 4. [Nonparametric Filters](#docs/probabilistic_robotics/4_nonparametric_filters)
+
+
+## Differentiation
+
+- [Finite Difference](#docs/maths/differentiation/finite_difference)
+- [Laplace Transforms](#docs/maths/differentiation/laplace_transforms)
+
 
 [cheat sheet](#docs/probabilistic_robotics/cheat_sheet)

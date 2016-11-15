@@ -99,7 +99,7 @@ T \times v)$:
 And projection onto $x_{2}$ gives the **Epipolar Constraint**:
 
 \begin{equation}
-    \lambda_{2}^{\top} \hat{T} R x_{1} = 0
+    x_{2}^{\top} \hat{T} R x_{1} = 0
 \end{equation}
 
 This constraint provides a relation between the 2D point coordinates of a 3D

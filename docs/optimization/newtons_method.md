@@ -19,15 +19,15 @@ approximation of $E(x)$ in the vicinity of this estimate is:
 \end{equation}
 
 The frist and second derivative are denoted by the **Jacobian** $g =
-\dfrac{dE}{dx(x_{t})}$ and the **Hessian matrix**
-$dfrac{d^{2}E}{dx^{2}(x_{t})}$. For this second order approximation, the
+dE / dx(x_{t})$ and the **Hessian matrix**
+$d^{2}E / dx^{2}(x_{t})$. For this second order approximation, the
 optimality condition is:
 
 \begin{equation}
     \dfrac{dE}{dx} = g + H(x - x_{t}) = 0
 \end{equation}
 
-Setting the next ierate to the minimizer $x$ leads to:
+Setting the next iterate to the minimizer $x$ leads to:
 
 \begin{equation}
     x_{t + 1} = x_{t} - H^{-1} g
