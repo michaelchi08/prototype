@@ -57,28 +57,164 @@ Levenberg-Marquardt is commonly used due to its ease of implementation and its
 use of an effective damping strategy that lends it the ability to converge
 quickly from a wide range of initial guesses.
 
-Under the assumption that the observed 2D point coordinates $\tilde{x}$ are
-corrupted by zero-mean Gaussian noise, maximum likelihood estimation leads to:
+![Reprojection Error](images/reprojection_error.png)
+
+Let $m$ and $\tilde{m}$ be the image projection and image measurement
+(observed) in image coordinates (**not homogeneous coordinates**). The
+reprojection error $e$ is defined as the distance between $\tilde{m}$ and $m$.
 
 \begin{equation}
-    E(R, T, X_{1}, \dots, X_{N}) =
-        \sum_{j = 1}^{N}
-            |\tilde{x}_{1}^{j} - \pi(X_{j})|^{2} +
-                |\tilde{x}_{2}^{j} - \pi(R, T, X_{j})|^{2}
+    e = \tilde{m} - m
 \end{equation}
 
-It aims at minimizing the **reprojection error** between the observed 2D
-coordinates $\tilde{x}_{i}^{j}$ and the projected 3D coordinate $X_{j}$ (w.r.t
-camera 1). Here $\pi(R, T, X_{j})$ denotes the perspective projection of
-$X_{j}$ after rotation and translation.
+In this scenario we have a given image measurement $\tilde{m}$, our goal is to
+find the image projection $m$ that minizmies the reprojection error $e$. The
+image projection $m$ can be converted to homogeneous coordinates $u, v, w$ by:
 
-For the general case of $m$ images, we get:
+\begin{align}
+      m =
+        \begin{bmatrix}
+            x \\
+            y
+        \end{bmatrix}
+      =
+        \begin{bmatrix}
+            u / w \\
+            v / w
+        \end{bmatrix}
+\end{align}
+
+It can be found by:
+
+\begin{align}
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix} &=
+    P
+    \begin{bmatrix}
+        X \\
+        1
+    \end{bmatrix} \\ 
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix} &=
+    K
+    R
+    \begin{bmatrix}I_{3 \times 3} & -C\end{bmatrix}
+    \begin{bmatrix}X \\ 1\end{bmatrix}
+\end{align}
+
+Where
+
+- $P$: projection matrix
+- $K$: camera intrinsic matrix
+- $I$: identity matrix ($3 \times 3$ matrix)
+- $R$: rotation matrix
+- $C$: camera center
+- $X$: 3D point in world ($3 \times 1$ vector)
+
+Note that the projection matrix $P$ can be decomposed in terms of the camera
+intrinsics matrix $K$, rotation matrix $R$ and camera center $C$, this is
+useful because it enables us to obtain the physical transformation (rotation
+and translation) from $R$ and $C$.
+
+The cost function can be rewritten as:
 
 \begin{equation}
-    E(\{R_{i}, T_{i}\}_{i = 1..m}, \{X_{j}\}_{j = 1..N}) =
-        \sum_{i = 1}^{m} \sum_{j = 1}^{N}
-            \theta_{ij} |\tilde{x}_{i}^{j} - \pi(R_{i}, T_{i}, X_{j})|^{2}
+    \min_{R, C, X} \left|\left|
+        \begin{bmatrix}
+            \tilde{x} \\
+            \tilde{y}
+        \end{bmatrix} -
+        \begin{bmatrix}
+            u(R, C, X) / w(R, C, X) \\
+            v(R, C, X) / w(R, C, X)
+        \end{bmatrix}
+    \right|\right|^{2}
 \end{equation}
 
-with $T_{1} = 0$ and $R_{1} = 1$. $\theta_{ij} = 1$ if point $j$ is visible in
-image $i$, else $\theta_{ij} = 0$. The above problem are non-convex.
+There is one problem with the above cost function though, specifically with the
+rotation matrix $R$ where Euler angles are commonly assumed to be extracted.
+Euler angles however are known to have singular issues (aka gimbal lock),
+quaternions on the other hand do not, we therefore specify here that the
+rotation matrix $R$ above is parameterized with quaternions.  A quaternion $q =
+(x, y, z, w)$ can be converted into a rotation matrix via
+
+\begin{equation}
+    R = \begin{bmatrix}
+        1 - 2q_{y}^{2} - 2q_{z}^{2}
+            & 2q_{x}q_{y} + 2q_{w}q_{z}
+            & 2q_{x}q_{z} - 2q_{w}q_{y} \\
+        2 q_{x}q_{y} - 2q_{w}q_{z}
+            & 1 - 2q_{x}^{2} - 2q_{z}^{2}
+            &  2q_{y}q_{z} + 2q_{w}q_{z} \\
+        2 q_{x}q_{z} - 2q_{w}q_{y}
+            & 2q_{y}q_{z} - 2q_{w}q_{x}
+            & 1 - 2q_{x}^{2} - 2q_{y}^{2}
+    \end{bmatrix}
+\end{equation}
+
+The rotation matrix $R$ parameterized by a quaternion is denoted by $R(q)$, the
+cost function with modified notation becomes.
+
+\begin{equation}
+    \min_{q, C, X} \left|\left|
+        \begin{bmatrix}
+            \tilde{x} \\
+            \tilde{y}
+        \end{bmatrix} -
+        \begin{bmatrix}
+            u(R(q), C, X) / w(R(q), C, X) \\
+            v(R(q), C, X) / w(R(q), C, X)
+        \end{bmatrix}
+    \right|\right|^{2} \\
+    \min_{q, C, X} \left|\left|
+        b - f(R(q), C, X)
+    \right|\right|^{2}
+\end{equation}
+
+If we expand out how $u, v, w$ are calculated we get:
+
+\begin{align}
+    f(R(q), C, X) &=
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix} \\
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix}
+    &= K R [X - C] \\
+    &= \begin{bmatrix}
+        f & 0 & p_x \\
+        0 & f & p_y \\
+        0 & 0 & 1
+    \end{bmatrix}
+    \begin{bmatrix}
+        r_{11} & r_{12} & r_{13} \\
+        r_{21} & r_{22} & r_{23} \\
+        r_{31} & r_{32} & r_{33}
+    \end{bmatrix}
+    [X - C]
+\end{align}
+
+\begin{align}
+    u &= \begin{bmatrix}
+        fr_{11} + p_{x}r_{31} &
+        fr_{12} + p_{x}r_{32} &
+        fr_{13} + p_{x}r_{33}
+    \end{bmatrix} [X - C] \\
+    v &= \begin{bmatrix}
+        fr_{21} + p_{y}r_{31} &
+        fr_{22} + p_{y}r_{32} &
+        fr_{23} + p_{y}r_{33}
+    \end{bmatrix} [X - C] \\
+    w &= \begin{bmatrix} r_{31} & r_{32} & r_{33} \end{bmatrix} [X - C]
+\end{align}

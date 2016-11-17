@@ -1,4 +1,4 @@
-# [notes](https://chutsu.github.io/notes)
+# [robotics](https://chutsu.github.io/robotics)
 
 
 ## Linear Algebra
@@ -50,7 +50,7 @@
 - [Potential Fields](#docs/planning/reactive_methods/potential_fields)
 
 
-## SLAM
+## Multiview Geometry
 
 - [Representating Scenes](#docs/multiview_geometry/representing_scenes)
 - [3D Reconstruction](#docs/multiview_geometry/3d_reconstruction)

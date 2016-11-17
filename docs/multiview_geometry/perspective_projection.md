@@ -219,5 +219,3 @@ In summary we have the following:
 - **Preimage Line**: $\text{span}(\hat{l}) \subset {\rm I\! R}^{3}$
 - **Coimage Point**: $\text{span}(\hat{x}) \subset {\rm I\! R}^{3}$
 - **Coimage Line**: $\text{span}(l) \subset {\rm I\! R}^{3}$
-
-

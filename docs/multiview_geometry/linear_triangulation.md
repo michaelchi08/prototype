@@ -49,6 +49,7 @@ Formulating it of the form $A X = 0$ where $A$ is
 The homogeneous method uses SVD to find the solution as the unit singular
 vector corresponding to the smallest singular value of A.
 
+    #!/usr/bin/octave
     [U, S, V] = svd(A);
     X = V(:, end);  // last column of V
     X = X / X(4);  // normalize 3D point
