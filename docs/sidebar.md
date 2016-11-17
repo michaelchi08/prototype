@@ -52,19 +52,15 @@
 
 ## SLAM
 
-- [Representating Scenes](#docs/slam/representing_scenes)
-- [3D Reconstruction](#docs/slam/3d_reconstruction)
-- [Perspective Projection](#docs/slam/perspective_projection)
-- [Point Correspondence](#docs/slam/point_correspondence)
-- [Reconstruction From Two Views](#docs/slam/reconstruction_from_two_views)
-- [Bundle Adjustment](#docs/slam/bundle_adjustment)
-- [Visual Odometry](#docs/slam/visual_odometry)
-
-
-## Multiview Geometry
-
+- [Representating Scenes](#docs/multiview_geometry/representing_scenes)
+- [3D Reconstruction](#docs/multiview_geometry/3d_reconstruction)
+- [Perspective Projection](#docs/multiview_geometry/perspective_projection)
+- [Point Correspondence](#docs/multiview_geometry/point_correspondence)
+- [Reconstruction From Two Views](#docs/multiview_geometry/reconstruction_from_two_views)
 - [Eight Point Algorithm](#docs/multiview_geometry/eight_point_algorithm)
 - [Linear Triangulation](#docs/multiview_geometry/linear_triangulation)
+- [Bundle Adjustment](#docs/multiview_geometry/bundle_adjustment)
+- [Visual Odometry](#docs/multiview_geometry/visual_odometry)
 
 
 ## Probabilistic Robotics

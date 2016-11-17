@@ -1,5 +1,9 @@
 # Visual Odometry
 
+## Feature Detection
+
+## Optical Flow
+
 ## Bundle Adjustment
 
 Let $x_{1}$ **(in homogeneous coordinates)** be the projection of a 3D point
@@ -31,9 +35,12 @@ T \times v)$:
 
 And projection onto $x_{2}$ gives the **Epipolar Constraint**:
 
-\begin{equation}
-    x_{2}^{\top} \hat{T} R x_{1} = 0
-\end{equation}
+\begin{align}
+    x_{2}^{\top} \hat{T} R x_{1} &= 0 \\
+    x_{2}^{\top} E x_{1} &= 0
+\end{align}
+
+Where $E = \hat{T} R \in {\rm I\! R}^{3 \times 3}$ is the Essential Matrix.
 
 Given that we have observed points $x_1$ and $x_2$, we can find the
 corresponding estimated points $\tilde{x_{2}}$ and $\tilde{x_{1}}$.
@@ -53,5 +60,5 @@ and then compare the euclidean distance between observed and estimated
 The cost function for Bundle Adjustment becomes:
 
 \begin{equation}
-    | x_{1} - \tilde{x_1} |^{2} - | x_{2} - \tilde{x_2} |^{2}
+    | x_{1} - \tilde{x_1} |^{2} + | x_{2} - \tilde{x_2} |^{2}
 \end{equation}
