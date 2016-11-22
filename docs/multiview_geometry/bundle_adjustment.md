@@ -218,3 +218,42 @@ If we expand out how $u, v, w$ are calculated we get:
     \end{bmatrix} [X - C] \\
     w &= \begin{bmatrix} r_{31} & r_{32} & r_{33} \end{bmatrix} [X - C]
 \end{align}
+
+
+## Reprojection error for 2 or more views
+
+The above formulation is the reprojection error for 1 image only, if we have 2 images we can write the cost function as follows under the assumption that the observed 2D point coordinates $\tilde{x}$ are corrupted by a **zero-mean Gaussian noise**, maximum likelihood estimation leads to:
+
+\begin{equation}
+    \min_{R, C, X} \sum_{j = 1}^{N}
+        \left|
+            x_{1}^{j} - \pi(X_{j})
+        \right|^{2} +
+        \left|
+            \tilde{x}_{2}^{j} - \pi(R, C, X_{j})
+        \right|^{2}
+\end{equation}
+
+Or for the general case of $m$ images:
+
+\begin{equation}
+    \min_{R, C, X} \sum_{i = 1}^{M} \sum_{j = 1}^{N}
+        \theta_{ij}
+        \left|
+            \tilde{x}_{i}^{j} - \pi(R_{i}, C_{i}, X_{j})
+        \right|^{2}
+\end{equation}
+
+Where:
+- $m$: number of images
+- $N$: number of 2D correspondance points
+- $\theta_{ij}$: scalar $\{0, 1\}$ that denotes whether point $j$ is visible in
+  image $i$, if it is $\theta_{ij} = 1$, else $\theta_{ij} = 0$.
+- $\tilde{x}_{i}^{j}$: observed $j$-th 2D correspondance point in the
+  $i$-th image
+- $\pi(\cdot)$: generic projection function $x = PX$
+- $R_{i}$: rotation matrix at $i$-th image
+- $T_{i}$: translation matrix at $i$-th image
+- $X_{j}$: 3D point in the world that corresponds to the 2D image point $x^{j}$
+
+For the first image where we set $T_{1} = 0$ and $R_{1} = 1$, so that the optimization process sets the first image as origin, and the following $R_{i}$ and $T_{i}$ will be relative to the first camera pose.

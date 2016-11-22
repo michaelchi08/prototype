@@ -49,3 +49,54 @@ and thus with some maniulation,
 \begin{equation}
     N = \dfrac{log(1 - p)}{log(1 - (1 - v)^{m})}
 \end{equation}
+
+
+    #!/usr/bin/octave
+
+    function [param1, param2] = ransac_demo(data,num,iter,threshDist,inlierRatio)
+    % data: a 2xn dataset with #n data points
+    % num: the minimum number of points. For line fitting problem, num=2
+    % iter: the number of iterations
+    % threshDist: threshold of the distances between points and fitting line
+    % inlierRatio: the threshold of the number of inliers
+
+    % Plot the data points
+    figure;
+    plot(data(1,:),
+    data(2,:),'o');
+    hold on;
+
+    number = size(data,2); % Total number of points
+    bestInNum = 0; % Best fitting line with largest number of inliers
+    param1=0; % parameters for best fitting line
+    param2=0;
+
+    for i=1:iter
+        % Randomly select 2 points
+        idx = randperm(number,num); sample = data(:,idx);
+
+        % Compute the distances between all points with the fitting line
+        kLine = sample(:,2)-sample(:,1);% two points relative distance
+        kLineNorm = kLine/norm(kLine);
+
+        % Ax+By+C=0 A=-kLineNorm(2),B=kLineNorm(1)
+        normVector = [-kLineNorm(2),kLineNorm(1)];
+        distance = normVector*(data - repmat(sample(:,1),1,number));
+
+        % Compute the inliers with distances smaller than the threshold
+        inlierIdx = find(abs(distance)<=threshDist);
+        inlierNum = length(inlierIdx);
+
+        % Update number of inliers and fitting model if better model found
+        if inlierNum>=round(inlierRatio*number) && inlierNum>bestInNum
+            bestInNum = inlierNum;
+            parameter1 = (sample(2,2)-sample(2,1))/(sample(1,2)-sample(1,1));
+            parameter2 = sample(2,1)-parameter1*sample(1,1);
+            param1=parameter1; param2=parameter2;
+        end
+    end
+
+    % Plot the best fitting line
+    xAxis = -number/2:number/2;
+    yAxis = param1*xAxis + param2;
+    plot(xAxis,yAxis,'r-','LineWidth',2);
