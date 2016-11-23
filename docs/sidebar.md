@@ -49,6 +49,10 @@
 - [Bug Algorithm](#docs/planning/reactive_methods/bug_algorithm)
 - [Potential Fields](#docs/planning/reactive_methods/potential_fields)
 
+## Camera
+
+- [Extrinsic Matrix](#docs/camera/extrinsic_matrix)
+
 
 ## Multiview Geometry
 
