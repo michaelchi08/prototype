@@ -5,7 +5,7 @@ polynomial which is invariant under matrix similarity and has the eigenvalues
 as roots. It is a common technique used to calculate the eigenvalues of the
 square matrix by setting the characteristic polynomial to zero.
 
-Let $A$ by an $n \times n$ matrix, the characteristic polynomal is defined as:
+Let $A$ by an $n \times n$ matrix, the characteristic polynomial is defined as:
 
 \begin{equation}
     f(\lambda) = \det(A - \lambda I)
@@ -30,7 +30,7 @@ For instance, if
     \end{bmatrix}
 \end{equation}
 
-then
+Then:
 
 \begin{equation}
     f(\lambda) = \det

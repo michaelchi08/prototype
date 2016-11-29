@@ -96,7 +96,7 @@ It can be found by:
     \begin{bmatrix}
         X \\
         1
-    \end{bmatrix} \\ 
+    \end{bmatrix} \\
     \begin{bmatrix}
         u \\
         v \\
@@ -257,3 +257,278 @@ Where:
 - $X_{j}$: 3D point in the world that corresponds to the 2D image point $x^{j}$
 
 For the first image where we set $T_{1} = 0$ and $R_{1} = 1$, so that the optimization process sets the first image as origin, and the following $R_{i}$ and $T_{i}$ will be relative to the first camera pose.
+
+
+## Build Jacobian Matrix
+
+Recall from the derivations above, we can map the predicted 2D image
+correspondence in homogeneous coordinates w.r.t rotation matrix $R$, camera
+center $C$, and 3D point $X$.
+
+\begin{align}
+    f(R(q), C, X) &=
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix}
+\end{align}
+
+\begin{align}
+    u &= \begin{bmatrix}
+        fr_{11} + p_{x}r_{31} &
+        fr_{12} + p_{x}r_{32} &
+        fr_{13} + p_{x}r_{33}
+    \end{bmatrix} [X - C] \\
+    v &= \begin{bmatrix}
+        fr_{21} + p_{y}r_{31} &
+        fr_{22} + p_{y}r_{32} &
+        fr_{23} + p_{y}r_{33}
+    \end{bmatrix} [X - C] \\
+    w &= \begin{bmatrix} r_{31} & r_{32} & r_{33} \end{bmatrix} [X - C]
+\end{align}
+
+The Jacobian matrix w.r.t rotation matrix $R$, camera center $C$, and 3D point
+$X$ can be built as such. The importance of the Jacobian matrix is to allow us
+to search for gradients or a direction to optimize the parameters using any
+non-linear optimization methods.
+
+\begin{align}
+  \definecolor{rot}{RGB}{255, 0, 0}
+  \definecolor{rotquat}{RGB}{0, 190, 0}
+  \definecolor{cam}{RGB}{127, 0, 255}
+  \definecolor{pt3d}{RGB}{0, 0, 204}
+  J &= \begin{bmatrix}
+    \color{rot}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial R} \quad
+    \color{cam}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial C} \quad
+    \color{pt3d}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial X}
+  \end{bmatrix} \\
+  &= \begin{bmatrix}
+    \color{rot}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial R}
+    \color{rotquat}
+    \dfrac{\partial{R}}{\partial{q}} \quad
+    \color{cam}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial C} \quad
+    \color{pt3d}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial X}
+  \end{bmatrix}
+\end{align}
+
+\begin{equation}
+  \definecolor{rot}{RGB}{255, 0, 0}
+  \color{rot}
+  \dfrac{\partial{f(R(q), C, X)}}{\partial{R}} =
+    \begin{bmatrix}
+      \dfrac{
+        w \dfrac{\partial{u}}{\partial{R}} -
+          u \dfrac{\partial{w}}{\partial{R}}
+      }{
+        w^{2}
+      } \\
+      \dfrac{
+        w \dfrac{\partial{v}}{\partial{R}} -
+          v \dfrac{\partial{w}}{\partial{R}}
+      }{
+        w^{2}
+      }
+    \end{bmatrix}_{2 \times 9}
+\end{equation}
+
+\begin{align}
+  \definecolor{rotquat}{RGB}{0, 190, 0}
+  \color{rotquat}
+  \dfrac{\partial{R}}{\partial{q}} =
+    \begin{bmatrix}
+      \dfrac{\partial{r_{11}}}{\partial{q}} \\
+      \dfrac{\partial{r_{12}}}{\partial{q}} \\
+      \vdots \\
+      \dfrac{\partial{r_{33}}}{\partial{q}}
+    \end{bmatrix}_{9 \times 4}
+\end{align}
+
+\begin{equation}
+  \definecolor{cam}{RGB}{127, 0, 255}
+  \color{cam}
+  \dfrac{\partial{f(R(q), C, X)}}{\partial{C}} =
+    \begin{bmatrix}
+      \dfrac{
+        w \dfrac{\partial{u}}{\partial{C}} -
+          u \dfrac{\partial{w}}{\partial{C}}
+      }{
+        w^{2}
+      } \\
+      \dfrac{
+        w \dfrac{\partial{v}}{\partial{C}} -
+          v \dfrac{\partial{w}}{\partial{C}}
+      }{
+        w^{2}
+      }
+    \end{bmatrix}_{2 \times 3}
+\end{equation}
+
+\begin{equation}
+  \definecolor{pt3d}{RGB}{0, 0, 204}
+  \color{pt3d}
+  \dfrac{\partial{f(R(q), C, X)}}{\partial{X}} =
+    \begin{bmatrix}
+      \dfrac{
+        w \dfrac{\partial{u}}{\partial{X}} -
+          u \dfrac{\partial{w}}{\partial{X}}
+      }{
+        w^{2}
+      } \\
+      \dfrac{
+        w \dfrac{\partial{v}}{\partial{X}} -
+          v \dfrac{\partial{w}}{\partial{X}}
+      }{
+        w^{2}
+      }
+    \end{bmatrix}_{2 \times 3}
+\end{equation}
+
+where:
+
+\begin{align}
+  \definecolor{rot}{RGB}{255, 0, 0}
+  \definecolor{rotquat}{RGB}{0, 190, 0}
+  \definecolor{cam}{RGB}{127, 0, 255}
+  \definecolor{pt3d}{RGB}{0, 0, 204}
+  \color{rot} \dfrac{\partial{u}}{\partial{R}} &\color{rot}=
+    \color{rot}
+      \begin{bmatrix}
+        f(X_{1} - C_{1}) &
+        0_{1 \times 3} &
+        p_{x} (X_{3} - C_{3})
+      \end{bmatrix} \\
+  \color{rot} \dfrac{\partial{v}}{\partial{R}} &\color{rot}=
+    \color{rot} \begin{bmatrix}
+      0_{1 \times 3} &
+      f(X_{1} - C_{1}) &
+      p_{x} (X_{3} - C_{3})
+    \end{bmatrix} \\
+  \color{rot} \dfrac{\partial{v}}{\partial{R}} &\color{rot}=
+    \color{rot} \begin{bmatrix}
+      0_{1 \times 3} &
+      0_{1 \times 3} &
+      (X_{3} - C_{3})
+    \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{11}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        0 & -4q_{y} & -4q_{z} & 0
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{12}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{y} & 2q_{x} & -2q_{w} & -2q_{z}
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{13}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{z} & 2q_{w} & 2q_{x} & 2q_{y}
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{21}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{y} & 2q_{x} & 2q_{w} & 2q_{z}
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{22}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        4q_{x} & 0 & 4q_{z} & 0
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{23}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{w} & 2q_{z} & 2q_{y} & 2q_{x}
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{31}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{z} & -2q_{w} & 2q_{x} & -2q_{y}
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{32}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        -4q_{x} & -4q_{y} & 0 & 0
+      \end{bmatrix} \\
+  \color{rotquat} \dfrac{R_{33}}{\partial{q}} &\color{rotquat}=
+    \color{rotquat}
+      \begin{bmatrix}
+        2q_{w} & 2q_{z} & 2q_{y} & 2q_{x}
+      \end{bmatrix}
+\end{align}
+
+\begin{align}
+  \color{cam} \dfrac{\partial{u}}{\partial{C}} &\color{cam}=
+    \color{cam} -\begin{bmatrix}
+      f r_{11} + p_{x} r_{31} &
+      f r_{12} + p_{x} r_{32} &
+      f r_{13} + p_{x} r_{33}
+    \end{bmatrix} \\
+  \color{cam} \dfrac{\partial{v}}{\partial{C}} &\color{cam}=
+    \color{cam} -\begin{bmatrix}
+      f r_{21} + p_{y} r_{31} &
+      f r_{22} + p_{y} r_{32} &
+      f r_{23} + p_{y} r_{33}
+    \end{bmatrix} \\
+  \color{cam} \dfrac{\partial{w}}{\partial{C}} &\color{cam}=
+    \color{cam} -\begin{bmatrix}
+      r_{31} &
+      r_{32} &
+      r_{33}
+    \end{bmatrix}
+\end{align}
+
+\begin{align}
+  \color{pt3d} \dfrac{\partial{u}}{\partial{X}} &\color{pt3d}=
+    \color{pt3d} \begin{bmatrix}
+      f r_{11} + p_{x} r_{31} &
+      f r_{12} + p_{x} r_{32} &
+      f r_{13} + p_{x} r_{33}
+    \end{bmatrix} \\
+  \color{pt3d} \dfrac{\partial{v}}{\partial{X}} &\color{pt3d}=
+    \color{pt3d} \begin{bmatrix}
+      f r_{21} + p_{y} r_{31} &
+      f r_{22} + p_{y} r_{32} &
+      f r_{23} + p_{y} r_{33}
+    \end{bmatrix} \\
+  \color{pt3d} \dfrac{\partial{w}}{\partial{X}} &\color{pt3d}=
+    \color{pt3d} \begin{bmatrix}
+      r_{31} &
+      r_{32} &
+      r_{33}
+    \end{bmatrix}
+\end{align}
+
+
+### How to build the overall Jacobian for optimization
+
+\begin{align}
+  \definecolor{rot}{RGB}{255, 0, 0}
+  \definecolor{rotquat}{RGB}{0, 190, 0}
+  \definecolor{cam}{RGB}{127, 0, 255}
+  \definecolor{pt3d}{RGB}{0, 0, 204}
+  J &= \begin{bmatrix}
+    \color{rot}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial R}
+    \color{rotquat}
+    \dfrac{\partial{R}}{\partial{q}} \quad
+    \color{cam}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial C} \quad
+    \color{pt3d}
+    \dfrac{\partial{f(R(q), C, X)}}{\partial X}
+  \end{bmatrix} \\
+  &= \begin{bmatrix}
+    \text{Image 1}_{2 \times 7}
+      & 0_{2 \times 7}
+      & \text{3D Point}_{2 \times 3} \\
+    0_{2 \times 7}
+      & \text{Image 2}_{2 \times 7}
+      & \text{3D Point}_{2 \times 3}
+  \end{bmatrix}
+\end{align}

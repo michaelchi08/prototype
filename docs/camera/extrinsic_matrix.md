@@ -6,10 +6,10 @@ a translation vector $t$, but as we will soon see, these don't exactly
 correspond to the camera's rotation and translation.
 
 First we will examine parts of the extrinsic matrix and later we will look for
-alternative wayss of describing the camera's pose more intuitively.
+alternative ways of describing the camera's pose more intuitively.
 
 The extrinsic matrix takes the form of a rigid transformation matrix: a $3
-\times 3$ rotation matrx in the left-block, and a $3 \times 1$ translation
+\times 3$ rotation matrix in the left-block, and a $3 \times 1$ translation
 column-vector on the right:
 
 \begin{equation}
@@ -30,7 +30,7 @@ decompose this matrix into a rotation followed by translation:
 \begin{align}
     \left[
         \begin{array}{c | c}
-            R_{I}^{B} & t \\
+            R_{I}^{B} & t_{I}^{B} \\
             \hline
             0 & 1
         \end{array}
@@ -43,7 +43,6 @@ decompose this matrix into a rotation followed by translation:
                 0 & 1
             \end{array}
         \right]
-        \times
         \left[
             \begin{array}{c | c}
                 R_{I}^{B} & 0 \\
@@ -60,7 +59,6 @@ decompose this matrix into a rotation followed by translation:
                 0 & 0 & 0 & 1
             \end{array}
         \right]
-        \times
         \left[
             \begin{array}{c c c | c}
                 r_{1, 1} & r_{1, 2} & r_{1, 3} & 0 \\
@@ -73,13 +71,13 @@ decompose this matrix into a rotation followed by translation:
 \end{align}
 
 This matrix describes how to transform points in the world coordinates to
-camera coordintes. The vector $t$ can be interpreted as the position of the
-world origin in camera coordinates, and the columns of $R_{I}^{B}$ represent the
-directions of the world-axes in camera coordinates.
+camera coordinates. The vector $t_{I}^{B}$ can be interpreted as the position of
+the world origin in camera coordinates, and the columns of $R_{I}^{B}$
+represent the directions of the world-axes in camera coordinates.
 
 The important thing to remember about the extrinsic matrix is that **the
 extrinsic matrix describes how the world is transformed relative to the
-camera**.  This is ofen couter-intuitive, because we often want to specify how
+camera**.  This is often counter-intuitive, because we often want to specify how
 the camera is transformed relative to the world.
 
 Next we will examine two alternative ways to describe the camera extrinsic
@@ -97,7 +95,7 @@ inverse.
 
 Let $C$ be a column vector describing the location of the camera-center in
 world coordinates, and let $R_{B}^{I}$ be the rotation matrix describing the
-camera's orientation with respect to the world coorindate axes. The
+camera's orientation with respect to the world coordinate axes. The
 transformation matrix that describes the camera's pose is then $[R_{B}^{I} \mid
 C]$. Like before, we make the matrix square by adding an extra row of $(0, 0,
 0, 1)$. Then the extrinsic matrix is obtained by inverting the camera's pose
@@ -114,7 +112,7 @@ matrix:
         &=
         \left[
             \begin{array}{c | c}
-                R_{B}^{I} & t \\
+                R_{B}^{I} & C \\
                 \hline
                 0 & 1
             \end{array}
@@ -154,7 +152,7 @@ matrix:
         &=
         \left[
             \begin{array}{c | c}
-                R_{B}^{I, \top} & 0 \\
+                (R_{B}^{I})^{\top} & 0 \\
                 \hline
                 0 & 1
             \end{array}
@@ -169,7 +167,7 @@ matrix:
         &=
         \left[
             \begin{array}{c | c}
-                R_{I}^{B} & -R_{I}^{B} \\
+                (R_{B}^{I})^{\top} & -(R_{B}^{I})^{\top} C \\
                 \hline
                 0 & 1
             \end{array}
@@ -182,8 +180,8 @@ translation vector. Thus we see that the relationship between extrinsic
 parameters and camera's pose is straight forward:
 
 \begin{align}
-    R &= R_{B}^{I, \top} \\
-    t &= -R C
+    R_{I}^{B} &= (R_{B}^{I})^{\top} \\
+    t_{I}^{B} &= -R_{I}^{B} C
 \end{align}
 
 Some texts write the extrinsic matrix substituting $-RC$ for $t$, which mixes a
