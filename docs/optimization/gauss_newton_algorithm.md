@@ -1,7 +1,7 @@
 # Gauss Newton Algorithm
 
 The Gauss-Newton Algorithm is a modification of Newton's method for finding a
-minimium of a function. Unlike Newton's method howevere, the Gauss-Newton
+minimum of a function. Unlike Newton's method however, the Gauss-Newton
 algorithm can only be used to minimize a sum of squared function values, but it
 has the advantage that second derivatives, which can be challenging to compute
 are not required.
@@ -42,7 +42,7 @@ The approximation
     \text{with} \quad J = \dfrac{dr}{dx}
 \end{align}
 
-together with $g = 2 J^{\top} r$, leads to the **Gauss-Newton Algorithm**:
+Together with $g = 2 J^{\top} r$, leads to the **Gauss-Newton Algorithm**:
 
 \begin{align}
     x_{t + 1} = x_{t} + \Delta \\

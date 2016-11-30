@@ -18,7 +18,7 @@ approximation of $E(x)$ in the vicinity of this estimate is:
             \dfrac{1}{2} (x - x_{t})^{\top} H (x - x_{t})
 \end{equation}
 
-The frist and second derivative are denoted by the **Jacobian** $g =
+The first and second derivative are denoted by the **Jacobian** $g =
 dE / dx(x_{t})$ and the **Hessian matrix**
 $d^{2}E / dx^{2}(x_{t})$. For this second order approximation, the
 optimality condition is:
@@ -46,7 +46,7 @@ exists a local neighborhood around each optimum where the Newton method
 converges quadratically for $\gamma = 1$.
 
 For large optimization problems, computing and inverting the Hessian may be
-challenging. Moreover, since this problem is often not parallelizable, some
+challenging. Moreover, since this problem is often not parallelize able, some
 second order methods do not profit from GPU acceleration. In such cases, one
 can aim to iteratively solve the extrememality condition.
 

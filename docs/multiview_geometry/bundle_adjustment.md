@@ -192,9 +192,14 @@ If we expand out how $u, v, w$ are calculated we get:
         w
     \end{bmatrix}
     &= K R [X - C] \\
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix}
     &= \begin{bmatrix}
-        f & 0 & p_x \\
-        0 & f & p_y \\
+        f_x & 0 & p_x \\
+        0 & f_y & p_y \\
         0 & 0 & 1
     \end{bmatrix}
     \begin{bmatrix}
@@ -202,21 +207,38 @@ If we expand out how $u, v, w$ are calculated we get:
         r_{21} & r_{22} & r_{23} \\
         r_{31} & r_{32} & r_{33}
     \end{bmatrix}
+    [X - C] \\
+    \begin{bmatrix}
+        u \\
+        v \\
+        w
+    \end{bmatrix}
+    &= \begin{bmatrix}
+        f_{x} r_{11} + p_{x}r_{31} &
+        f_{x} r_{12} + p_{x}r_{32} &
+        f_{x} r_{13} + p_{x}r_{33} \\
+        f_{y} r_{21} + p_{y}r_{31} &
+        f_{y} r_{22} + p_{y}r_{32} &
+        f_{y} r_{23} + p_{y}r_{33} \\
+        r_{31} & r_{32} & r_{33}
+    \end{bmatrix}
     [X - C]
 \end{align}
 
 \begin{align}
     u &= \begin{bmatrix}
-        fr_{11} + p_{x}r_{31} &
-        fr_{12} + p_{x}r_{32} &
-        fr_{13} + p_{x}r_{33}
+        f_{x} r_{11} + p_{x}r_{31} &
+        f_{x} r_{12} + p_{x}r_{32} &
+        f_{x} r_{13} + p_{x}r_{33}
     \end{bmatrix} [X - C] \\
     v &= \begin{bmatrix}
-        fr_{21} + p_{y}r_{31} &
-        fr_{22} + p_{y}r_{32} &
-        fr_{23} + p_{y}r_{33}
+        f_{y} r_{21} + p_{y}r_{31} &
+        f_{y} r_{22} + p_{y}r_{32} &
+        f_{y} r_{23} + p_{y}r_{33}
     \end{bmatrix} [X - C] \\
-    w &= \begin{bmatrix} r_{31} & r_{32} & r_{33} \end{bmatrix} [X - C]
+    w &= \begin{bmatrix} 
+        r_{31} & r_{32} & r_{33} 
+    \end{bmatrix} [X - C]
 \end{align}
 
 

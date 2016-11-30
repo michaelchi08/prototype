@@ -9,6 +9,7 @@
 - [Covariance matrix](#docs/maths/linear_algebra/covariance_matrix)
 - [Skew Symmetric matrix](#docs/maths/linear_algebra/skew_symmetric_matrix)
 - [SVD](#docs/maths/linear_algebra/svd)
+- [Compressed Column Storage](#docs/maths/linear_algebra/compressed_column_storage)
 
 
 ## Statistics
@@ -41,6 +42,7 @@
 - [Gradient Descent](#docs/optimization/gradient_descent)
 - [Newton's Method](#docs/optimization/newtons_method)
 - [Gauss-Newton Algorithm](#docs/optimization/gauss_newton_algorithm)
+- [Levenberg-Marquardt Algorithm](#docs/optimization/levenberg_marquardt_algorithm)
 
 
 ## Planner
@@ -64,7 +66,6 @@
 - [Eight Point Algorithm](#docs/multiview_geometry/eight_point_algorithm)
 - [Linear Triangulation](#docs/multiview_geometry/linear_triangulation)
 - [Bundle Adjustment](#docs/multiview_geometry/bundle_adjustment)
-- [Visual Odometry](#docs/multiview_geometry/visual_odometry)
 
 
 ## Probabilistic Robotics
