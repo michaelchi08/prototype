@@ -11,9 +11,7 @@ function R = euler123(phi, theta, psi)
     R32 = cos(phi) * sin(theta) * sin(psi) - sin(phi) * cos(psi);
     R33 = cos(phi) * cos(theta);
 
-    R = [
-        R11, R12, R13;
-        R21, R22, R23;
-        R31, R32, R33;
-    ];
+    R = [R11, R12, R13;
+         R21, R22, R23;
+         R31, R32, R33];
 endfunction
