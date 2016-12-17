@@ -82,4 +82,9 @@
 - [Laplace Transforms](#docs/maths/differentiation/laplace_transforms)
 
 
+## Coordinate Systems
+
+- [Gimbal Lock](#docs/coordinate_systems/gimbal_lock)
+
+
 [cheat sheet](#docs/probabilistic_robotics/cheat_sheet)

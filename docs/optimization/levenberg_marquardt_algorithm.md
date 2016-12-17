@@ -23,7 +23,7 @@ The Newton algorithm:
 can be modified (damped):
 
 \begin{equation}
-    x_{t + 1} = x_{t} - (H^{-1} + \lambda I_{n})^{-1} g
+    x_{t + 1} = x_{t} - (H + \lambda I_{n})^{-1} g
 \end{equation}
 
 to create a hybrid between the Newton method ($\lambda = 0$) and a gradient
