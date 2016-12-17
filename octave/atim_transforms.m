@@ -15,6 +15,10 @@ cam_att = [0.0; deg2rad(10.0); 0.0];  # pitch 10, target should be ahead
 % cam_att = [deg2rad(-10.0); 0.0; 0.0];  # roll -10, target should be right
 
 # rotate image frame (if) to camera frame (cf)
+# !!IMPORTANT NOTE!!: This is dangerous by setting pitch to -90 we are in
+# [GIMBAL LOCK]! In our case it is ok because we only want to point camera
+# downwards, but if roll and pitch mount angles are introduced this rotation
+# matrix will not work!
 R_if_cf = euler321(cam_mnt(1), cam_mnt(2), cam_mnt(3));
 
 # rotate camera frame (cf) to body planar frame (bpf)
