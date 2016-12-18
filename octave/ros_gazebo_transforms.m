@@ -1,6 +1,6 @@
 #!/usr/bin/octave -qf
-addpath("./lib/transform")
-addpath("./lib/util")
+addpath('./lib/transform')
+addpath('./lib/util')
 
 robot_pos_ros = [1.0; 2.0; 3.0]
 robot_att_euler = [deg2rad(10.0); deg2rad(20.0); deg2rad(30.0)];
@@ -15,13 +15,13 @@ R_enu_nwu = [0.0, 1.0, 0.0;
 robot_quat = euler2quat(robot_att_euler(3),
                             robot_att_euler(2),
                             robot_att_euler(1),
-                            "321");
+                            '321');
 
 [roll, pitch, yaw] = quat2euler(robot_quat(1),
                                 robot_quat(2),
                                 robot_quat(3),
                                 robot_quat(4),
-                                "321")
+                                '321')
 
 robot_rotmat = quat2rot(robot_quat(1),
                         robot_quat(2),

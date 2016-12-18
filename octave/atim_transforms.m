@@ -1,6 +1,6 @@
 #!/usr/bin/octave -qf
-addpath("./lib/transform")
-addpath("./lib/util")
+addpath('./lib/transform')
+addpath('./lib/util')
 
 # target position in camera frame (NED)
 tgt = [1.0; 0.0; 0.0]
