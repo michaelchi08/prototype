@@ -1,10 +1,18 @@
-function [yaw, pitch, roll] = quat2euler(q)
-    qw = q(1);
-    qx = q(2);
-    qy = q(3);
-    qz = q(4);
+function [psi, theta, phi] = quat2euler(qw, qx, qy, qz, euler_seq)
+    switch (euler_seq)
+    case "123"
+        % euler 1-2-3
+        psi = atan2(2 * (qx * qw - qy * qz), (qw^2 - qx^2 - qy^2 + qz^2));
+        theta = asin(2 * (qx * qz+qy * qw));
+        phi = atan2(2 * (qz * qw - qx * qy), (qw^2 + qx^2 - qy^2 - qz^2));
 
-    yaw = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx^2 + qy^2));
-    pitch = asin(2 * (qw * qy - qz * qx));
-    roll = atan2(2 * (qx * qz + qx * qy), 1 - 2 * (qy^2 + qz^2));
+    case "321"
+        % euler 3-2-1
+        psi = atan2(2 * (qx * qy + qz * qw), (qw^2 + qx^2 - qy^2 - qz^2));
+        theta = asin(2 * (qy * qw - qx * qz));
+        phi = atan2(2 * (qx * qw + qz * qy), (qw^2 - qx^2 - qy^2 + qz^2));
+
+    otherwise
+        printf("Error! Invalid euler sequence [%s]\n", euler_seq);
+    endswitch
 endfunction
