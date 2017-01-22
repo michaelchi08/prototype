@@ -22,7 +22,7 @@ R_nwu_enu = [0.0, -1.0, 0.0;
 robot_pos_ros = R_nwu_enu * robot_pos_gaz
 
 
-# convert euler angles to quaternion and back
+% convert euler angles to quaternion and back
 robot_att_euler = [deg2rad(10.0);
                    deg2rad(20.0);
                    deg2rad(30.0)];
