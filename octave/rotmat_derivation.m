@@ -16,8 +16,9 @@ Rz = [[cos(gamma), sin(gamma), 0.0];
       [-sin(gamma), cos(gamma), 0.0];
       [0.0, 0.0, 1.0]];
 
-% euler 1-2-3  (inertial to body)
-R123 = Rx * Ry * Rz
-
-% euler 3-2-1  (body to inertial)
+% euler 3-2-1  (inertial to body)
 R321 = Rz * Ry * Rx
+
+
+% % euler 1-2-3  (body to inertial)
+R123 = Rx * Ry * Rz
