@@ -1,4 +1,4 @@
-#!/usr/bin/octave -qf
+#!/usr/bin/octave
 % pkg install -forge symbolic
 pkg load symbolic
 

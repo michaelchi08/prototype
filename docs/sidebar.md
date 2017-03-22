@@ -87,4 +87,17 @@
 - [Gimbal Lock](#docs/coordinate_systems/gimbal_lock)
 
 
+## Lie Algebra and Lie Groups
+
+- [Group](#docs/lie/group)
+- [Lie Group](#docs/lie/lie_group)
+- [Lie Algegra](#docs/lie/lie_algebra)
+- [Manifold](#docs/lie/manifold)
+- Mapping
+- Affine Connection
+- Parallelism
+- Exponential Mapping
+- Covariant Differentiation
+
+
 [cheat sheet](#docs/probabilistic_robotics/cheat_sheet)

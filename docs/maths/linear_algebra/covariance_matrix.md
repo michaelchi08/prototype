@@ -23,7 +23,7 @@ along the diagonal and covariances appear int he off-diagnoal elements.
     V =
     \begin{bmatrix}
         \sum x_{1}^{2} / N
-        & \sum x_{1}^{2} x_{2}^{2} / N
+        & \sum x_{1} x_{2} / N
         & \dots
         & \sum x_{1} x_{c} / N \\
         \sum x_{2} x_{1} / N
@@ -35,7 +35,7 @@ along the diagonal and covariances appear int he off-diagnoal elements.
         & \dots
         & \dots \\
         \sum x_{c} x_{1} / N
-        & \sum x_{c}^{2} x_{2} / N
+        & \sum x_{c} x_{2} / N
         & \dots
         & \sum x_{c}^{2} / N \\
     \end{bmatrix}

@@ -64,4 +64,3 @@ This approximation of the Hessian is valid only if
 
 This is the case if the **residuum $r_{i}$ is small** or if it is **close to
 linear** (in which case the second derivatives are small).
-
