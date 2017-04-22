@@ -12,11 +12,6 @@ distributions over possible world states.
 
 
 
-
-
-
-
-
 ## Robot Environment Interaction
 
 The environment or world of a robot is a dynamical system that possessses
@@ -26,7 +21,6 @@ cannto be sensed directly. As a consequence, the robot maintainsan internal
 belief with regards to the state of its environmen. The robot can also
 influence its environment throught its actuators. However, the effect of doing
 so is often somewhat unpredictable.
-
 
 
 ### State
@@ -47,8 +41,6 @@ functioning correctly, and so on.
 - And more...: there can be a huge number of other state variales, for example,
   whether or not a sensor is broken is a state variable, as is the level of
   battery chrage for a battery powered robot.
-
-
 
 
 
@@ -178,11 +170,11 @@ Bayes filter allow robots to continuously update their most likely position
 within a coordinate system, based onthe most recently acquired sensor data.
 This is a recursive algorith, it consists of two parts:
 
-- **Prediction**: It processes the control $u_{t}$ by calculating a belief over the
-  state $x_{t}$ based on the prior belief over state $x_{t - 1}$ and the
+- **Prediction**: It processes the control $u_{t}$ by calculating a belief over
+  the state $x_{t}$ based on the prior belief over state $x_{t - 1}$ and the
   control $u_{t}$.
-- **Innovation**: Also called the measurement update, the algorithm multiplies the
-  belief prediction by the probability that the measurement $z_{t}$ may have
+- **Innovation**: Also called the measurement update, the algorithm multiplies
+  the belief prediction by the probability that the measurement $z_{t}$ may have
   been observed. It does so for each hypothetical posterior state $x_{t}$.
 
 To compute the posterior belief recursively, the algorithm's initial belief
