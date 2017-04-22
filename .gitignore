@@ -1,8 +1,8 @@
 .DS_Store
-tags
 
-lib
-bin
+*.log
+*.avi
+*.*~
 
 .coverage
 .coverage.*
@@ -10,16 +10,8 @@ bin
 *.pyc
 __pycache__
 
-CMakeCache.txt
-CMakeFiles
-Makefile
-cmake_install.cmake
-cmake_uninstall.cmake
-install_manifest.txt
+.ropeproject
 
-*.log
-unittests_log
-nohup.out
-pycallgraph.png
-.rope*
+tags
 run.sh
+unittests_log
