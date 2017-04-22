@@ -1,6 +1,24 @@
 .DS_Store
 tags
-run.sh
 
-*.avi
-*.*~
+lib
+bin
+
+.coverage
+.coverage.*
+
+*.pyc
+
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+cmake_uninstall.cmake
+install_manifest.txt
+
+*.log
+unittests_log
+nohup.out
+pycallgraph.png
+.rope*
+run.sh
