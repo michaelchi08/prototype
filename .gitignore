@@ -8,6 +8,7 @@ bin
 .coverage.*
 
 *.pyc
+__pycache__
 
 CMakeCache.txt
 CMakeFiles
