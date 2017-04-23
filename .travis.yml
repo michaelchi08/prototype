@@ -1,20 +1,15 @@
 language: python
 
 python:
+    - "3.2"
+    - "3.3"
     - "3.4"
 
-virtualenv:
-    system_site_packages: true
-
 install:
-    - pip3 install -r requirements.txt
+    - pip install -r requirements.txt
 
 script:
     - python3 -m unittest discover --pattern "*.py"
-
-branches:
-    only:
-        - master
 
 notifications:
     recipients:
