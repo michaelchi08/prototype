@@ -1,0 +1,24 @@
+language: python
+
+python:
+    - "3.5"
+
+virtualenv:
+    system_site_packages: true
+
+install:
+    - pip3 install -r requirements.txt
+
+script:
+    - python3 -m unittest discover --pattern "*.py"
+
+branches:
+    only:
+        - master
+
+notifications:
+    recipients:
+        - chutsu@gmail.com
+    email:
+        on_success: change
+        on_failure: always
