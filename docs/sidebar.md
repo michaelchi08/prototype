@@ -3,96 +3,96 @@
 
 ## Linear Algebra
 
-- [Span](#docs/maths/linear_algebra/span)
-- [Rank](#docs/maths/linear_algebra/rank)
-- [Determinants](#docs/maths/linear_algebra/determinants)
-- [Covariance matrix](#docs/maths/linear_algebra/covariance_matrix)
-- [Skew Symmetric matrix](#docs/maths/linear_algebra/skew_symmetric_matrix)
-- [SVD](#docs/maths/linear_algebra/svd)
-- [Compressed Column Storage](#docs/maths/linear_algebra/compressed_column_storage)
+- [Span](#maths/linear_algebra/span)
+- [Rank](#maths/linear_algebra/rank)
+- [Determinants](#maths/linear_algebra/determinants)
+- [Covariance matrix](#maths/linear_algebra/covariance_matrix)
+- [Skew Symmetric matrix](#maths/linear_algebra/skew_symmetric_matrix)
+- [SVD](#maths/linear_algebra/svd)
+- [Compressed Column Storage](#maths/linear_algebra/compressed_column_storage)
 
 
 ## Statistics
 
-- [Variance](#docs/maths/statistics/variance)
-- [Covariance](#docs/maths/statistics/covariance)
-- [Gaussian Distribution](#docs/maths/statistics/gaussian_distribution)
-- [Probability Basics](#docs/maths/statistics/basic_concepts)
-- [Bayes Theorem](#docs/maths/statistics/bayes_theorem)
+- [Variance](#maths/statistics/variance)
+- [Covariance](#maths/statistics/covariance)
+- [Gaussian Distribution](#maths/statistics/gaussian_distribution)
+- [Probability Basics](#maths/statistics/basic_concepts)
+- [Bayes Theorem](#maths/statistics/bayes_theorem)
 
 
 ## Motion Modeling
 
-- [Definitions](#docs/motion_modeling/definitions)
-- [Modeling](#docs/motion_modeling/modeling)
+- [Definitions](#motion_modeling/definitions)
+- [Modeling](#motion_modeling/modeling)
 
 
 ## Control Theory
 
-- [Definitions](#docs/control_theory/definitions)
-- [Control Systems](#docs/control_theory/control_systems)
-- [Controllability](#docs/control_theory/controllability)
+- [Definitions](#control_theory/definitions)
+- [Control Systems](#control_theory/control_systems)
+- [Controllability](#control_theory/controllability)
 
 
 ## Optimization
 
-- [RANSAC](#docs/optimization/ransac)
-- [Linear Least Squares](#docs/optimization/linear_least_squares)
-- [Nonlinear Least Squares](#docs/optimization/nonlinear_least_squares)
-- [Gradient Descent](#docs/optimization/gradient_descent)
-- [Newton's Method](#docs/optimization/newtons_method)
-- [Gauss-Newton Algorithm](#docs/optimization/gauss_newton_algorithm)
-- [Levenberg-Marquardt Algorithm](#docs/optimization/levenberg_marquardt_algorithm)
+- [RANSAC](#optimization/ransac)
+- [Linear Least Squares](#optimization/linear_least_squares)
+- [Nonlinear Least Squares](#optimization/nonlinear_least_squares)
+- [Gradient Descent](#optimization/gradient_descent)
+- [Newton's Method](#optimization/newtons_method)
+- [Gauss-Newton Algorithm](#optimization/gauss_newton_algorithm)
+- [Levenberg-Marquardt Algorithm](#optimization/levenberg_marquardt_algorithm)
 
 
 ## Planner
 
-- [Planning](#docs/planning/planning)
-- [Bug Algorithm](#docs/planning/reactive_methods/bug_algorithm)
-- [Potential Fields](#docs/planning/reactive_methods/potential_fields)
+- [Planning](#planning/planning)
+- [Bug Algorithm](#planning/reactive_methods/bug_algorithm)
+- [Potential Fields](#planning/reactive_methods/potential_fields)
 
 ## Camera
 
-- [Extrinsic Matrix](#docs/camera/extrinsic_matrix)
+- [Extrinsic Matrix](#camera/extrinsic_matrix)
 
 
 ## Multiview Geometry
 
-- [Representating Scenes](#docs/multiview_geometry/representing_scenes)
-- [3D Reconstruction](#docs/multiview_geometry/3d_reconstruction)
-- [Perspective Projection](#docs/multiview_geometry/perspective_projection)
-- [Point Correspondence](#docs/multiview_geometry/point_correspondence)
-- [Reconstruction From Two Views](#docs/multiview_geometry/reconstruction_from_two_views)
-- [Eight Point Algorithm](#docs/multiview_geometry/eight_point_algorithm)
-- [Linear Triangulation](#docs/multiview_geometry/linear_triangulation)
-- [Bundle Adjustment](#docs/multiview_geometry/bundle_adjustment)
+- [Representating Scenes](#multiview_geometry/representing_scenes)
+- [3D Reconstruction](#multiview_geometry/3d_reconstruction)
+- [Perspective Projection](#multiview_geometry/perspective_projection)
+- [Point Correspondence](#multiview_geometry/point_correspondence)
+- [Reconstruction From Two Views](#multiview_geometry/reconstruction_from_two_views)
+- [Eight Point Algorithm](#multiview_geometry/eight_point_algorithm)
+- [Linear Triangulation](#multiview_geometry/linear_triangulation)
+- [Bundle Adjustment](#multiview_geometry/bundle_adjustment)
 
 
 ## Probabilistic Robotics
 
-1. [Uncertainty in Robotics](#docs/probabilistic_robotics/1_uncertainty_in_robotics)
-2. [Recursive State Estimation](#docs/probabilistic_robotics/2_recursive_state_estimation)
-3. [Gaussian Filters](#docs/probabilistic_robotics/3_gaussian_filters)
-4. [Nonparametric Filters](#docs/probabilistic_robotics/4_nonparametric_filters)
+1. [Uncertainty in Robotics](#probabilistic_robotics/1_uncertainty_in_robotics)
+2. [Recursive State Estimation](#probabilistic_robotics/2_recursive_state_estimation)
+3. [Gaussian Filters](#probabilistic_robotics/3_gaussian_filters)
+4. [Nonparametric Filters](#probabilistic_robotics/4_nonparametric_filters)
 
 
 ## Differentiation
 
-- [Finite Difference](#docs/maths/differentiation/finite_difference)
-- [Laplace Transforms](#docs/maths/differentiation/laplace_transforms)
+- [Finite Difference](#maths/differentiation/finite_difference)
+- [Laplace Transforms](#maths/differentiation/laplace_transforms)
 
 
 ## Coordinate Systems
 
-- [Gimbal Lock](#docs/coordinate_systems/gimbal_lock)
+- [Gimbal Lock](#coordinate_systems/gimbal_lock)
 
 
 ## Lie Algebra and Lie Groups
 
-- [Group](#docs/lie/group)
-- [Lie Group](#docs/lie/lie_group)
-- [Lie Algegra](#docs/lie/lie_algebra)
-- [Manifold](#docs/lie/manifold)
+- [Group](#lie/group)
+- [Lie Group](#lie/lie_group)
+- [Lie Algegra](#lie/lie_algebra)
+- [Manifold](#lie/manifold)
 - Mapping
 - Affine Connection
 - Parallelism
@@ -100,4 +100,4 @@
 - Covariant Differentiation
 
 
-[cheat sheet](#docs/probabilistic_robotics/cheat_sheet)
+[cheat sheet](#probabilistic_robotics/cheat_sheet)
