@@ -1,5 +1,7 @@
-language: python
+dist: trusty
+sudo: required
 
+language: python
 python:
     - "3.2"
     - "3.3"
