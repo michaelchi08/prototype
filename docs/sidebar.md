@@ -1,4 +1,4 @@
-# [robotics](https://chutsu.github.io/robotics)
+# [prototype](https://chutsu.github.io/prototype)
 
 
 ## Linear Algebra
