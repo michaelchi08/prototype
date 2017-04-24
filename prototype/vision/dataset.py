@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
-import numpy as np
+import os
+from math import pi
+from random import uniform as randf
+
 from numpy import dot
 
+from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.utils.math import nwu2edn
 from prototype.utils.math import euler2rot
+from prototype.utils.data import mat2csv
 from prototype.vision.utils import projection_matrix
+from prototype.vision.utils import camera_intrinsics
 
 
-class TestCamera(object):
-    def __init__(self):
-        self.dt = 0.0
-        self.hz = 10
+class SimCamera(object):
+
+    def __init__(self, image_width, image_height, hz, K):
+        self.image_width = image_width
+        self.image_height = image_height
+        self.hz = hz
+        self.K = K
         self.frame = 0
 
     def update(self, dt):
@@ -44,6 +53,7 @@ class TestCamera(object):
         for i in range(features.shape[1]):
             # convert feature in NWU to EDN coordinate system
             f_3d = features[0:4, i]
+            f_3d_edn = [0, 0, 0, 0]
             f_3d_edn[0] = -f_3d[1]
             f_3d_edn[1] = -f_3d[2]
             f_3d_edn[2] = f_3d[0]
@@ -62,7 +72,21 @@ class TestCamera(object):
                 # check to see if feature observed is within image plane
                 if (f_2d[0] < self.image_width) and (f_2d[0] > 0.0):
                     if (f_2d[1] < self.image_height) and (f_2d[1] > 0):
-                    observed.append((f_2d[0:2], f_3d[0:3]))
+                        observed.append((f_2d[0:2], f_3d[0:3]))
+
+        return observed
+
+
+class DatasetGenerator(object):
+    def __init__(self):
+        K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
+        self.camera = SimCamera(640, 640, 10, K)
+        self.nb_features = 100
+        self.bounds = {
+            "x": {"min": -1.0, "max": 1.0},
+            "y": {"min": -1.0, "max": 1.0},
+            "z": {"min": -1.0, "max": 1.0}
+        }
 
     def prep_header(self, output_file):
         header = ["time_step", "x", "y", "theta"]
@@ -74,105 +98,82 @@ class TestCamera(object):
     def calculate_circle_angular_velocity(self, r, v):
         dist = 2 * pi * r
         time = dist / v
-        return (2 * M_PI) / time
+        return (2 * pi) / time
 
-    def generateRandom3DFeatures(self, nb_features, x_bounds, y_bounds, z_bounds):
+    def generate_random_3d_features(self):
         features = []
 
         # generate random 3d features
-        for i in range(nb_features):
+        for i in range(self.nb_features):
             point = [0, 0, 0, 0]
-            point[0] = randf(x_bounds[0], x_bounds[1])
-            point[1] = randf(y_bounds[0], y_bounds[1])
-            point[2] = randf(z_bounds[0], z_bounds[1])
+            point[0] = randf(self.bounds["x"]["min"], self.bounds["x"]["max"])
+            point[1] = randf(self.bounds["y"]["min"], self.bounds["y"]["max"])
+            point[2] = randf(self.bounds["z"]["min"], self.bounds["z"]["max"])
             point[3] = 1.0
             features.append(point)
 
-    # def record3DFeatures(self, output_path, features):
-#   return mat2csv(output_path,
-#                  features.block(0, 0, 3, features.cols()).transpose())
-# }
+    def record_3d_features(self, output_path, features):
+        mat2csv(output_path, features)
 
-    # def recordObservedFeatures(time, x, outputpath, observed):
-#   // open file
-#   if (outfile.good() != true) {
-#     log_err("Failed to open file [%s] to record observed features!",
-#             output_path.c_str())
-#     return -1
-#   }
-#
-#   // time and number of observed features
-#   outfile << time << std::endl
-#   outfile << observed.size() << std::endl
-#   outfile << x(0) << "," << x(1) << "," << x(2) << std::endl
-#
-#   // features
-#   for (auto feature : observed) {
-#     // feature in image frame
-#     f_2d = feature.first.transpose()
-#     outfile << f_2d(0) << "," << f_2d(1) << std::endl
-#
-#     // feature in world frame
-#     f_3d = feature.second.transpose()
-#     outfile << f_3d(0) << "," << f_3d(1) << "," << f_3d(2) << std::endl
-#   }
-#
-#   // clean up
-#   outfile.close()
-#
-#   return 0
-# }
+    def record_observed_features(time, x, output_path, observed):
+        # setup
+        outfile = open(output_path, "w")
 
-# def generateTestData(self, save_path):
+        # time and number of observed features
+        outfile.write(time)
+        outfile.write(len(observed))
+        outfile.write(x.join(","))
 
-#   // mkdir calibration directory
-#   retval = mkdir(save_path.c_str(), ACCESSPERMS)
-#   if (retval != 0) {
-#     switch (errno) {
-#       case EACCES: log_err(MKDIR_PERMISSION_DENIED, save_path.c_str()) break
-#       case ENOTDIR: log_err(MKDIR_INVALID, save_path.c_str()) break
-#       case EEXIST: log_err(MKDIR_EXISTS, save_path.c_str()) break
-#       default: log_err(MKDIR_FAILED, save_path.c_str()) break
-#     }
-#     return -2
-#   }
+        # features
+        for obs in observed:
+            f_2d, f_3d = obs
+            outfile.write(f_2d[0:2])  # feature in image frame
+            outfile.write(f_3d[0:3])  # feature in world frame
 
-#   // setup
-#   output_file.open(save_path + "/state.dat")
-#   prep_header(output_file)
-#   index_file.open(save_path + "/index.dat")
-#   calculate_circle_angular_velocity(0.5, 1.0, w)
-#   this->generateRandom3DFeatures(features)
-#   this->record3DFeatures("/tmp/test/features.dat", features)
-#
-#   // initialize states
-#   dt = 0.01
-#   time = 0.0
-#   x << 0.0, 0.0, 0.0
-#   u << 1.0, w
-#
-#   for (int i = 0 i < 300 i++) {
-#     // update state
-#     x = two_wheel_model(x, u, dt)
-#     time += dt
-#
-#     // check features
-#     rpy << 0.0, 0.0, x(2)
-#     t << x(0), x(1), 0.0
-#     if (this->camera.checkFeatures(dt, features, rpy, t, observed) == 0) {
-#       oss.str("")
-#       oss << "/tmp/test/observed_" << this->camera.frame << ".dat"
-#       this->recordObservedFeatures(time, x, oss.str(), observed)
-#
-#       index_file << oss.str() << std::endl
-#     }
-#
-#     // record state
-#     record_observation(output_file, x)
-#   }
-#
-#   // clean up
-#   output_file.close()
-#   index_file.close()
-#   return 0
-# }
+        # clean up
+        outfile.close()
+
+    def generate_test_data(self, save_path):
+        # mkdir calibration directory
+        os.mkdir(save_path)
+
+        # setup
+        output_file = open(save_path + "/state.dat", "w")
+        self.prep_header(output_file)
+
+        index_file = open(save_path + "/index.dat", "w")
+
+        features = self.generateRandom3DFeatures()
+        self.record3DFeatures("/tmp/test/features.dat", features)
+
+        # initialize states
+        dt = 0.01
+        time = 0.0
+
+        x = [0, 0, 0]
+
+        w = self.calculate_circle_angular_velocity(0.5, 1.0)
+        u = [1.0, w]
+
+        for i in range(300):
+            # update state
+            x = two_wheel_2d_model(x, u, dt)
+            time += dt
+
+            # check features
+            rpy = [0.0, 0.0, x[2]]
+            t = [x[0], x[1], 0.0]
+            observed = self.camera.check_features(dt, features, rpy, t)
+            if len(observed) > 0:
+                observed_file = "/observed_" + str(self.camera.frame) + ".dat"
+                self.record_observed_features(time,
+                                              x,
+                                              save_path + observed_file,
+                                              observed)
+
+            # record state
+            self.record_observation(output_file, x)
+
+        # clean up
+        output_file.close()
+        index_file.close()
