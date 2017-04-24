@@ -14,18 +14,24 @@ FEATURE_DATA_FILE = "features.dat"
 
 
 def load_features_data(dataset_path):
+    # setup
     csv_file = open(dataset_path + "/" + FEATURE_DATA_FILE, 'r')
     csv_reader = csv.reader(csv_file)
 
+    # parse features file
     data = []
     for line in csv_reader:
         f3d = np.array([float(line[0]), float(line[1]), float(line[2])])
         data.append(f3d)
 
+    # clean up
+    csv_file.close()
+
     return np.vstack(data).T
 
 
 def load_single_observation_data(fp):
+    # setup
     csv_file = open(fp, 'r')
     csv_reader = csv.reader(csv_file)
 
@@ -37,11 +43,11 @@ def load_single_observation_data(fp):
         "feature_3d": []
     }
 
+    # parse time, nb_observations and robot state
     data["time"] = float(next(csv_reader, None)[0])
+    x = next(csv_reader, None)
     data["nb_observations"] = int(next(csv_reader, None)[0])
-    state = next(csv_reader, None)
-    data["state"] = np.array(
-        [float(state[0]), float(state[1]), float(state[2])])
+    data["state"] = np.array([float(x[0]), float(x[1]), float(x[2])])
 
     # parse observed features
     f_2d_line = True
@@ -59,21 +65,28 @@ def load_single_observation_data(fp):
     data["feature_2d"] = np.vstack(data["feature_2d"]).T
     data["feature_3d"] = np.vstack(data["feature_3d"]).T
 
+    # clean up
+    csv_file.close()
+
     return data
 
 
 def load_all_observation_data(dataset_path):
+    # setup
     index_file = open(dataset_path + "/index.dat", 'r')
     observations = [line.strip() for line in index_file]
 
+    # load
     data = {"time": [], "nb_observations": [], "state": [], "data": []}
-
     for f in observations:
         obs_data = load_single_observation_data(f)
         data["time"].append(obs_data["time"])
         data["nb_observations"].append(obs_data["nb_observations"])
         data["state"].append(obs_data["state"])
         data["data"].append(obs_data)
+
+    # clean up
+    index_file.close()
 
     return data
 
@@ -110,11 +123,6 @@ def plot_3d(fea_data, obs_data):
         print("State: " + str(obs["state"]))
         print()
 
-        # ax.scatter(obs["feature_3d"][0, :],
-        #            obs["feature_3d"][1, :],
-        #            obs["feature_3d"][2, :],
-        #            c="b", s=10, depthshade=False)
-
         for line in lines:
             try:
                 line.remove()
@@ -127,9 +135,3 @@ def plot_3d(fea_data, obs_data):
                              [0.0, obs["feature_3d"][2, j]], "b-")
 
         fig.canvas.draw()
-
-
-if __name__ == "__main__":
-    fea_data = load_features_data(DATASET_PATH)
-    obs_data = load_all_observation_data(DATASET_PATH)
-    plot_3d(fea_data, obs_data)
