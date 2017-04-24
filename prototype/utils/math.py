@@ -261,11 +261,11 @@ def nwu2edn(nwu):
     return edn
 
 
-def wrapTo180(euler_angle):
+def wrap180(euler_angle):
     return fmod((euler_angle + 180.0), 360.0) - 180.0
 
 
-def wrapTo360(euler_angle):
+def wrap360(euler_angle):
     if euler_angle > 0.0:
         return fmod(euler_angle, 360.0)
     else:

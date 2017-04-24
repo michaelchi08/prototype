@@ -29,18 +29,19 @@ def load_single_observation_data(fp):
     csv_file = open(fp, 'r')
     csv_reader = csv.reader(csv_file)
 
-    data = {"time": None,
-            "nb_observations": None,
-            "state": None,
-            "feature_2d": [],
-            "feature_3d": []}
+    data = {
+        "time": None,
+        "nb_observations": None,
+        "state": None,
+        "feature_2d": [],
+        "feature_3d": []
+    }
 
     data["time"] = float(next(csv_reader, None)[0])
     data["nb_observations"] = int(next(csv_reader, None)[0])
     state = next(csv_reader, None)
-    data["state"] = np.array([float(state[0]),
-                              float(state[1]),
-                              float(state[2])])
+    data["state"] = np.array(
+        [float(state[0]), float(state[1]), float(state[2])])
 
     # parse observed features
     f_2d_line = True
@@ -65,10 +66,7 @@ def load_all_observation_data(dataset_path):
     index_file = open(dataset_path + "/index.dat", 'r')
     observations = [line.strip() for line in index_file]
 
-    data = {"time": [],
-            "nb_observations": [],
-            "state": [],
-            "data": []}
+    data = {"time": [], "nb_observations": [], "state": [], "data": []}
 
     for f in observations:
         obs_data = load_single_observation_data(f)
@@ -91,10 +89,13 @@ def plot_3d(fea_data, obs_data):
     ax = fig.add_subplot(111, projection="3d")
 
     # plot 3d points
-    ax.scatter(fea_data[0, :],
-               fea_data[1, :],
-               fea_data[2, :],
-               c="r", s=5, depthshade=False)
+    ax.scatter(
+        fea_data[0, :],
+        fea_data[1, :],
+        fea_data[2, :],
+        c="r",
+        s=5,
+        depthshade=False)
     plt.show(block=False)
 
     ax.set_xlim([-3.0, 3.0])

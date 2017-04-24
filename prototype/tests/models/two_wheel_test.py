@@ -8,6 +8,7 @@ from prototype.models.two_wheel import two_wheel_3d_model
 
 
 class TwoWheelTest(unittest.TestCase):
+
     def test_two_wheel_2d_model(self):
         # setup
         t = 0.0

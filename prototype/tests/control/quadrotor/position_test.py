@@ -9,6 +9,7 @@ from prototype.models.quadrotor import QuadrotorModel
 
 
 class PositionControllerTest(unittest.TestCase):
+
     def setUp(self):
         self.quadrotor = QuadrotorModel()
         self.position_controller = PositionController()
@@ -20,27 +21,20 @@ class PositionControllerTest(unittest.TestCase):
         dt = 0.01
         for i in range(5000):
             # position controller
-            pos_actual = np.array([self.quadrotor.states[6],
-                                   self.quadrotor.states[7],
-                                   self.quadrotor.states[8],
-                                   self.quadrotor.states[2]])
+            pos_actual = np.array([
+                self.quadrotor.states[6], self.quadrotor.states[7],
+                self.quadrotor.states[8], self.quadrotor.states[2]
+            ])
             att_setpoints = self.position_controller.update(
-                pos_setpoints,
-                pos_actual,
-                self.quadrotor.states[2],
-                dt
-            )
+                pos_setpoints, pos_actual, self.quadrotor.states[2], dt)
 
             # attitude controller
-            att_actual = np.array([self.quadrotor.states[0],
-                                   self.quadrotor.states[1],
-                                   self.quadrotor.states[2],
-                                   self.quadrotor.states[8]])
+            att_actual = np.array([
+                self.quadrotor.states[0], self.quadrotor.states[1],
+                self.quadrotor.states[2], self.quadrotor.states[8]
+            ])
             motor_inputs = self.attitude_controller.update(
-                att_setpoints,
-                att_actual,
-                dt
-            )
+                att_setpoints, att_actual, dt)
             self.quadrotor.update(motor_inputs, dt)
 
         self.assertTrue(self.quadrotor.states[6] < 1.1)
