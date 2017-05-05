@@ -9,12 +9,22 @@ from prototype.utils.math import deg2rad
 
 
 def focal_length(image_width, image_height, fov):
+    """ Calculate focal length in the x and y axis from:
+    - image width
+    - image height
+    - field of view
+    """
     fx = (image_width / 2.0) / tan(deg2rad(fov) / 2.0)
     fy = (image_height / 2.0) / tan(deg2rad(fov) / 2.0)
     return (fx, fy)
 
 
 def projection_matrix(K, R, t):
+    """ Construct projection matrix from:
+    - Camera intrinsics matrix K
+    - Camera rotation matrix R
+    - Camera translation vector t
+    """
     extrinsics = np.array([[R[0, 0], R[0, 1], R[0, 2], t[0]],
                            [R[1, 0], R[1, 1], R[1, 2], t[1]],
                            [R[2, 0], R[2, 1], R[2, 2], t[2]]])
@@ -51,10 +61,6 @@ def camera_intrinsics(fx, fy, cx, cy):
         [0.0, 0.0, 1.0]
     ])
     return K
-
-
-def convert2homogeneous(points):
-    return np.vstack((points, np.ones((1, points.shape[1]))))
 
 
 def random_3d_features(nb_features, feature_bounds):

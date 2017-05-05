@@ -10,26 +10,31 @@ import numpy as np
 
 
 def deg2rad(d):
+    """Convert degrees to radians"""
     return d * (pi / 180.0)
 
 
 def rad2deg(r):
+    """Convert radians to degrees"""
     return r * (180.0 / pi)
 
 
 def rotx(theta):
+    """Rotation matrix around x-axis"""
     return np.array([[1.0, 0.0, 0.0],
                      [0.0, cos(theta), sin(theta)],
                      [0.0, -sin(theta), cos(theta)]])
 
 
 def roty(theta):
+    """Rotation matrix around y-axis"""
     return np.array([[cos(theta), 0.0, -sin(theta)],
                      [0.0, 1.0, 0.0],
                      [sin(theta), 0.0, cos(theta)]])
 
 
 def rotz(theta):
+    """Rotation matrix around z-axis"""
     return np.array([[cos(theta), sin(theta), 0.0],
                      [-sin(theta), cos(theta), 0.0],
                      [0.0, 0.0, 1.0]])

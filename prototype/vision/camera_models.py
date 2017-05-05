@@ -18,6 +18,7 @@ class PinHoleCameraModel(object):
         self.dt = 0.0
 
     def update(self, dt):
+        """Update camera"""
         self.dt += dt
 
         if self.dt > (1.0 / self.hz):
