@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import pydoc
 
 from jinja2 import Template
@@ -148,8 +149,8 @@ def genapi(module, classes, functions, output_dir="./"):
 
 
 if __name__ == "__main__":
-    files = walkdir("prototype")
+    files = walkdir(sys.argv[1])
 
     for f in files:
         module, classes, functions = docstr(f)
-        genapi(module, classes, functions, "./docs/api")
+        genapi(module, classes, functions, sys.argv[2])
