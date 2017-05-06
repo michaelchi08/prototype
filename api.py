@@ -6,6 +6,10 @@ import pydoc
 from jinja2 import Template
 
 
+def print_usage():
+    print("usage: api.py <path_to_src> <output_path>")
+
+
 def walkdir(path):
     files = []
     for (dirpath, dirnames, filenames) in os.walk(path):
@@ -34,6 +38,9 @@ def function_docstr(fn):
     fn_args = pydoc.inspect.formatargspec(*pydoc.inspect.getargspec(fn[1]))
     fn_doc = clean_docstr(fn[1].__doc__)
 
+    # if fn_doc is None:
+    #     print("[warning]: missing docstring for {}".format(fn_name))
+
     return {"type": "function",
             "name": fn_name,
             "args": fn_args,
@@ -44,6 +51,9 @@ def method_docstr(mh):
     mh_name = mh[0]
     mh_args = pydoc.inspect.formatargspec(*pydoc.inspect.getargspec(mh[1]))
     mh_doc = clean_docstr(mh[1].__doc__)
+
+    # if mh_doc is None:
+    #     print("[warning]: missing docstring for {}".format(mh_name))
 
     return {"type": "method",
             "name": mh_name,
@@ -57,6 +67,9 @@ def class_docstr(cl):
 
     cl_name = cl[0]
     cl_doc = clean_docstr(cl[1].__doc__)
+    if cl_doc is None:
+        print("[warning]: missing docstring for {}".format(cl_name))
+
     cl_methods = []
     for mh in pydoc.inspect.getmembers(cl[1], pydoc.inspect.isfunction):
         cl_methods.append(method_docstr(mh))
@@ -149,8 +162,13 @@ def genapi(module, classes, functions, output_dir="./"):
 
 
 if __name__ == "__main__":
-    files = walkdir(sys.argv[1])
+    # pre-check
+    if len(sys.argv) != 3:
+        print_usage()
+        exit(-1)
 
+    # generate docs
+    files = walkdir(sys.argv[1])
     for f in files:
         module, classes, functions = docstr(f)
         genapi(module, classes, functions, sys.argv[2])
