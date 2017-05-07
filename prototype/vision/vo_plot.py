@@ -77,7 +77,11 @@ def load_all_observation_data(dataset_path):
     observations = [line.strip() for line in index_file]
 
     # load
-    data = {"time": [], "nb_observations": [], "state": [], "data": []}
+    data = {"time": [],
+            "nb_observations": [],
+            "state": [],
+            "data": []}
+
     for f in observations:
         obs_data = load_single_observation_data(f)
         data["time"].append(obs_data["time"])

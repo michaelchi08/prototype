@@ -29,6 +29,7 @@ class PinHoleCameraModel(object):
         return False
 
     def project(self, X, R, t):
+        """ Project 3D point to image plane """
         P = projection_matrix(self.K, R, dot(-R, t))
         x = dot(P, X)
         for i in range(3):
@@ -36,6 +37,7 @@ class PinHoleCameraModel(object):
         return x
 
     def check_features(self, dt, features, rpy, t):
+        """ Check whether features are observable by camera """
         observed = []
 
         # pre-check

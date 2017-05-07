@@ -1,8 +1,48 @@
 #!/usr/bin/env python3
+from math import pi
+from math import atan2
+
 import numpy as np
 
 
-class CarrotController:
+def atan3(y, x):
+    angle = atan2(y, x)
+
+    if y < 0:
+        angle = angle + 2 * pi
+
+    return angle
+
+
+# def calculate_delta(x_t, carrot_t, delta_max):
+#     theta = x_t(3)
+#
+#     # calculate angle between carrot and bicycle
+#     x = (carrot_t(1) - x_t(1))
+#     y = (carrot_t(2) - x_t(2))
+#     angle_of_vec = atan3(y, x)  # returns only +ve angle
+#
+#     # limit delta_t to pi and -pi only
+#     delta_t = -(theta - angle_of_vec)
+#     delta_t = mod(delta_t + pi, 2 * pi) - pi
+#
+#     # limit delta_t to steering angle max
+#     if delta_t > delta_max:
+#         delta_t = delta_max
+#     elif delta_t < -delta_max:
+#         delta_t = -delta_max
+#
+#     return theta
+
+
+# def waypoint_reached(position, waypoint, threshold):
+#     if dist_between_points(position, waypoint) < threshold:
+#         return True
+#     else:
+#         return False
+
+
+class CarrotController(object):
     def __init__(self, waypoints, look_ahead_dist):
         if len(waypoints) <= 2:
             raise RuntimeError("Too few waypoints!")
@@ -13,6 +53,12 @@ class CarrotController:
         self.look_ahead_dist = look_ahead_dist
 
     def closest_point(self, wp_start, wp_end, point):
+        """ Calculate closest point between waypoint given
+
+        - waypoint start
+        - waypoint end
+        - robot position
+        """
         # calculate closest point
         v1 = point - wp_start
         v2 = wp_end - wp_start
@@ -31,6 +77,8 @@ class CarrotController:
             return (closest, 0)
 
     def carrot_point(self, p, r, wp_start, wp_end):
+        """ Calculate carrot point
+        """
         closest_pt, retval = self.closest_point(wp_start, wp_end, p)
 
         v = wp_end - wp_start
@@ -40,6 +88,7 @@ class CarrotController:
         return carrot_pt, retval
 
     def update(self, position):
+        """ Update """
         # calculate new carot point
         carrot_pt, retval = self.carrot_point(
             position,

@@ -33,6 +33,7 @@ def projection_matrix(K, R, t):
 
 
 def factor_projection_matrix(P):
+    """ Extract camera intrinsics, rotation matrix and translation vector """
     K, R = np.linalg.rq(P[:, :3])
     T = np.diag(np.sign(np.diag(K)))
 
@@ -50,11 +51,13 @@ def factor_projection_matrix(P):
 
 
 def camera_center(P):
+    """ Extract camera center from projection matrix P """
     K, R, t = factor_projection_matrix(P)
     return -1 * np.dot(R.T, t)
 
 
 def camera_intrinsics(fx, fy, cx, cy):
+    """ Construct camera intrinsics matrix K """
     K = np.array([
         [fx, 0.0, cx],
         [0.0, fy, cy],
@@ -64,6 +67,7 @@ def camera_intrinsics(fx, fy, cx, cy):
 
 
 def random_3d_features(nb_features, feature_bounds):
+    """ Generate random 3D features """
     features = []
 
     for i in range(nb_features):
