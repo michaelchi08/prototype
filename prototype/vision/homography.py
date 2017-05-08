@@ -3,8 +3,8 @@ import numpy as np
 
 
 def normalize(points):
-    """ Normalize a collection of points in homogeneous coordinates so that the
-    last row equals 1
+    """ Normalize a collection of `points` in homogeneous coordinates so that
+    the last row equals 1.
     """
     for row in points:
         row /= points[-1]
@@ -14,13 +14,15 @@ def normalize(points):
 
 def convert2homogeneous(points):
     """ Convert a set of points (dim * n array) to homogeneous coordinates
+    where `points` is a numpy array matrix. Returns points in homogeneous
+    coordinates.
     """
     return np.vstack((points, np.ones((1, points.shape[1]))))
 
 
 def homography(fp, tp):
-    """ Find homography H, such that fp is mapped to tp using the linear DLT
-    method. Points are conditioned automatically
+    """ Find homography H, such that `fp` is mapped to tp using the linear DLT
+    method, points are conditioned automatically.
     """
     # check number of points
     if fp.shape != tp.shape:
@@ -66,8 +68,8 @@ def homography(fp, tp):
 
 
 def affine_transformation(fp, tp):
-    """ Find Homography H, affine transformation, such that tp is affine transf
-    of fp.
+    """ Find Homography H, affine transformation, such that `tp` is affine
+    transform of fp.
     """
     # check number of points
     if fp.shape != tp.shape:

@@ -7,6 +7,7 @@ import numpy as np
 
 
 def omni_wheel_model(u, x, dt, data):
+    """ Omni wheel model """
     l = 0.3  # length from wheel to center of chassis
     r = 0.25  # radius of wheel
 

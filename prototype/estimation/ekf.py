@@ -4,6 +4,8 @@ from numpy.linalg import inv
 
 
 class EKF(object):
+    """ Extended Kalman Filter """
+
     def __init__(self):
         self.dt = None
 
@@ -23,6 +25,7 @@ class EKF(object):
         self.H_func = None
 
     def prediction_update(self, g_func, G_func, u):
+        """ Prediction update """
         g = g_func(u, self.mu, self.dt)
         G = G_func(u, self.mu, self.dt)
 
@@ -30,6 +33,7 @@ class EKF(object):
         self.S_p = G * self.S * G.T + self.R
 
     def measurement_update(self, h_func, H_func, y):
+        """ Measurement update """
         h = h_func(self.mu_p)
         H = H_func(self.mu_p)
 

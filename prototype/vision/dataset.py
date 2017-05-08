@@ -6,13 +6,15 @@ from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.utils.data import mat2csv
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import random_3d_features
-from prototype.vision.camera_models import PinHoleCameraModel
+from prototype.vision.camera_models import PinholeCameraModel
 
 
 class DatasetGenerator(object):
+    """ Dataset Generator """
+
     def __init__(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        self.camera = PinHoleCameraModel(640, 640, 10, K)
+        self.camera = PinholeCameraModel(640, 640, 10, K)
         self.nb_features = 100
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
@@ -21,24 +23,29 @@ class DatasetGenerator(object):
         }
 
     def setup_state_file(self, save_dir):
+        """ Setup state file """
         header = ["time_step", "x", "y", "theta"]
         state_file = open(os.path.join(save_dir, "state.dat"), "w")
         state_file.write(",".join(header) + "\n")
         return state_file
 
     def setup_index_file(self, save_dir):
+        """ Setup index file """
         index_file = open(os.path.join(save_dir, "index.dat"), "w")
         return index_file
 
     def setup_features(self, save_dir):
+        """ Setup features """
         features = random_3d_features(self.nb_features, self.feature_bounds)
         mat2csv(os.path.join(save_dir, "features.dat"), features)
         return features
 
     def record_robot_state(self, output_file, x):
+        """ Record robot state """
         output_file.write(str(x))
 
     def record_observed_features(self, save_dir, index_file, time, x, observed):
+        """ Record observed features """
         # setup
         output_path = save_dir + "/observed_" + str(self.camera.frame) + ".dat"
         index_file.write(output_path + '\n')
@@ -61,11 +68,13 @@ class DatasetGenerator(object):
         outfile.close()
 
     def calculate_circle_angular_velocity(self, r, v):
+        """ Calculate circle angular velocity """
         dist = 2 * pi * r
         time = dist / v
         return (2 * pi) / time
 
     def generate_test_data(self, save_dir):
+        """ Generate test data """
         # mkdir calibration directory
         os.mkdir(save_dir)
 

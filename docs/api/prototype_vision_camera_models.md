@@ -15,11 +15,13 @@
 
     check_features(self, dt, features, rpy, t)
 
+Check whether features are observable by camera 
 
 ---
 
     project(self, X, R, t)
 
+Project 3D point to image plane 
 
 ---
 

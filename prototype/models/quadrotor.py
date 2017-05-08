@@ -13,6 +13,8 @@ from prototype.control.quadrotor.attitude import AttitudeController
 
 
 class QuadrotorModel(object):
+    """ Quadrotor model """
+
     def __init__(self):
         self.states = [0.0 for i in range(12)]
 

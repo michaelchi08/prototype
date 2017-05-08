@@ -43,6 +43,8 @@ def atan3(y, x):
 
 
 class CarrotController(object):
+    """ Carrot controller """
+
     def __init__(self, waypoints, look_ahead_dist):
         if len(waypoints) <= 2:
             raise RuntimeError("Too few waypoints!")
@@ -53,11 +55,25 @@ class CarrotController(object):
         self.look_ahead_dist = look_ahead_dist
 
     def closest_point(self, wp_start, wp_end, point):
-        """ Calculate closest point between waypoint given
+        """ Calculate closest point between waypoint
 
-        - waypoint start
-        - waypoint end
-        - robot position
+        Args:
+
+            wp_start (numpy array): waypoint start
+            wp_end (numpy array): waypoint end
+            point (numpy array): robot position
+
+        Returns:
+
+            (closest_point, retval)
+
+        where `closest_point` is a 2D vector of the closest point and `retval`
+        denotes whether `closest_point` is
+
+            1. before wp_start
+            2. after wp_end
+            3. middle of wp_start and wp_end
+
         """
         # calculate closest point
         v1 = point - wp_start
@@ -78,6 +94,25 @@ class CarrotController(object):
 
     def carrot_point(self, p, r, wp_start, wp_end):
         """ Calculate carrot point
+
+        Args:
+
+            p (numpy array): robot pose
+            r (numpy array): look ahead distance
+            wp_start (numpy array): waypoint start
+            wp_end (numpy array): waypoint end
+
+        Returns:
+
+            (carrot_pt, retval)
+
+        where `carrot_pt` is a 2D vector of the carrot point and `retval`
+        denotes whether `carrot_pt` is
+
+            1. before wp_start
+            2. after wp_end
+            3. middle of wp_start and wp_end
+
         """
         closest_pt, retval = self.closest_point(wp_start, wp_end, p)
 
@@ -88,7 +123,17 @@ class CarrotController(object):
         return carrot_pt, retval
 
     def update(self, position):
-        """ Update """
+        """ Update carrot controller
+
+        Args:
+
+            position (numpy array): robot position
+
+        Returns:
+
+            carrot_pt (numpy array): carrot point
+
+        """
         # calculate new carot point
         carrot_pt, retval = self.carrot_point(
             position,
@@ -96,7 +141,6 @@ class CarrotController(object):
             self.wp_start,
             self.wp_end
         )
-        print(carrot_pt, retval)
 
         # update waypoints
         if retval > 1 and len(self.waypoints) > 2:

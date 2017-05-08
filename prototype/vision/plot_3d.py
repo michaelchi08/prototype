@@ -14,6 +14,7 @@ FEATURE_DATA_FILE = "features.dat"
 
 
 def load_features_data(dataset_path):
+    """ Load features data """
     csv_file = open(dataset_path + "/" + FEATURE_DATA_FILE, 'r')
     csv_reader = csv.reader(csv_file)
 
@@ -26,6 +27,7 @@ def load_features_data(dataset_path):
 
 
 def load_single_observation_data(fp):
+    """ Load single observation data """
     csv_file = open(fp, 'r')
     csv_reader = csv.reader(csv_file)
 
@@ -62,6 +64,7 @@ def load_single_observation_data(fp):
 
 
 def load_all_observation_data(dataset_path):
+    """ Load all observation data """
     index_file = open(dataset_path + "/index.dat", 'r')
     observations = [line.strip() for line in index_file]
 
@@ -81,12 +84,14 @@ def load_all_observation_data(dataset_path):
 
 
 def plot_camera(ax):
+    """ Plot camera """
     p = Rectangle((0, 0), 0.1, 0.1, ec="black", fill=False)
     ax.add_patch(p)
     art3d.pathpatch_2d_to_3d(p, z=0, zdir="y")
 
 
 def plot_3d(fea_data, obs_data):
+    """ Plot 3D """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 

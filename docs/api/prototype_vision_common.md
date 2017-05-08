@@ -16,16 +16,19 @@
 
     camera_center(P)
 
+Extract camera center from projection matrix P 
 
 ---
 
     camera_intrinsics(fx, fy, cx, cy)
 
+Construct camera intrinsics matrix K 
 
 ---
 
     factor_projection_matrix(P)
 
+Extract camera intrinsics, rotation matrix and translation vector 
 
 ---
 
@@ -51,5 +54,6 @@ Construct projection matrix from:
 
     random_3d_features(nb_features, feature_bounds)
 
+Generate random 3D features 
 
 ---

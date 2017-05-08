@@ -9,6 +9,7 @@ from sympy import pprint
 
 
 def two_wheel_2d_model(x, u, dt):
+    """ Two wheel 2D motion model """
     g1 = x[0] + u[0] * cos(x[2]) * dt
     g2 = x[1] + u[0] * sin(x[2]) * dt
     g3 = x[2] + u[1] * dt
@@ -17,6 +18,7 @@ def two_wheel_2d_model(x, u, dt):
 
 
 def two_wheel_2d_linearized_model(x, u, dt):
+    """ Two wheel 2D linearized motion model """
     G1 = 1.0
     G2 = 0.0
     G3 = -u[0] * sin(x[2]) * dt
@@ -35,6 +37,7 @@ def two_wheel_2d_linearized_model(x, u, dt):
 
 
 def two_wheel_3d_model(x, u, dt):
+    """ Two wheel 3D motion model """
     g1 = x[0] + u[0] * cos(x[3]) * dt
     g2 = x[1] + u[0] * sin(x[3]) * dt
     g3 = x[2] + u[1] * dt

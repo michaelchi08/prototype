@@ -7,7 +7,7 @@ from prototype.utils.math import euler2rot
 from prototype.vision.common import projection_matrix
 
 
-class PinHoleCameraModel(object):
+class PinholeCameraModel(object):
     def __init__(self, image_width, image_height, hz, K):
         self.image_width = image_width
         self.image_height = image_height

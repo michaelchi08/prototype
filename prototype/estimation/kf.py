@@ -5,6 +5,8 @@ from numpy.linalg import inv
 
 
 class KF(object):
+    """ Kalman Filter """
+
     def __init__(self):
         self.mu = None
         self.S = None

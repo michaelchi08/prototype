@@ -7,6 +7,8 @@ from prototype.utils.math import deg2rad
 
 
 class AttitudeController(object):
+    """ Attitude controller for 2-axis gimbal """
+
     def __init__(self):
         self.roll_controller = PID(200.0, 0.5, 10.0)
         self.pitch_controller = PID(200.0, 0.5, 10.0)
@@ -16,6 +18,19 @@ class AttitudeController(object):
         self.outputs = np.array([0.0, 0.0, 0.0, 0.0])
 
     def update(self, setpoints, actual, dt):
+        """ Update attitude controller
+
+        Args:
+
+            setpoint
+            actual
+            dt
+
+        Returns:
+
+            outputs
+
+        """
         self.dt += dt
         if self.dt < 0.001:
             return self.outputs

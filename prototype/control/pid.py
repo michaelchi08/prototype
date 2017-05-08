@@ -2,6 +2,8 @@
 
 
 class PID(object):
+    """ PID controller """
+
     def __init__(self, k_p, k_i, k_d):
         self.error_prev = 0.0
         self.error_sum = 0.0
@@ -15,6 +17,7 @@ class PID(object):
         self.k_d = k_d
 
     def reset(self):
+        """ Reset PID controller """
         self.error_prev = 0.0
         self.error_sum = 0.0
 
@@ -23,6 +26,7 @@ class PID(object):
         self.error_d = 0.0
 
     def update(self, setpoint, actual, dt):
+        """ Update PID controller """
         # update errors
         error = setpoint - actual
         self.error_sum += error * dt
