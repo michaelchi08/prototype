@@ -30,9 +30,11 @@
     cf2enu(cf)
 
 
+
 ---
 
     cf2nwu(cf)
+
 
 
 ---
@@ -41,9 +43,11 @@
 
 Convert degrees to radians
 
+
 ---
 
     enu2nwu(enu)
+
 
 
 ---
@@ -51,9 +55,11 @@ Convert degrees to radians
     euler123(phi, theta, psi)
 
 
+
 ---
 
     euler2quat(alpha, beta, gamma, euler_seq)
+
 
 
 ---
@@ -61,9 +67,11 @@ Convert degrees to radians
     euler2rot(euler, euler_seq)
 
 
+
 ---
 
     euler321(phi, theta, psi)
+
 
 
 ---
@@ -71,9 +79,11 @@ Convert degrees to radians
     ned2enu(ned)
 
 
+
 ---
 
     nwu2edn(nwu)
+
 
 
 ---
@@ -81,14 +91,17 @@ Convert degrees to radians
     nwu2enu(nwu)
 
 
+
 ---
 
     quat2euler(q, euler_seq)
 
 
+
 ---
 
     quat2rot(q)
+
 
 
 ---
@@ -97,11 +110,13 @@ Convert degrees to radians
 
 Convert radians to degrees
 
+
 ---
 
     rotx(theta)
 
 Rotation matrix around x-axis
+
 
 ---
 
@@ -109,20 +124,24 @@ Rotation matrix around x-axis
 
 Rotation matrix around y-axis
 
+
 ---
 
     rotz(theta)
 
 Rotation matrix around z-axis
 
+
 ---
 
     wrap180(euler_angle)
 
 
+
 ---
 
     wrap360(euler_angle)
+
 
 
 ---

@@ -16,9 +16,11 @@
     load_all_observation_data(dataset_path)
 
 
+
 ---
 
     load_features_data(dataset_path)
+
 
 
 ---
@@ -26,14 +28,17 @@
     load_single_observation_data(fp)
 
 
+
 ---
 
     plot_3d(fea_data, obs_data)
 
 
+
 ---
 
     plot_camera(ax)
+
 
 
 ---

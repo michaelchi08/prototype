@@ -2,10 +2,10 @@
 
 ## Classes
 
-- PinHoleCameraModel
+- PinholeCameraModel
 
 
-### PinHoleCameraModel
+### PinholeCameraModel
 
 
     __init__(self, image_width, image_height, hz, K)

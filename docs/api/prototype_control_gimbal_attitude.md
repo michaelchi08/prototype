@@ -17,7 +17,19 @@ Attitude controller for 2-axis gimbal
 
     update(self, setpoints, actual, dt)
 
-Update attitude controller 
+Update attitude controller
+
+        Args:
+
+            setpoint
+            actual
+            dt
+
+        Returns:
+
+            outputs
+
+        
 
 ---
 

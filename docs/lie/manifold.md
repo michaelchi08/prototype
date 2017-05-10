@@ -1,15 +1,15 @@
 # Manifold
 
 An $N$-dimensional manifold $M$ is a topological space where every point $p \in
-M$ is endowed with local Euclidean structure. Another way of saying it: the
-neighborhood of every point $p$ is homeomorphic to {\rm I\!R}^{N}.
+M$ is endowed with local Euclidean structure. Another way of saying it:
+the neighborhood of every point $p$ is homeomorphic to ${\rm I\!R}^{N}$.
 
-One dimensional manifolds includ lines and circles, but not figure eights
+One dimensional manifolds include lines and circles, but not figure eights
 (because they have crossing points that are not locally homeomorphic to
 Euclidean 1-space). Two dimensional manifolds are also called surfaces.
 Examples include the plane, the sphere, and the torus, which can all be
 embedded (formed without self-intersections) in three dimensional real space,
-but also the Klein bottole and real projective plane, which will always self
+but also the Klein bottle and real projective plane, which will always self
 intersect when immersed in three-dimensional real space.
 
 Although a manifold locally resembles Euclidean space, globally it may not. For

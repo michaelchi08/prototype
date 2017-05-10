@@ -4,8 +4,7 @@ import numpy as np
 
 def normalize(points):
     """ Normalize a collection of `points` in homogeneous coordinates so that
-    the last row equals 1.
-    """
+    the last row equals 1. """
     for row in points:
         row /= points[-1]
 
@@ -15,15 +14,13 @@ def normalize(points):
 def convert2homogeneous(points):
     """ Convert a set of points (dim * n array) to homogeneous coordinates
     where `points` is a numpy array matrix. Returns points in homogeneous
-    coordinates.
-    """
+    coordinates. """
     return np.vstack((points, np.ones((1, points.shape[1]))))
 
 
 def homography(fp, tp):
-    """ Find homography H, such that `fp` is mapped to tp using the linear DLT
-    method, points are conditioned automatically.
-    """
+    """ Find homography H, such that from points `fp` is mapped to to points tp
+    using the linear DLT method, points are conditioned automatically. """
     # check number of points
     if fp.shape != tp.shape:
         raise RuntimeError("Number of points do not match")
@@ -69,7 +66,7 @@ def homography(fp, tp):
 
 def affine_transformation(fp, tp):
     """ Find Homography H, affine transformation, such that `tp` is affine
-    transform of fp.
+    transform of `fp`.
     """
     # check number of points
     if fp.shape != tp.shape:
@@ -107,3 +104,17 @@ def affine_transformation(fp, tp):
     H = np.dot(np.linalg.inv(C2), np.dot(H, C1))
 
     return H / H[2, 2]
+
+
+def warp_images(img1, img2, tp):
+    """ Put `img1` in `img2` with an affine transformation such that the corners
+    are as close to `tp` as possible, where `tp` are homogeneous and
+    counter-clockwise from top left hand corner """
+    # points to warp from
+    m, n = img1.shape[:2]
+    fp = array([[0, m, m, 0],
+                [0, 0, n, n],
+                [1, 1, 1, 1]])
+
+    # compute affine transform and apply
+    H = affine_transform(tp, fp)

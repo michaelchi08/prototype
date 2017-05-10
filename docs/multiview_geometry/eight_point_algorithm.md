@@ -15,7 +15,7 @@ However, variations of the algorithm can be used for fewer than eight points.
 ## Derivation
 
 First we rewrite the epipolar constraint as a scalar product in the elements of
-the matrix $E$ and the coordinates of hte points $x_{1}$ and $x_{2}$. Let
+the matrix $E$ and the coordinates of the points $x_{1}$ and $x_{2}$. Let
 
 \begin{equation}
     E^{s} = (
@@ -74,7 +74,7 @@ solution (up to a scalaing factor and ruling out the trivial solution $E = 0$),
 the rank of the matrix $\chi$ needs to be exactly 8. Therefore we need atleast
 8 point pairs.
 
-In certian degenerate cases, the solution for the essential matrix is not
+In certain degenerate cases, the solution for the essential matrix is not
 unique even if we have 8 or more point pairs. One such example is the case that
 all points lie on a line or on a plane.
 

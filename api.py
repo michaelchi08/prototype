@@ -28,7 +28,14 @@ def clean_docstr(docstr):
 
     result = ""
     for line in docstr.split("\n"):
-        result += line.lstrip(" ") + "\n"
+        # if len(line):
+        #     if len(line.split(" ")) > 4 and line.split(" ")[4] == "Args:":
+        #         print("HERE")
+        #         result += line.lstrip(" ") + "\n"
+        #     else:
+        #         result += line + "\n"
+        # else:
+        result += line + "\n"
 
     return result
 
@@ -148,6 +155,7 @@ def genapi(module, classes, functions, output_dir="./"):
     {{fn.name}}{{fn.args}}
 
 {% if fn.docstr %}{{fn.docstr}}{% endif %}
+
 ---
 {% endfor %}\
 {% endif %}\
