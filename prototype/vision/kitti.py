@@ -55,7 +55,7 @@ def get_scale(ground_truth, frame_id):
     return scale
 
 
-def benchmark_kitti_mono_vo(data_path, sequence, vo, **kwargs):
+def benchmark_mono_vo(data_path, sequence, vo, **kwargs):
     map_size = kwargs.get("map_size", (600, 600))
     visualize = kwargs.get("visualize", False)
 
@@ -93,7 +93,7 @@ def benchmark_kitti_mono_vo(data_path, sequence, vo, **kwargs):
         # visualize
         if visualize:
             cv2.rectangle(traj_map, (10, 20), (600, 60), (0, 0, 0), -1)
-            # cv2.circle(traj_map, (x, y), 1, (0, 0, 255), 1)
+            cv2.circle(traj_map, (x, y), 1, (0, 0, 255), 1)
             cv2.circle(traj_map, (draw_x, draw_y), 1, (0, 255, 0), 1)
 
             cv2.imshow('Road facing camera', img)

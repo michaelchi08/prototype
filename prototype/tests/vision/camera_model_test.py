@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 
 from prototype.vision.camera_models import PinholeCameraModel
 from prototype.vision.common import camera_intrinsics
-from prototype.vision.common import random_3d_features
+from prototype.vision.common import rand3dpts
 
 
 class PinholeCameraModelTest(unittest.TestCase):
@@ -41,7 +41,7 @@ class PinholeCameraModelTest(unittest.TestCase):
             "y": {"min": -1.0, "max": 1.0},
             "z": {"min": -1.0, "max": 1.0}
         }
-        features = random_3d_features(nb_features, feature_bounds)
+        features = rand3dpts(nb_features, feature_bounds)
 
         # test
         rpy = [0.0, 0.0, 0.0]

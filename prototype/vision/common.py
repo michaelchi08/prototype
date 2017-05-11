@@ -2,6 +2,7 @@
 from math import tan
 from random import uniform as randf
 
+import scipy.linalg
 import numpy as np
 from numpy import dot
 
@@ -34,26 +35,26 @@ def projection_matrix(K, R, t):
 
 def factor_projection_matrix(P):
     """ Extract camera intrinsics, rotation matrix and translation vector """
-    K, R = np.linalg.rq(P[:, :3])
-    T = np.diag(np.sign(np.diag(K)))
+    K, R = scipy.linalg.rq(P[:, :3])
 
     # RQ-factorization is not unique, there is a sign ambiguity in the
     # factorization. Since we need the rotation matrix R to have positive
     # determinant (otherwise coordinate axis can get flipped) we can add a
     # transform T to change the sign when needed
+    T = np.diag(np.sign(np.diag(K)))
     if np.linalg.det(T) < 0:
         T[1, 1] *= -1
-        K = np.dot(K, T)
-        R = np.dot(T, R)  # T is its own inverse
-        t = np.dot(np.linalg.inv(K), P[:, 3])
 
+    K = np.dot(K, T)
+    R = np.dot(T, R)  # T is its own inverse
+    t = np.dot(np.linalg.inv(K), P[:, 3])
     return K, R, t
 
 
 def camera_center(P):
     """ Extract camera center from projection matrix P """
     K, R, t = factor_projection_matrix(P)
-    return -1 * np.dot(R.T, t)
+    return np.dot(R.T, t)
 
 
 def camera_intrinsics(fx, fy, cx, cy):
@@ -66,8 +67,25 @@ def camera_intrinsics(fx, fy, cx, cy):
     return K
 
 
-def random_3d_features(nb_features, feature_bounds):
-    """ Generate random 3D features """
+def rand3dpts(nb_features, feature_bounds):
+    """ Generate random 3D features
+
+    Args:
+
+        bounds (dict): 3D feature bounds, for example
+                       bounds = {
+                         "x": {"min": -1.0, "max": 1.0},
+                         "y": {"min": -1.0, "max": 1.0},
+                         "z": {"min": -1.0, "max": 1.0}
+                       }
+
+        nb_features (int): number of 3D features to generate
+
+    Returns:
+
+        features (list): list of 3D features
+
+    """
     features = []
 
     for i in range(nb_features):

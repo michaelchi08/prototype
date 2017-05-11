@@ -6,4 +6,5 @@ from prototype.vision.features import vo
 
 class FeaturesTest(unittest.TestCase):
     def test_sandbox(self):
-        vo()
+        # vo()
+        pass

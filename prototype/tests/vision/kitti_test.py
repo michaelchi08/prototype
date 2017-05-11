@@ -2,7 +2,7 @@
 import unittest
 
 from prototype.vision.kitti import parse_data_dir
-from prototype.vision.kitti import benchmark_kitti_mono_vo
+from prototype.vision.kitti import benchmark_mono_vo
 
 
 class KittiTest(unittest.TestCase):
@@ -15,4 +15,4 @@ class KittiTest(unittest.TestCase):
     def test_benchmark_kitti_mono_vo(self):
         data_path = "/data/kitti_odometry/dataset/sequences/"
         sequences = "00"
-        benchmark_kitti_mono_vo(data_path, sequences, None, visualize=True)
+        benchmark_mono_vo(data_path, sequences, None, visualize=True)

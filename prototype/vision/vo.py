@@ -2,11 +2,6 @@
 import cv2
 import numpy as np
 
-STAGE_FIRST_FRAME = 0
-STAGE_SECOND_FRAME = 1
-STAGE_DEFAULT_FRAME = 2
-kMinNumFeature = 1500
-
 
 def feature_tracking(image_ref, image_cur, px_ref):
     # setup
@@ -34,8 +29,6 @@ def feature_tracking(image_ref, image_cur, px_ref):
 
 class BasicVO:
     def __init__(self, fx, cx, cy):
-        self.frame_stage = 0
-        self.new_frame = None
         self.last_frame = None
         self.R = None
         self.t = None
@@ -46,11 +39,8 @@ class BasicVO:
         self.detector = cv2.FastFeatureDetector_create(threshold=25,
                                                        nonmaxSuppression=True)
 
-    def calc_pose(self):
-        px_ref, px_cur = feature_tracking(self.last_frame,
-                                          self.new_frame,
-                                          self.px_ref)
-
+    def calc_pose(self, frame):
+        px_ref, px_cur = feature_tracking(self.last_frame, frame, self.px_ref)
         E, mask = cv2.findEssentialMat(px_cur,
                                        px_ref,
                                        focal=self.focal,
@@ -58,51 +48,45 @@ class BasicVO:
                                        method=cv2.RANSAC,
                                        prob=0.999,
                                        threshold=1.0)
-
         _, R, t, mask = cv2.recoverPose(E,
                                         px_cur,
                                         px_ref,
                                         focal=self.focal,
                                         pp=self.pp)
-
         return R, t, px_ref, px_cur
 
-    def process_first_frame(self):
-        self.px_ref = self.detector.detect(self.new_frame)
-        self.px_ref = np.array([x.pt for x in self.px_ref], dtype=np.float32)
-        self.frame_stage = STAGE_SECOND_FRAME
+    def process(self, frame_id, frame, scale, min_nb_features=1500):
+        R, t, self.px_ref, self.px_cur = self.calc_pose(frame)
 
-    def process_second_frame(self):
-        self.R, self.t, self.px_ref, self.px_cur = self.calc_pose()
-        self.frame_stage = STAGE_DEFAULT_FRAME
-        self.px_ref = self.px_cur
-
-    def process(self, frame_id, scale):
-        R, t, self.px_ref, self.px_cur = self.calc_pose()
-
-        # scale calculated pose
+        # update position and orientation of camera
         if scale > 0.1:
             self.t = self.t + scale * self.R.dot(t)
             self.R = R.dot(self.R)
 
         # redetect new feature points (too few)
-        if self.px_ref.shape[0] < kMinNumFeature:
-            self.px_cur = self.detector.detect(self.new_frame)
+        if self.px_ref.shape[0] < min_nb_features:
+            self.px_cur = self.detector.detect(frame)
             self.px_cur = np.array([x.pt for x in self.px_cur],
                                    dtype=np.float32)
         self.px_ref = self.px_cur
 
-    def update(self, frame_id, img, scale):
+    def update(self, frame_id, frame, scale):
         # update
-        self.new_frame = img
-        if self.frame_stage == STAGE_DEFAULT_FRAME:
-            self.process(frame_id, scale)
-        elif self.frame_stage == STAGE_SECOND_FRAME:
-            self.process_second_frame()
-        elif self.frame_stage == STAGE_FIRST_FRAME:
-            self.process_first_frame()
+        if frame_id > 1:
+            self.process(frame_id, frame, scale)
+
+        elif frame_id == 1:
+            # second frame
+            self.R, self.t, self.px_ref, self.px_cur = self.calc_pose(frame)
+            self.px_ref = self.px_cur
+
+        elif frame_id == 0:
+            # first frame
+            self.px_ref = self.detector.detect(frame)
+            self.px_ref = np.array([x.pt for x in self.px_ref],
+                                   dtype=np.float32)
 
         # keep track of current frame
-        self.last_frame = self.new_frame
+        self.last_frame = frame
 
         return (self.R, self.t)

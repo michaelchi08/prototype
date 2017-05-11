@@ -29,4 +29,4 @@ class VOPlotTest(unittest.TestCase):
 
         self.assertEqual(fea_data.shape, (3, 100))
         self.assertTrue(obs_data is not None)
-        # plot_3d(fea_data, obs_data, True)
+        # plot_3d(fea_data, obs_data)

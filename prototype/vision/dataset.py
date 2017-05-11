@@ -5,7 +5,7 @@ from math import pi
 from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.utils.data import mat2csv
 from prototype.vision.common import camera_intrinsics
-from prototype.vision.common import random_3d_features
+from prototype.vision.common import rand3dpts
 from prototype.vision.camera_models import PinholeCameraModel
 
 
@@ -36,7 +36,7 @@ class DatasetGenerator(object):
 
     def setup_features(self, save_dir):
         """ Setup features """
-        features = random_3d_features(self.nb_features, self.feature_bounds)
+        features = rand3dpts(self.nb_features, self.feature_bounds)
         mat2csv(os.path.join(save_dir, "features.dat"), features)
         return features
 
