@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 import unittest
 
-from prototype.vision.features import vo
+import cv2
+
+from prototype.vision.features import FastDetector
 
 
-class FeaturesTest(unittest.TestCase):
-    def test_sandbox(self):
-        # vo()
-        pass
+class FastDetectorTest(unittest.TestCase):
+    def test_detect(self):
+        detector = FastDetector()
+        img = cv2.imread("data/empire/empire.jpg")
+        keypoints = detector.detect(img)
+        self.assertEqual(len(keypoints), 3865)

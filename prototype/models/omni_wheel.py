@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 from math import cos
 from math import sin
-from math import tan
+from math import pi
 
 import numpy as np
+from numpy import dot
+from numpy.linalg import inv
 
 
 def omni_wheel_model(u, x, dt, data):
@@ -12,7 +14,8 @@ def omni_wheel_model(u, x, dt, data):
     r = 0.25  # radius of wheel
 
     # wheel constraints
-    J_1 = np.array([[0, 1, data.l], [-cos(pi / 6), -sin(pi / 6), data.l],
+    J_1 = np.array([[0, 1, l],
+                    [-cos(pi / 6), -sin(pi / 6), data.l],
                     [cos(pi / 6), -sin(pi / 6), data.l]])
 
     # wheel radius
