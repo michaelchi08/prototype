@@ -7,9 +7,9 @@ python:
     - "3.3"
     - "3.4"
 
-install:
-    - sudo apt-get install -qq python3-pip python3-dev libpython3-dev
-    - sudo pip3 install -r requirements.txt
+cache: pip
+
+install: pip install -r requirements.txt
 
 script:
     - exit 0
