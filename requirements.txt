@@ -1,3 +1,6 @@
 numpy
+scipy
+jinja2
+Pillow
 matplotlib
 sympy
