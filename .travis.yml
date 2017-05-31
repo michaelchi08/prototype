@@ -5,17 +5,11 @@ language: python
 
 python:
     - "3.3"
-
-virtualenv:
-      system_site_packages: true
-
-before_install:
-    - sudo apt-get install -qq python-numpy python-scipy
-    - pip install coveralls
-    - pip install coverage
+    - "3.4"
 
 install:
-    - pip install -r requirements.txt
+    - sudo apt-get install -qq python3-pip python3-dev libpython3-dev
+    - sudo pip3 install -r requirements.txt
 
 script:
     - exit 0
