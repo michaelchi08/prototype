@@ -11,4 +11,4 @@ class FastDetectorTest(unittest.TestCase):
         detector = FastDetector()
         img = cv2.imread("data/empire/empire.jpg")
         keypoints = detector.detect(img)
-        self.assertEqual(len(keypoints), 3865)
+        self.assertEqual(len(keypoints), 3866)

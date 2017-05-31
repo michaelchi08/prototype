@@ -10,11 +10,8 @@ cache: pip
 
 install: pip install -r requirements.txt
 
-script:
-    - exit 0
-
-# after_success:
-#     - coveralls
+script: python3 -m unittest discover -b --pattern "*.py"
+    
 
 notifications:
   recipients:
