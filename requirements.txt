@@ -4,3 +4,5 @@ jinja2
 Pillow
 matplotlib
 sympy
+pygame
+PyOpenGL
