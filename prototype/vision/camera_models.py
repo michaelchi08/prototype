@@ -42,13 +42,13 @@ class PinholeCameraModel(object):
         if self.update(dt) == False:
             return None
 
-        # rotation matrix - convert from nwu to edn then to rotation matrix R
+        # rotation matrix
         R = euler2rot(rpy, 123)
 
         # projection matrix
         P = projection_matrix(self.K, R, dot(-R, t))
 
-        # check which landmarks in 3d are observable from camera
+        # check which landmarks are observable from camera
         for i in range(len(landmarks)):
             # convert feature in NWU to EDN coordinate system
             point = landmarks[i]
@@ -64,7 +64,7 @@ class PinholeCameraModel(object):
 
             # check to see if feature is valid and infront of camera
             if img_pt[2] < 1.0:
-                continue  # feature is not infront of camera skip
+                continue  # skip this landmark! feature is not infront of camera
 
             # normalize pixels
             img_pt[0] = img_pt[0] / img_pt[2]

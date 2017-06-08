@@ -24,7 +24,7 @@ class DatasetGenerator(object):
 
         self.landmarks = []
         self.time = []
-        self.robot_state = []
+        self.robot_states = []
         self.observed_landmarks = []
 
     def generate_landmarks(self):
@@ -43,7 +43,7 @@ class DatasetGenerator(object):
         # write state file
         for i in range(len(self.time)):
             t = self.time[i]
-            x = self.robot_state[i]
+            x = self.robot_states[i]
 
             state_file.write(str(t) + ",")
             state_file.write(str(x[0]) + ",")
@@ -67,7 +67,7 @@ class DatasetGenerator(object):
 
             # data
             t = self.time[i]
-            x = self.robot_state[i]
+            x = self.robot_states[i]
             observed = self.observed_landmarks[i]
 
             # output time, robot state, and number of observed features
@@ -124,7 +124,7 @@ class DatasetGenerator(object):
             observed = self.camera.check_landmarks(dt, self.landmarks, rpy, t)
             if observed is not None:
                 self.observed_landmarks.append(observed)
-                self.robot_state.append(x)
+                self.robot_states.append(x)
                 self.time.append(time)
 
             # update

@@ -1,6 +1,6 @@
 from numpy import eye
+from numpy import dot
 from numpy.linalg import inv
-from numpy.linalg import dot
 
 
 class EKF(object):

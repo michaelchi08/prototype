@@ -1,20 +1,24 @@
 import os
-import sys
-import urllib.request
-
-
-def download_reporthook(blocknum, blocksize, totalsize):
-    sys.stdout.write(".")
-    sys.stdout.flush()
+import shutil
 
 
 def download(url, output_dir):
+    # pre-check
     if os.path.isdir(output_dir) is False:
-        raise RuntimeError("{} invalid output dir!".format(output_dir))
+        raise RuntimeError("Invalid output dir [%s]" % output_dir)
 
-    cmd = "cd {output_dir} && curl -O {url}".format(output_dir=output_dir,
-                                                    url=url)
-    os.system(cmd)
+    # build shell command string
+    cmd = None
+    if shutil.which("curl"):
+        cmd = "cd {0} && curl -O {1}".format(output_dir, url)
+    elif shutil.which("wget"):
+        cmd = "cd {0} && wget {1}".format(output_dir, url)
+
+    # run shell command
+    if cmd:
+        os.system(cmd)
+    else:
+        raise RuntimeError("Can't find cURL or Wget for downloading!")
 
 
 def download_kitti_vo_dataset(output_dir):
