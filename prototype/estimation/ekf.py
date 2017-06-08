@@ -1,5 +1,6 @@
 from numpy import eye
 from numpy.linalg import inv
+from numpy.linalg import dot
 
 
 class EKF(object):
@@ -29,13 +30,13 @@ class EKF(object):
         G = G_func(u, self.mu, self.dt)
 
         self.mu_p = g
-        self.S_p = G * self.S * G.T + self.R
+        self.S_p = dot(G, dot(self.S, G.T)) + self.R
 
     def measurement_update(self, h_func, H_func, y):
         """ Measurement update """
         h = h_func(self.mu_p)
         H = H_func(self.mu_p)
 
-        K = self.S_p * H.T * inv(H * self.S_p * H.T + self.Q)
-        self.mu = self.mu_p + K * (y - h)
-        self.S = (eye(len(self.mu)) - K * H) * self.S_p
+        K = dot(self.S_p, dot(H.T, inv(dot(H, dot(self.S_p, H.T)))) + self.Q)
+        self.mu = self.mu_p + dot(K, (y - h))
+        self.S = dot((eye(len(self.mu)) - dot(K, H)), self.S_p)
