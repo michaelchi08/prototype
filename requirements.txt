@@ -6,3 +6,4 @@ matplotlib
 sympy
 pygame
 PyOpenGL
+opencv-python
