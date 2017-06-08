@@ -2,7 +2,6 @@
 import numpy as np
 from numpy import dot
 
-from prototype.utils.math import nwu2edn
 from prototype.utils.math import euler2rot
 from prototype.vision.common import projection_matrix
 
@@ -36,51 +35,47 @@ class PinholeCameraModel(object):
             x[i] /= x[2]
         return x
 
-    def check_features(self, dt, features, rpy, t):
-        """ Check whether features are observable by camera """
+    def check_landmarks(self, dt, landmarks, rpy, t):
+        """ Check whether landmarks are observable by camera """
         observed = []
 
         # pre-check
         if self.update(dt) == False:
-            return observed
+            return None
 
         # rotation matrix - convert from nwu to edn then to rotation matrix R
-        rpy_edn = nwu2edn(rpy)
-        R = euler2rot(rpy_edn, 123)
-
-        # translation - convert translation from nwu to edn
-        t_edn = nwu2edn(t)
+        R = euler2rot(rpy, 123)
 
         # projection matrix
-        P = projection_matrix(self.K, R, dot(-R, t_edn))
+        P = projection_matrix(self.K, R, dot(-R, t))
 
-        # check which features in 3d are observable from camera
-        for i in range(len(features)):
+        # check which landmarks in 3d are observable from camera
+        for i in range(len(landmarks)):
             # convert feature in NWU to EDN coordinate system
-            f3d = features[i]
-            f3d_edn = [0, 0, 0, 0]
-            f3d_edn[0] = -f3d[1]
-            f3d_edn[1] = -f3d[2]
-            f3d_edn[2] = f3d[0]
-            f3d_edn[3] = 1.0
-            f3d_edn = np.array(f3d_edn)
+            point = landmarks[i]
+            point_edn = [0, 0, 0, 0]
+            point_edn[0] = -point[1]
+            point_edn[1] = -point[2]
+            point_edn[2] = point[0]
+            point_edn[3] = 1.0
+            point_edn = np.array(point_edn)
 
             # project 3D world point to 2D image plane
-            f2d = dot(P, f3d_edn)
+            img_pt = dot(P, point_edn)
 
             # check to see if feature is valid and infront of camera
-            if f2d[2] < 1.0:
+            if img_pt[2] < 1.0:
                 continue  # feature is not infront of camera skip
 
             # normalize pixels
-            f2d[0] = f2d[0] / f2d[2]
-            f2d[1] = f2d[1] / f2d[2]
-            f2d[2] = f2d[2] / f2d[2]
+            img_pt[0] = img_pt[0] / img_pt[2]
+            img_pt[1] = img_pt[1] / img_pt[2]
+            img_pt[2] = img_pt[2] / img_pt[2]
 
             # check to see if feature observed is within image plane
-            x_ok = (f2d[0] < self.image_width) and (f2d[0] > 0.0)
-            y_ok = (f2d[1] < self.image_height) and (f2d[1] > 0.0)
+            x_ok = (img_pt[0] < self.image_width) and (img_pt[0] > 0.0)
+            y_ok = (img_pt[1] < self.image_height) and (img_pt[1] > 0.0)
             if x_ok and y_ok:
-                observed.append((f2d[0:2], np.array(f3d[0:3])))
+                observed.append((img_pt[0:2], i))
 
         return observed

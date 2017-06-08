@@ -29,24 +29,24 @@ class PinholeCameraModelTest(unittest.TestCase):
         self.assertEqual(camera.dt, 0.0)
         self.assertEqual(camera.frame, 1)
 
-    def test_check_features(self):
+    def test_check_landmarks(self):
         # setup camera
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
         camera = PinholeCameraModel(640, 640, 10, K)
 
-        # setup random 3d features
-        nb_features = 100
+        # setup random 3d landmarks
+        nb_landmarks = 100
         feature_bounds = {
             "x": {"min": -1.0, "max": 10.0},
             "y": {"min": -1.0, "max": 1.0},
             "z": {"min": -1.0, "max": 1.0}
         }
-        features = rand3dpts(nb_features, feature_bounds)
+        landmarks = rand3dpts(nb_landmarks, feature_bounds)
 
         # test
         rpy = [0.0, 0.0, 0.0]
         t = [0.0, 0.0, 0.0]
-        observed = camera.check_features(0.11, features, rpy, t)
+        observed = camera.check_landmarks(0.11, landmarks, rpy, t)
 
         self.assertTrue(len(observed) > 0)
 

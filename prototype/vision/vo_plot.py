@@ -7,18 +7,18 @@ import matplotlib.pylab as plt
 import mpl_toolkits.mplot3d.art3d as art3d
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
-from matplotlib.patches import PathPatch
+# from matplotlib.patches import PathPatch
 
 DATASET_PATH = "/tmp/test"
-FEATURE_DATA_FILE = "features.dat"
+LANDMARK_DATA_FILE = "landmarks.dat"
 
 
-def load_features_data(dataset_path):
+def load_landmark_data(dataset_path):
     # setup
-    csv_file = open(dataset_path + "/" + FEATURE_DATA_FILE, 'r')
+    csv_file = open(dataset_path + "/" + LANDMARK_DATA_FILE, 'r')
     csv_reader = csv.reader(csv_file)
 
-    # parse features file
+    # parse landmarks file
     data = []
     for line in csv_reader:
         f3d = np.array([float(line[0]), float(line[1]), float(line[2])])
@@ -49,7 +49,7 @@ def load_single_observation_data(fp):
     data["nb_observations"] = int(next(csv_reader, None)[0])
     data["state"] = np.array([float(x[0]), float(x[1]), float(x[2])])
 
-    # parse observed features
+    # parse observed landmarks
     f_2d_line = True
     for line in csv_reader:
         if f_2d_line:

@@ -17,5 +17,8 @@ class DatasetGeneratorTest(unittest.TestCase):
         if os.path.isdir(self.save_dir):
             shutil.rmtree(self.save_dir)
 
+    def test_simulate_test_data(self):
+        self.dataset.simulate_test_data()
+
     def test_generate_test_data(self):
         self.dataset.generate_test_data(self.save_dir)
