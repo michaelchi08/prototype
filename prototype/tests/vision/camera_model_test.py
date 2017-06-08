@@ -63,6 +63,6 @@ class PinholeCameraModelTest(unittest.TestCase):
         x = camera.project(points, R, t)
 
         # plot projection
-        plt.figure()
-        plt.plot(x[0], x[1], 'k. ')
+        # plt.figure()
+        # plt.plot(x[0], x[1], 'k. ')
         # plt.show()

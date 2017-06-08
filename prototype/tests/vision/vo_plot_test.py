@@ -5,7 +5,7 @@ import unittest
 
 from prototype.vision.dataset import DatasetGenerator
 from prototype.vision.vo_plot import load_landmark_data
-from prototype.vision.vo_plot import load_all_observation_data
+from prototype.vision.vo_plot import load_observed_data
 from prototype.vision.vo_plot import plot_3d
 
 DATASET_PATH = "/tmp/dataset_test"
@@ -23,11 +23,10 @@ class VOPlotTest(unittest.TestCase):
             shutil.rmtree(self.save_dir)
 
     def test_plot_3d(self):
-        # self.dataset.generate_test_data(self.save_dir)
-        # fea_data = load_landmark_data(DATASET_PATH)
-        # obs_data = load_all_observation_data(DATASET_PATH)
-        pass
+        self.dataset.generate_test_data(self.save_dir)
+        landmark_data = load_landmark_data(DATASET_PATH)
+        observed_data = load_observed_data(DATASET_PATH)
 
-        # self.assertEqual(fea_data.shape, (3, 100))
-        # self.assertTrue(obs_data is not None)
-        # plot_3d(fea_data, obs_data)
+        self.assertEqual(landmark_data.shape, (3, 100))
+        self.assertTrue(observed_data is not None)
+        plot_3d(landmark_data, observed_data)

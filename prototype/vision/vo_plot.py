@@ -30,7 +30,7 @@ def load_landmark_data(dataset_path):
     return np.vstack(data).T
 
 
-def load_single_observation_data(fp):
+def load_single_observed_data(fp):
     # setup
     csv_file = open(fp, 'r')
     csv_reader = csv.reader(csv_file)
@@ -39,31 +39,30 @@ def load_single_observation_data(fp):
         "time": None,
         "nb_observations": None,
         "state": None,
-        "feature_2d": [],
-        "feature_3d": []
+        "keypoints": [],
+        "landmark_ids": []
     }
 
     # parse time, nb_observations and robot state
     data["time"] = float(next(csv_reader, None)[0])
     x = next(csv_reader, None)
-    data["nb_observations"] = int(next(csv_reader, None)[0])
     data["state"] = np.array([float(x[0]), float(x[1]), float(x[2])])
+    data["nb_observations"] = int(next(csv_reader, None)[0])
 
     # parse observed landmarks
-    f_2d_line = True
+    keypoint_line = True
     for line in csv_reader:
-        if f_2d_line:
-            f2d = np.array([float(line[0]), float(line[1])])
-            data["feature_2d"].append(f2d)
-            f_2d_line = False
+        if keypoint_line:
+            keypoint = np.array([float(line[0]), float(line[1])])
+            data["keypoints"].append(keypoint)
+            keypoint_line = False
         else:
-            f3d = np.array([float(line[0]), float(line[1]), float(line[2])])
-            data["feature_3d"].append(f3d)
-            f_2d_line = True
+            landmark_id = int(line[0])
+            data["landmark_ids"].append(landmark_id)
+            keypoint_line = True
 
     # convert list of vectors into 1 matrix, where each column is 1 observation
-    data["feature_2d"] = np.vstack(data["feature_2d"]).T
-    data["feature_3d"] = np.vstack(data["feature_3d"]).T
+    data["keypoints"] = np.vstack(data["keypoints"]).T
 
     # clean up
     csv_file.close()
@@ -71,7 +70,7 @@ def load_single_observation_data(fp):
     return data
 
 
-def load_all_observation_data(dataset_path):
+def load_observed_data(dataset_path):
     # setup
     index_file = open(dataset_path + "/index.dat", 'r')
     observations = [line.strip() for line in index_file]
@@ -83,7 +82,7 @@ def load_all_observation_data(dataset_path):
             "data": []}
 
     for f in observations:
-        obs_data = load_single_observation_data(f)
+        obs_data = load_single_observed_data(f)
         data["time"].append(obs_data["time"])
         data["nb_observations"].append(obs_data["nb_observations"])
         data["state"].append(obs_data["state"])
@@ -101,15 +100,15 @@ def plot_camera(ax):
     art3d.pathpatch_2d_to_3d(p, z=0, zdir="y")
 
 
-def plot_3d(fea_data, obs_data):
+def plot_3d(landmark_data, observed_data):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
     # plot 3d points
     ax.scatter(
-        fea_data[0, :],
-        fea_data[1, :],
-        fea_data[2, :],
+        landmark_data[0, :],
+        landmark_data[1, :],
+        landmark_data[2, :],
         c="r",
         s=5,
         depthshade=False)
@@ -120,11 +119,13 @@ def plot_3d(fea_data, obs_data):
     ax.set_zlim([-3.0, 3.0])
 
     lines = []
-    for i in range(len(obs_data["data"])):
-        obs = obs_data["data"][i]
+    for i in range(len(observed_data["data"])):
+        obs = observed_data["data"][i]
 
         input("Time Step: " + str(i))
         print("State: " + str(obs["state"]))
+        print("Number of features: " + str(obs["nb_observations"]))
+        print("Landmark IDs: " + str(obs["landmark_ids"]))
         print()
 
         for line in lines:
@@ -134,8 +135,10 @@ def plot_3d(fea_data, obs_data):
                 pass
 
         for j in range(obs["nb_observations"]):
-            lines += ax.plot([obs["state"][0], obs["feature_3d"][0, j]],
-                             [obs["state"][1], obs["feature_3d"][1, j]],
-                             [0.0, obs["feature_3d"][2, j]], "b-")
+            landmark_id = obs["landmark_ids"][j]
+            landmark = landmark_data[:, landmark_id]
+            lines += ax.plot([obs["state"][0], landmark[0]],
+                             [obs["state"][1], landmark[1]],
+                             [0.0, landmark[2]], "b-")
 
         fig.canvas.draw()
