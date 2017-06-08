@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import unittest
 
 from prototype.data.dataset import download

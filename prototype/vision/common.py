@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from math import tan
 from random import uniform as randf
 

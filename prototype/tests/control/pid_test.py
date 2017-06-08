@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import unittest
 from prototype.control.pid import PID
 

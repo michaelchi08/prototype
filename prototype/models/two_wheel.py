@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from math import cos
 from math import sin
 

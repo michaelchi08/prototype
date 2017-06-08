@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from numpy import eye
 from numpy import dot
 from numpy.linalg import inv

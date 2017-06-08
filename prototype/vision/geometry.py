@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 # function [F,e1,e2] = fundmatrix(varargin)
 #

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import unittest
 
 from prototype.vision.kitti import parse_data_dir
