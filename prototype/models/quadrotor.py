@@ -62,7 +62,7 @@ class QuadrotorModel(object):
         taur = tau[3]
 
         # update
-        self.states[0] = ph + ( p + q * sin(ph) * tan(th) + r * cos(ph) * tan(th)) * dt  # noqa
+        self.states[0] = ph + (p + q * sin(ph) * tan(th) + r * cos(ph) * tan(th)) * dt  # noqa
         self.states[1] = th + (q * cos(ph) - r * sin(ph)) * dt  # noqa
         self.states[2] = ps + ((1 / cos(th)) * (q * sin(ph) + r * cos(ph))) * dt  # noqa
         self.states[3] = p + (-((self.Iz - self.Iy) / self.Ix) * q * r - (self.kr * p / self.Ix) + (1 / self.Ix) * taup) * dt  # noqa

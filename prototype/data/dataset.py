@@ -7,6 +7,7 @@ def download_reporthook(blocknum, blocksize, totalsize):
     sys.stdout.write(".")
     sys.stdout.flush()
 
+
 def download(url, output_dir):
     if os.path.isdir(output_dir) is False:
         raise RuntimeError("{} invalid output dir!".format(output_dir))

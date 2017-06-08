@@ -14,7 +14,8 @@ class AttitudeControllerTest(unittest.TestCase):
         self.attitude_controller = AttitudeController()
 
     def test_update(self):
-        setpoints = np.array([deg2rad(10.0), deg2rad(10.0), deg2rad(10.0), 0.5])
+        setpoints = np.array(
+            [deg2rad(10.0), deg2rad(10.0), deg2rad(10.0), 0.5])
 
         dt = 0.001
         for i in range(1000):

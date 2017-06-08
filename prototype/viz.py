@@ -74,7 +74,7 @@ class Viz(object):
         glViewport(0, 0, width, height)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(45.0, float(width)/height, 0.1, 100.0)
+        gluPerspective(45.0, float(width) / height, 0.1, 100.0)
         glTranslatef(
             self.camera_position[0],
             self.camera_position[1],
