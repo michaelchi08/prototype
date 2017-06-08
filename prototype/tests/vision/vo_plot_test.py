@@ -6,7 +6,7 @@ import unittest
 from prototype.vision.dataset import DatasetGenerator
 from prototype.vision.vo_plot import load_landmark_data
 from prototype.vision.vo_plot import load_observed_data
-from prototype.vision.vo_plot import plot_3d
+# from prototype.vision.vo_plot import plot_3d
 
 DATASET_PATH = "/tmp/dataset_test"
 
@@ -29,4 +29,4 @@ class VOPlotTest(unittest.TestCase):
 
         self.assertEqual(landmark_data.shape, (3, 100))
         self.assertTrue(observed_data is not None)
-        plot_3d(landmark_data, observed_data)
+        # plot_3d(landmark_data, observed_data)
