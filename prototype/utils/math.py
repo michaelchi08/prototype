@@ -111,7 +111,8 @@ def euler2rot(euler, euler_seq):
     return np.array([[R11, R12, R13], [R21, R22, R23], [R31, R32, R33]])
 
 
-def euler2quat(alpha, beta, gamma, euler_seq):
+def euler2quat(euler, euler_seq):
+    alpha, beta, gamma = euler
     c1 = cos(alpha / 2.0)
     c2 = cos(beta / 2.0)
     c3 = cos(gamma / 2.0)
@@ -127,7 +128,7 @@ def euler2quat(alpha, beta, gamma, euler_seq):
         z = c1 * c2 * s3 + s1 * s2 * c3
         return [w, x, y, z]
 
-    elif euler_seq == "321":
+    elif euler_seq == 321:
         # euler 3-2-1 to quaternion
         w = c1 * c2 * c3 + s1 * s2 * s3
         x = s1 * c2 * c3 - c1 * s2 * s3
@@ -136,7 +137,8 @@ def euler2quat(alpha, beta, gamma, euler_seq):
         return [w, x, y, z]
 
     else:
-        print("Error! Invalid euler sequence [{0}]".format(euler_seq))
+        error_msg = "Error! Invalid euler sequence [%s]" % str(euler_seq)
+        raise RuntimeError(error_msg)
 
 
 def quat2euler(q, euler_seq):
