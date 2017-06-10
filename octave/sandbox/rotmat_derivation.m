@@ -5,15 +5,15 @@ pkg load symbolic
 syms alpha beta gamma
 
 Rx = [[1.0, 0.0, 0.0];
-      [0.0, cos(alpha), sin(alpha)];
-      [0.0, -sin(alpha), cos(alpha)]];
+      [0.0, cos(alpha), -sin(alpha)];
+      [0.0, sin(alpha), cos(alpha)]];
 
-Ry = [[cos(beta), 0.0, -sin(beta)];
+Ry = [[cos(beta), 0.0, sin(beta)];
       [0.0, 1.0, 0.0];
-      [sin(beta), 0.0, cos(beta)]];
+      [-sin(beta), 0.0, cos(beta)]];
 
-Rz = [[cos(gamma), sin(gamma), 0.0];
-      [-sin(gamma), cos(gamma), 0.0];
+Rz = [[cos(gamma), -sin(gamma), 0.0];
+      [sin(gamma), cos(gamma), 0.0];
       [0.0, 0.0, 1.0]];
 
 % euler 3-2-1 (body to inertial)

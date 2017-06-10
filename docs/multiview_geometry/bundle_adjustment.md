@@ -151,7 +151,7 @@ rotation matrix $R$ above is parameterized with quaternions.  A quaternion $q =
             & 2q_{x}q_{z} - 2q_{w}q_{y} \\
         2 q_{x}q_{y} - 2q_{w}q_{z}
             & 1 - 2q_{x}^{2} - 2q_{z}^{2}
-            &  2q_{y}q_{z} + 2q_{w}q_{z} \\
+            &  2q_{y}q_{z} + 2q_{w}q_{x} \\
         2 q_{x}q_{z} - 2q_{w}q_{y}
             & 2q_{y}q_{z} - 2q_{w}q_{x}
             & 1 - 2q_{x}^{2} - 2q_{y}^{2}
@@ -236,8 +236,8 @@ If we expand out how $u, v, w$ are calculated we get:
         f_{y} r_{22} + p_{y}r_{32} &
         f_{y} r_{23} + p_{y}r_{33}
     \end{bmatrix} [X - C] \\
-    w &= \begin{bmatrix} 
-        r_{31} & r_{32} & r_{33} 
+    w &= \begin{bmatrix}
+        r_{31} & r_{32} & r_{33}
     \end{bmatrix} [X - C]
 \end{align}
 

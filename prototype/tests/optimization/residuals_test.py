@@ -3,12 +3,14 @@ import unittest
 import numpy as np
 
 from prototype.utils.math import euler2quat
+from prototype.utils.math import euler2rot
 from prototype.utils.math import nwu2edn
 from prototype.vision.dataset import DatasetGenerator
 from prototype.optimization.residuals import reprojection_error
 
 
 class ResidualTest(unittest.TestCase):
+
     def test_reprojection_error(self):
         debug = False
         dataset = DatasetGenerator()
@@ -19,7 +21,8 @@ class ResidualTest(unittest.TestCase):
         observed = dataset.observed_landmarks
         robot_states = dataset.robot_states
 
-        for i in range(len(robot_states)):
+        # for i in range(len(robot_states)):
+        for i in range(2):
             x, y, theta = robot_states[i]
             image_point, landmark_id = observed[i][0]
             world_point = nwu2edn(np.array(landmarks[landmark_id]))
