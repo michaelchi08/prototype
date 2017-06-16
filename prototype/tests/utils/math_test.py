@@ -3,6 +3,9 @@ import math
 
 import numpy as np
 
+from prototype.utils.math import rotx
+from prototype.utils.math import roty
+from prototype.utils.math import rotz
 from prototype.utils.math import deg2rad
 from prototype.utils.math import rad2deg
 from prototype.utils.math import quat2rot
@@ -12,6 +15,16 @@ from prototype.utils.math import euler2quat
 
 
 class MathTest(unittest.TestCase):
+    def test_sandbox(self):
+        roll = 0.1
+        pitch = 0.2
+        yaw = 0.3
+        euler = [roll, pitch, yaw]
+        R = euler2rot(euler, 123)
+        print(R)
+        v = [1,2,3]
+        print(np.dot(R, v))
+
     def test_deg2rad(self):
         r = deg2rad(360)
         self.assertTrue((r - 2 * math.pi) < 0.0001)
@@ -27,7 +40,11 @@ class MathTest(unittest.TestCase):
         pass
 
     def test_rotz(self):
-        pass
+        theta = 0.785
+        R = rotz(theta)
+        p = np.dot(R, [2, 1, 0])
+        expected = [0.70795136, 2.12103863, 0.0]
+        self.assertTrue(np.allclose(expected, p))
 
     def test_euler2rot(self):
         euler = [0.1, 0.2, 0.3]

@@ -19,6 +19,20 @@ def rad2deg(r):
     return r * (180.0 / pi)
 
 
+def wrap180(euler_angle):
+    """ Wrap angle to 180 """
+    return fmod((euler_angle + 180.0), 360.0) - 180.0
+
+
+def wrap360(euler_angle):
+    """ Wrap angle to 360 """
+    if euler_angle > 0.0:
+        return fmod(euler_angle, 360.0)
+    else:
+        euler_angle += 360.0
+        return fmod(euler_angle, 360.0)
+
+
 def quatnormalize(q):
     qw, qx, qy, qz = q
     qw2 = pow(qw, 2)
@@ -36,21 +50,21 @@ def quatnormalize(q):
 
 
 def rotx(theta):
-    """ Rotation matrix around x-axis """
+    """ Rotation matrix around x-axis (counter-clockwise) """
     return np.array([[1.0, 0.0, 0.0],
                      [0.0, cos(theta), -sin(theta)],
                      [0.0, sin(theta), cos(theta)]])
 
 
 def roty(theta):
-    """ Rotation matrix around y-axis """
+    """ Rotation matrix around y-axis (counter-clockwise) """
     return np.array([[cos(theta), 0.0, sin(theta)],
                      [0.0, 1.0, 0.0],
                      [-sin(theta), 0.0, cos(theta)]])
 
 
 def rotz(theta):
-    """ Rotation matrix around z-axis """
+    """ Rotation matrix around z-axis (counter-clockwise) """
     return np.array([[cos(theta), -sin(theta), 0.0],
                      [sin(theta), cos(theta), 0.0],
                      [0.0, 0.0, 1.0]])
@@ -58,7 +72,7 @@ def rotz(theta):
 
 def euler2rot(euler, euler_seq):
     """ Convert euler to rotation matrix R
-    This function assumes the coordinate system is in NWU.
+    This function assumes we are performing an extrinsic rotation.
 
     Source:
         Euler Angles, Quaternions and Transformation Matrices
@@ -105,7 +119,7 @@ def euler2rot(euler, euler_seq):
 
 def euler2quat(euler, euler_seq):
     """ Convert euler to quaternion
-    This function assumes the coordinate system is in NWU.
+    This function assumes we are performing an extrinsic rotation.
 
     Source:
         Euler Angles, Quaternions and Transformation Matrices
@@ -173,6 +187,7 @@ def quat2euler(q, euler_seq):
 
 
 def quat2rot(q):
+    """ Quaternion to rotation matrix """
     qw = q[0]
     qx = q[1]
     qy = q[2]
@@ -202,6 +217,7 @@ def quat2rot(q):
 
 
 def enu2nwu(enu):
+    """ Convert vector in ENU to NWU coordinate system """
     # ENU frame:  (x - right, y - forward, z - up)
     # NWU frame:  (x - forward, y - left, z - up)
     nwu = [0, 0, 0]
@@ -211,27 +227,30 @@ def enu2nwu(enu):
     return nwu
 
 
-def cf2nwu(cf):
+def edn2nwu(edn):
+    """ Convert vector in EDN to NWU coordinate system """
     # camera frame:  (x - right, y - down, z - forward)
     # NWU frame:  (x - forward, y - left, z - up)
     nwu = [0, 0, 0]
-    nwu[0] = cf[2]
-    nwu[1] = -cf[0]
-    nwu[2] = -cf[1]
+    nwu[0] = edn[2]
+    nwu[1] = -edn[0]
+    nwu[2] = -edn[1]
     return nwu
 
 
-def cf2enu(cf):
+def edn2enu(edn):
+    """ Convert vector in EDN to ENU coordinate system """
     # camera frame:  (x - right, y - down, z - forward)
     # ENU frame:  (x - right, y - forward, z - up)
     enu = [0, 0, 0]
-    enu[0] = cf[0]
-    enu[1] = cf[2]
-    enu[2] = -cf[1]
+    enu[0] = edn[0]
+    enu[1] = edn[2]
+    enu[2] = -edn[1]
     return enu
 
 
 def ned2enu(ned):
+    """ Convert vector in NED to ENU coordinate system """
     # NED frame:  (x - forward, y - right, z - down)
     # ENU frame:  (x - right, y - forward, z - up)
     enu = [0, 0, 0]
@@ -242,6 +261,7 @@ def ned2enu(ned):
 
 
 def nwu2enu(nwu):
+    """ Convert vector in NWU to ENU coordinate system """
     # NWU frame:  (x - forward, y - left, z - up)
     # ENU frame:  (x - right, y - forward, z - up)
     enu = [0, 0, 0]
@@ -252,6 +272,7 @@ def nwu2enu(nwu):
 
 
 def nwu2edn(nwu):
+    """ Convert vector in NWU to EDN coordinate system """
     # NWU frame:  (x - forward, y - left, z - up)
     # EDN frame:  (x - right, y - down, z - forward)
     edn = [0, 0, 0]
@@ -259,15 +280,3 @@ def nwu2edn(nwu):
     edn[1] = -nwu[2]
     edn[2] = nwu[0]
     return edn
-
-
-def wrap180(euler_angle):
-    return fmod((euler_angle + 180.0), 360.0) - 180.0
-
-
-def wrap360(euler_angle):
-    if euler_angle > 0.0:
-        return fmod(euler_angle, 360.0)
-    else:
-        euler_angle += 360.0
-        return fmod(euler_angle, 360.0)
