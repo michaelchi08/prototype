@@ -9,8 +9,8 @@ from prototype.vision.vo_plot import plot_3d
 
 import numpy as np
 from numpy import dot
-from prototype.utils.math import euler2rot
-from prototype.utils.math import euler2quat
+from prototype.utils.transforms import euler2rot
+from prototype.utils.transforms import euler2quat
 from prototype.vision.common import projection_matrix
 
 DATASET_PATH = "/tmp/dataset_test"

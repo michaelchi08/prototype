@@ -2,9 +2,9 @@ import unittest
 
 import numpy as np
 
-from prototype.utils.math import euler2quat
-from prototype.utils.math import euler2rot
-from prototype.utils.math import nwu2edn
+from prototype.utils.transforms import euler2quat
+from prototype.utils.transforms import euler2rot
+from prototype.utils.transforms import nwu2edn
 from prototype.vision.dataset import DatasetGenerator
 from prototype.optimization.residuals import reprojection_error
 

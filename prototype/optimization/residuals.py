@@ -1,13 +1,13 @@
 import numpy as np
 from numpy import dot
 
-from prototype.utils.math import quat2rot
+from prototype.utils.transforms import quat2rot
 
 
 def reprojection_error(K, image_point, rotation, translation, world_point):
     # convert quaterion to rotation matrix R
     R = quat2rot(rotation)
-    print(R)
+    # print(R)
 
     # project 3D world point to image plane
     est_homo = dot(K, dot(R, (world_point - translation)))
@@ -19,6 +19,6 @@ def reprojection_error(K, image_point, rotation, translation, world_point):
 
     # calculate residual error
     residual = np.absolute(image_point - est_pt)
-    print("residual: ", residual)
+    # print("residual: ", residual)
 
     return residual

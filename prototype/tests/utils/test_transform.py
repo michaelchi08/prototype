@@ -3,15 +3,15 @@ import math
 
 import numpy as np
 
-from prototype.utils.math import rotx
-from prototype.utils.math import roty
-from prototype.utils.math import rotz
-from prototype.utils.math import deg2rad
-from prototype.utils.math import rad2deg
-from prototype.utils.math import quat2rot
-from prototype.utils.math import quat2euler
-from prototype.utils.math import euler2rot
-from prototype.utils.math import euler2quat
+from prototype.utils.transforms import rotx
+from prototype.utils.transforms import roty
+from prototype.utils.transforms import rotz
+from prototype.utils.transforms import deg2rad
+from prototype.utils.transforms import rad2deg
+from prototype.utils.transforms import quat2rot
+from prototype.utils.transforms import quat2euler
+from prototype.utils.transforms import euler2rot
+from prototype.utils.transforms import euler2quat
 
 
 class MathTest(unittest.TestCase):
@@ -21,9 +21,9 @@ class MathTest(unittest.TestCase):
         yaw = 0.3
         euler = [roll, pitch, yaw]
         R = euler2rot(euler, 123)
-        print(R)
+        # print(R)
         v = [1,2,3]
-        print(np.dot(R, v))
+        # print(np.dot(R, v))
 
     def test_deg2rad(self):
         r = deg2rad(360)

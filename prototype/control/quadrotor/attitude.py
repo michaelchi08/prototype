@@ -1,8 +1,8 @@
 import numpy as np
 
 from prototype.control.pid import PID
-from prototype.utils.math import rad2deg
-from prototype.utils.math import deg2rad
+from prototype.utils.transforms import rad2deg
+from prototype.utils.transforms import deg2rad
 
 
 class AttitudeController(object):

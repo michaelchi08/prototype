@@ -1,7 +1,7 @@
 import os
 from math import pi
 
-from prototype.utils.math import nwu2edn
+from prototype.utils.transforms import nwu2edn
 from prototype.utils.data import mat2csv
 from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.vision.common import camera_intrinsics

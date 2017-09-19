@@ -5,8 +5,8 @@ from math import tan
 import numpy as np
 from numpy import dot
 
-from prototype.utils.math import rad2deg
-from prototype.utils.math import deg2rad
+from prototype.utils.transforms import rad2deg
+from prototype.utils.transforms import deg2rad
 from prototype.control.quadrotor.position import PositionController
 from prototype.control.quadrotor.attitude import AttitudeController
 
@@ -52,9 +52,10 @@ class QuadrotorModel(object):
         vz = self.states[11]
 
         # convert motor inputs to angular p, q, r and total thrust
-        A = np.array([[1.0, 1.0, 1.0, 1.0], [0.0, -self.l, 0.0, self.l],
-                      [-self.l, 0.0, self.l,
-                       0.0], [-self.d, self.d, -self.d, self.d]])
+        A = np.array([[1.0, 1.0, 1.0, 1.0],
+                      [0.0, -self.l, 0.0, self.l],
+                      [-self.l, 0.0, self.l, 0.0],
+                      [-self.d, self.d, -self.d, self.d]])
         tau = dot(A, motor_inputs)
         tauf = tau[0]
         taup = tau[1]

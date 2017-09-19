@@ -5,7 +5,7 @@ import scipy.linalg
 import numpy as np
 from numpy import dot
 
-from prototype.utils.math import deg2rad
+from prototype.utils.transforms import deg2rad
 
 
 def focal_length(image_width, image_height, fov):
