@@ -25,7 +25,19 @@ class PID(object):
         self.error_d = 0.0
 
     def update(self, setpoint, actual, dt):
-        """ Update PID controller """
+        """ Update PID controller
+
+        Args:
+
+            setupoint
+            actual
+            dt (float)
+
+        Returns:
+
+            PID control command
+
+        """
         # update errors
         error = setpoint - actual
         self.error_sum += error * dt
