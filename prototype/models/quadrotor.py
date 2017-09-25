@@ -5,8 +5,8 @@ from math import tan
 import numpy as np
 from numpy import dot
 
-from prototype.utils.transforms import rad2deg
-from prototype.utils.transforms import deg2rad
+from prototype.utils.utils import rad2deg
+from prototype.utils.utils import deg2rad
 from prototype.control.quadrotor.position import PositionController
 from prototype.control.quadrotor.attitude import AttitudeController
 

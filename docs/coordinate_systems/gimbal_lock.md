@@ -1,9 +1,9 @@
 # Gimbl Lock
 
-Gimbal lock is the loss of one degree of freedom in a three dimensional, thre
-gimbal mechanism that occurs when the axes of two of the three gimbals are
-driven into a parallel configuration, "locking" the system into rotation in
-degenerate two-dimensional space.
+Gimbal lock is the loss of one degree of freedom in a three dimensional,
+three gimbal mechanism that occurs when the axes of two of the three
+gimbals are driven into a parallel configuration, "locking" the system
+into rotation in degenerate two-dimensional space.
 
 The word lock is misleading: no gimbal is restrained. All three gimbals can
 still rotate freely about their respective axes of suspension. Nevertheless,

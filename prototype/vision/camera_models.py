@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import dot
 
-from prototype.utils.transforms import euler2rot
+from prototype.utils.utils import euler2rot
 from prototype.vision.common import projection_matrix
 
 

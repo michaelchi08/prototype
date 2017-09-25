@@ -5,7 +5,7 @@ import scipy.linalg
 import numpy as np
 from numpy import dot
 
-from prototype.utils.transforms import deg2rad
+from prototype.utils.utils import deg2rad
 
 
 def focal_length(image_width, image_height, fov):
@@ -20,10 +20,18 @@ def focal_length(image_width, image_height, fov):
 
 
 def projection_matrix(K, R, t):
-    """ Construct projection matrix from:
-    - Camera intrinsics matrix K
-    - Camera rotation matrix R
-    - Camera translation vector t
+    """ Construct projection matrix
+
+    Args:
+
+        K (np.array 3x3 matrix): Camera intrinsics matrix
+        R (np.array 3x3 matrix): Camera rotation matrix
+        t (np.array 3x1 vector): Camera translation vector
+
+    Returns:
+
+        Projection Matrix (3 x 4 matrix)
+
     """
     extrinsics = np.array([[R[0, 0], R[0, 1], R[0, 2], t[0]],
                            [R[1, 0], R[1, 1], R[1, 2], t[1]],
@@ -33,7 +41,19 @@ def projection_matrix(K, R, t):
 
 
 def factor_projection_matrix(P):
-    """ Extract camera intrinsics, rotation matrix and translation vector """
+    """ Extract camera intrinsics, rotation matrix and translation vector
+
+    Args:
+
+        P (np.array of size 3 x 4): Projection Matrix
+
+    Returns:
+
+        K (np.array 3x3 matrix): Camera intrinsics matrix
+        R (np.array 3x3 matrix): Camera rotation matrix
+        t (np.array 3x1 vector): Camera translation vector
+
+    """
     K, R = scipy.linalg.rq(P[:, :3])
 
     # RQ-factorization is not unique, there is a sign ambiguity in the
@@ -51,18 +71,35 @@ def factor_projection_matrix(P):
 
 
 def camera_center(P):
-    """ Extract camera center from projection matrix P """
+    """ Extract camera center from projection matrix P
+
+    Args:
+
+        P (np.array of size 3 x 4): Projection Matrix
+
+    """
     K, R, t = factor_projection_matrix(P)
     return np.dot(R.T, t)
 
 
 def camera_intrinsics(fx, fy, cx, cy):
-    """ Construct camera intrinsics matrix K """
-    K = np.array([
-        [fx, 0.0, cx],
-        [0.0, fy, cy],
-        [0.0, 0.0, 1.0]
-    ])
+    """ Construct camera intrinsics matrix K
+
+    Args:
+
+        fx (float): Focal length in x-axis
+        fy (float): Focal length in y-axis
+        cx (float): Principle point in x-axis
+        cy (float): Principle point in y-axis
+
+    Returns:
+
+        Camera intrinsics matrix as a 3x3 matrix
+
+    """
+    K = np.array([[fx, 0.0, cx],
+                  [0.0, fy, cy],
+                  [0.0, 0.0, 1.0]])
     return K
 
 

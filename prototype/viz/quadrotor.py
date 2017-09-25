@@ -2,9 +2,9 @@ import numpy as np
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 
-from prototype.utils.transforms import rotz
-from prototype.utils.transforms import deg2rad
-from prototype.utils.transforms import euler2rot
+from prototype.utils.utils import rotz
+from prototype.utils.utils import deg2rad
+from prototype.utils.utils import euler2rot
 
 
 class Arrow3D(FancyArrowPatch):

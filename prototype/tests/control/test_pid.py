@@ -3,7 +3,6 @@ from prototype.control.pid import PID
 
 
 class PIDTest(unittest.TestCase):
-
     def test_init(self):
         pid = PID(1.0, 2.0, 3.0)
 

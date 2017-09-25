@@ -3,12 +3,12 @@ import numpy as np
 
 
 def feature_tracking(image_ref, image_cur, px_ref):
-    # setup
+    # Setup
     win_size = (21, 21)
     max_level = 3
     criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01)
 
-    # perform LK-tracking
+    # Perform LK-tracking
     lk_params = {"winSize": win_size,
                  "maxLevel": max_level,
                  "criteria": criteria}
@@ -18,7 +18,7 @@ def feature_tracking(image_ref, image_cur, px_ref):
                                             None,
                                             **lk_params)
 
-    # post-process
+    # Post-process
     st = st.reshape(st.shape[0])
     kp1 = px_ref[st == 1]
     kp2 = kp2[st == 1]
@@ -57,12 +57,12 @@ class BasicVO:
     def process(self, frame_id, frame, scale, min_nb_features=1500):
         R, t, self.px_ref, self.px_cur = self.calc_pose(frame)
 
-        # update position and orientation of camera
+        # Update position and orientation of camera
         if scale > 0.1:
             self.t = self.t + scale * self.R.dot(t)
             self.R = R.dot(self.R)
 
-        # redetect new feature points (too few)
+        # Re-detect new feature points (too few)
         if self.px_ref.shape[0] < min_nb_features:
             self.px_cur = self.detector.detect(frame)
             self.px_cur = np.array([x.pt for x in self.px_cur],
@@ -70,22 +70,22 @@ class BasicVO:
         self.px_ref = self.px_cur
 
     def update(self, frame_id, frame, scale):
-        # update
+        # Update
         if frame_id > 1:
             self.process(frame_id, frame, scale)
 
         elif frame_id == 1:
-            # second frame
+            # Second frame
             self.R, self.t, self.px_ref, self.px_cur = self.calc_pose(frame)
             self.px_ref = self.px_cur
 
         elif frame_id == 0:
-            # first frame
+            # First frame
             self.px_ref = self.detector.detect(frame)
             self.px_ref = np.array([x.pt for x in self.px_ref],
                                    dtype=np.float32)
 
-        # keep track of current frame
+        # Keep track of current frame
         self.last_frame = frame
 
         return (self.R, self.t)

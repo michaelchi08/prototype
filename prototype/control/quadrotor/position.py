@@ -4,8 +4,8 @@ import numpy as np
 from numpy import dot
 
 from prototype.control.pid import PID
-from prototype.utils.transforms import deg2rad
-from prototype.utils.transforms import euler2rot
+from prototype.utils.utils import deg2rad
+from prototype.utils.utils import euler2rot
 
 
 class PositionController(object):

@@ -1,6 +1,6 @@
 import numpy as np
 
-from prototype.utils.transforms import quat2rot
+from prototype.utils.utils import quat2rot
 
 
 def skew(v):
