@@ -24,8 +24,8 @@ class VOSequence:
         self.Tr = np.array([])
 
         # Images
-        self.image_files = []
-        self.nb_images = 0
+        self.image_0_files = []
+        self.image_1_files = []
 
         # Ground Truth
         self.ground_truth = []
@@ -33,6 +33,7 @@ class VOSequence:
         # Load data
         self._load_time(self.sequence_data_path)
         self._load_calibration(self.sequence_data_path)
+        self._load_image_file_names(self.sequence_data_path)
 
     def _load_time(self, sequence_data_path):
         """ Load time data
@@ -87,8 +88,18 @@ class VOSequence:
             sequence_data_path (str): Path to where VO sequence data is
 
         """
-        self.image_files = walkdir(sequence_data_path, ".png")
-        self.nb_images = len(self.image_files)
+        image_0_path = join(sequence_data_path, "image_0")
+        image_1_path = join(sequence_data_path, "image_1")
+
+        self.image_0_files = walkdir(image_0_path, ".png")
+        self.image_1_files = walkdir(image_1_path, ".png")
+
+        self.image_0_files.sort(
+            key=lambda f: int("".join(filter(str.isdigit, f)))
+        )
+        self.image_1_files.sort(
+            key=lambda f: int("".join(filter(str.isdigit, f)))
+        )
 
     def _load_ground_truth(self, data_path, sequence):
         # Build ground truth file path
