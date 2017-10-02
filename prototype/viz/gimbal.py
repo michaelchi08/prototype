@@ -121,13 +121,18 @@ def plot_3d_cube(ax, width, origin, orientation):
 class GimbalPlot:
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
-        self.attitude = np.array([0.0, 0.0, 0.0])
+        self.attitude = np.array([deg2rad(0.0), deg2rad(0.0), 0.0])
 
         self.roll_motor_base = np.array([0.0, 0.0, -0.3])
         self.roll_motor_attitude = np.array([0.0, 0.0, 0.0])
 
+        self.roll_bar_width = 0.2
+        self.roll_bar_length = 0.2
+
         self.pitch_motor_base = np.array([0.25, 0.25, -0.3])
         self.pitch_motor_attitude = np.array([0.0, 0.0, -90.0])
+
+        self.pitch_bar_length = 0.2
 
         self.camera_origin = np.array([0.3, 0.0, -0.3])
         self.camera_attitude = np.array([0.0, 0.0, 0.0])
@@ -179,24 +184,42 @@ class GimbalPlot:
         plot_3d_cube(ax, 0.1, self.camera_origin, self.camera_attitude)
 
     def plot(self, ax):
-        self.attitude = np.array([deg2rad(10.0), deg2rad(45.0), 0.0])
+        # End effector to camera frame
         euler = [0.0, 0.0, 0.0]
-        R = euler2rot([deg2rad(i) for i in euler], 123).reshape(3, 3)
-        t = np.array([0.0, 0.0, 0.0]).reshape(3, 1)
-        origin = np.matrix([[R[0, 0], R[0, 1], R[0, 2], t[0, 0]],
-                            [R[1, 0], R[1, 1], R[1, 2], t[1, 0]],
-                            [R[2, 0], R[2, 1], R[2, 2], t[2, 0]],
+        R_c = euler2rot([deg2rad(i) for i in euler], 123).reshape(3, 3)
+        t_c = np.array([0.0, 0.0, 0.0]).reshape(3, 1)
+        camera = np.matrix([[R_c[0, 0], R_c[0, 1], R_c[0, 2], t_c[0, 0]],
+                            [R_c[1, 0], R_c[1, 1], R_c[1, 2], t_c[1, 0]],
+                            [R_c[2, 0], R_c[2, 1], R_c[2, 2], t_c[2, 0]],
                             [0.0, 0.0, 0.0, 1.0]])
 
-        # Create DH Transforms
-        T_1 = dh_transform_matrix(self.attitude[0], deg2rad(0.0), 1.0, 0.0)
-        T_2 = dh_transform_matrix(deg2rad(180.0), deg2rad(90.0), 0.0, 1.0)
-        T_3 = dh_transform_matrix(deg2rad(0.0), self.attitude[1], 1.0, 0.0)
+        # Base frame to first link
+        euler = [0.0, 90.0, 90.0]
+        R_b = euler2rot([deg2rad(i) for i in euler], 123).reshape(3, 3)
+        t_b = np.array([0.0, 0.0, -0.3]).reshape(3, 1)
+        T_b = np.matrix([[R_b[0, 0], R_b[0, 1], R_b[0, 2], t_b[0, 0]],
+                         [R_b[1, 0], R_b[1, 1], R_b[1, 2], t_b[1, 0]],
+                         [R_b[2, 0], R_b[2, 1], R_b[2, 2], t_b[2, 0]],
+                         [0.0, 0.0, 0.0, 1.0]])
 
-        # Transform from origin to end-effector
-        T_1_end = T_1 * origin
-        T_2_end = T_1 * T_2 * origin
-        T_3_end = T_1 * T_2 * T_3 * origin
+        # Create DH Transforms
+        T_1 = dh_transform_matrix(self.attitude[0],
+                                  deg2rad(0.0),
+                                  self.roll_bar_width,
+                                  0.0)
+        T_2 = dh_transform_matrix(deg2rad(180.0),
+                                  deg2rad(0.0),
+                                  0.0,
+                                  self.roll_bar_length)
+        T_3 = dh_transform_matrix(deg2rad(0.0),
+                                  self.attitude[1],
+                                  self.pitch_bar_length,
+                                  0.0)
+
+        # Transform from camera to end-effector
+        T_1_end = T_b * T_1 * camera
+        T_2_end = T_b * T_1 * T_2 * camera
+        T_3_end = T_b * T_1 * T_2 * T_3 * camera
 
         links = []
         links.append(np.array(T_1_end[0:3, 3]).reshape(3, 1))
@@ -204,9 +227,9 @@ class GimbalPlot:
         links.append(np.array(T_3_end[0:3, 3]).reshape(3, 1))
 
         # Plot first link
-        ax.plot([self.origin[0], links[0][0, 0]],
-                [self.origin[1], links[0][1, 0]],
-                [self.origin[2], links[0][2, 0]])
+        ax.plot([t_b[0, 0], links[0][0, 0]],
+                [t_b[1, 0], links[0][1, 0]],
+                [t_b[2, 0], links[0][2, 0]])
 
         ax.plot([links[0][0, 0], links[1][0, 0]],
                 [links[0][1, 0], links[1][1, 0]],
