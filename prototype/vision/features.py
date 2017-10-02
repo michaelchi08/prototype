@@ -41,14 +41,41 @@ class FeatureTrack:
     """ Feature Track """
 
     def __init__(self, track_id, frame_id, keypoint):
+        """ Constructor
+
+        Args:
+
+            frame_id (int): Frame id
+            track_id (int): Track id
+            keypoint (Keypoint): Keypoint
+
+        """
         self.track_id = track_id
         self.frame_start = frame_id
         self.frame_end = frame_id
         self.track = [keypoint]
 
     def update(self, frame_id, keypoint):
+        """ Update feature track
+
+        Args:
+
+            frame_id (int): Frame id
+            keypoint (Keypoint): Keypoint
+
+        """
         self.frame_end = frame_id
         self.track.append(keypoint)
+
+    def last_keypoint(self):
+        """ Return last keypoint
+
+        Returns:
+
+            Last keypoint (Keypoint)
+
+        """
+        return self.track[-1].pt
 
     def __str__(self):
         s = ""
@@ -63,33 +90,70 @@ class FeatureTracker:
     """ Feature Tracker """
 
     def __init__(self, detector):
+        """ Constructor
+
+        Args:
+
+            detector (FastDetector): Feature detector
+
+        """
         self.frame_id = 0
-        self.track_id = 0
         self.detector = detector
-        self.feature_tracks = []
+
+        self.track_id = 0
+        self.tracks = {}
+        self.tracks_alive = []
 
         self.frame_prev = None
         self.kp_cur = None
         self.kp_ref = None
         self.min_nb_features = 100
 
-    def track_features(self, image_ref, image_cur, kp_old):
+    def detect(self, frame):
+        """ Detect features
+
+        Detects and initializes feature tracks
+
+        Args:
+
+            frame_id (int): Frame id
+            frame (np.array): Frame
+
+        """
+        for kp in self.detector.detect(frame):
+            track = FeatureTrack(self.track_id, self.frame_id, kp)
+            self.tracks[self.track_id] = track
+            self.tracks_alive.append(self.track_id)
+            self.track_id += 1
+
+    def last_keypoints(self):
+        """ Returns previously tracked features
+
+        Returns:
+
+            Keypoints as a numpy array of shape (N, 2), where N is the number of
+            keypoints
+
+        """
+        keypoints = []
+        for track_id in self.tracks_alive:
+            keypoints.append(self.tracks[track_id].last_keypoint())
+
+        return np.array(keypoints, dtype=np.float32)
+
+    def track_features(self, image_ref, image_cur):
         """ Track Features
 
         Args:
 
             image_ref (np.array): Reference image
             image_cur (np.array): Current image
-            kp_old (list of Keypoints): Old keypoints
-
-        Returns:
-
-            Old and new keypoints
 
         """
         # Re-detect new feature points if too few
-        if len(kp_old) < self.min_nb_features:
-            kp_old = self.detector.detect(image_ref)
+        if len(self.tracks_alive) < self.min_nb_features:
+            self.tracks_alive = []  # reset alive feature tracks
+            self.detect(image_ref)
 
         # LK parameters
         win_size = (21, 21)
@@ -97,30 +161,31 @@ class FeatureTracker:
         criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.03)
 
         # Convert reference keypoints to numpy array
-        kp_old = np.array([x.pt for x in kp_old], dtype=np.float32)
+        self.kp_ref = self.last_keypoints()
 
         # Perform LK tracking
         lk_params = {"winSize": win_size,
                      "maxLevel": max_level,
                      "criteria": criteria}
-        kp_new, st, err = cv2.calcOpticalFlowPyrLK(image_ref,
-                                                   image_cur,
-                                                   kp_old,
-                                                   None,
-                                                   **lk_params)
+        self.kp_cur, statuses, err = cv2.calcOpticalFlowPyrLK(image_ref,
+                                                              image_cur,
+                                                              self.kp_ref,
+                                                              None,
+                                                              **lk_params)
 
-        # Post-process (choose only good keypoints)
-        st = st.reshape(st.shape[0])
-        kp_old = kp_old[st == 1]
-        kp_new = kp_new[st == 1]
+        # Filter out bad matches (choose only good keypoints)
+        status = statuses.reshape(statuses.shape[0])
+        still_alive = []
+        for i in range(len(status)):
+            if status[i] == 1:
+                track_id = self.tracks_alive[i]
+                still_alive.append(track_id)
+                kp = Keypoint(self.kp_cur[i])
+                self.tracks[track_id].update(self.frame_id, kp)
 
-        # Convert np.array back to keypoints
-        kp_old = [Keypoint(x) for x in kp_old]
-        kp_new = [Keypoint(x) for x in kp_new]
+        self.tracks_alive = still_alive
 
-        return kp_old, kp_new
-
-    def draw_tracks(self, kp1, kp2, frame, debug=False):
+    def draw_tracks(self, frame, debug=False):
         if debug is False:
             return
 
@@ -128,45 +193,22 @@ class FeatureTracker:
         mask = np.zeros_like(frame)
         color = [0, 0, 255]
 
-        # Convert Keypoints to numpy array
-        kp1 = np.array([x.pt for x in kp1], dtype=np.float32)
-        kp2 = np.array([x.pt for x in kp2], dtype=np.float32)
-
         # Draw tracks
-        for i, (new, old) in enumerate(zip(kp2, kp1)):
+        for i, (new, old) in enumerate(zip(self.kp_cur, self.kp_ref)):
             a, b = new.ravel()
             c, d = old.ravel()
             mask = cv2.line(mask, (a, b), (c, d), color, 1)
         img = cv2.add(frame, mask)
         cv2.imshow("Feature Tracks", img)
 
-    def add_feature_tracks(self, keypoints):
-        for kp in keypoints:
-            track = FeatureTrack(self.track_id, self.frame_id, kp)
-            self.feature_tracks.append(track)
-            self.track_id += 1
-            print(track)
-            print()
-
-    def update_feature_tracks(self, frame_id, keypoints, st):
-        for i in range(len(st)):
-            if st[i] == 1:
-                self.feature_tracks[i].update(frame_id, keypoints)
-
     def update(self, frame, debug=False):
         if self.frame_id > 0:
-            # Track features
-            self.kp_ref, self.kp_cur = self.track_features(self.frame_prev,
-                                                           frame,
-                                                           self.kp_ref)
-            self.draw_tracks(self.kp_ref, self.kp_cur, frame, debug)
+            self.track_features(self.frame_prev, frame)
+            self.draw_tracks(frame, debug)
 
         elif self.frame_id == 0:
-            # First frame
-            self.kp_ref = self.detector.detect(frame)
-            self.add_feature_tracks(self.kp_ref)
+            self.detect(frame)
 
         # Keep track of current frame
-        self.kp_ref = self.kp_cur if self.kp_cur else self.kp_ref
         self.frame_prev = frame
         self.frame_id += 1

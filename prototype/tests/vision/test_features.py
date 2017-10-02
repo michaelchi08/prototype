@@ -26,19 +26,59 @@ class FeatureTrackerTest(unittest.TestCase):
         self.tracker = FeatureTracker(detector)
         self.data = VOSequence(VO_DATA_PATH, "00")
 
+    def test_detect(self):
+        img = cv2.imread(self.data.image_0_files[0])
+        self.tracker.detect(img)
+
+        self.assertTrue(len(self.tracker.tracks) > 10)
+        self.assertEqual(self.tracker.track_id,
+                         len(self.tracker.tracks))
+        self.assertEqual(self.tracker.track_id,
+                         len(self.tracker.tracks_alive))
+
+    def test_last_keypoints(self):
+        img = cv2.imread(self.data.image_0_files[0])
+        self.tracker.detect(img)
+        keypoints = self.tracker.last_keypoints()
+
+        self.assertEqual(len(self.tracker.tracks_alive), keypoints.shape[0])
+        self.assertEqual(2, keypoints.shape[1])
+
+    def test_track_features(self):
+        img1 = cv2.imread(self.data.image_0_files[0])
+        img2 = cv2.imread(self.data.image_0_files[1])
+
+        self.tracker.detect(img1)
+        tracks_alive_before = len(self.tracker.tracks_alive)
+
+        self.tracker.track_features(img1, img2)
+        tracks_alive_after = len(self.tracker.tracks_alive)
+
+        self.assertTrue(tracks_alive_after < tracks_alive_before)
+
+    def test_draw_tracks(self):
+        img1 = cv2.imread(self.data.image_0_files[0])
+        img2 = cv2.imread(self.data.image_0_files[1])
+
+        self.tracker.detect(img1)
+        self.tracker.track_features(img1, img2)
+        self.tracker.draw_tracks(img2, True)
+
+        # cv2.waitKey(1000000)
+
     def test_update(self):
+        tracks_tracked = []
+
         # Loop through images
         index = 0
-        while index <= len(self.data.image_0_files[:10]):
+        while index <= len(self.data.image_0_files[:100]):
             # Index out of bounds guard
             index = 0 if index < 0 else index
 
-            # Open image 0
-            img_path = self.data.image_0_files[index]
-            img = cv2.imread(img_path)
-
             # Feature tracker update
+            img = cv2.imread(self.data.image_0_files[index])
             self.tracker.update(img, True)
+            tracks_tracked.append(len(self.tracker.tracks_alive))
 
             # Display image
             cv2.imshow("VO Sequence " + self.data.sequence, img)
@@ -49,3 +89,7 @@ class FeatureTrackerTest(unittest.TestCase):
                 index -= 1
             else:
                 index += 1
+
+        import matplotlib.pylab as plt
+        plt.plot(range(len(tracks_tracked)), tracks_tracked)
+        plt.show()
