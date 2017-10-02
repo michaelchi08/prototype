@@ -9,7 +9,7 @@ from prototype.vision.features import FastDetector
 from prototype.vision.features import FeatureTracker
 
 # GLOBAL VARIABLES
-VO_DATA_PATH = "/data/vo_dataset"
+VO_DATA_PATH = "/data/dataset"
 
 
 # class FastDetectorTest(unittest.TestCase):
@@ -29,7 +29,7 @@ class FeatureTrackerTest(unittest.TestCase):
     def test_update(self):
         # Loop through images
         index = 0
-        while index <= len(self.data.image_0_files):
+        while index <= len(self.data.image_0_files[:10]):
             # Index out of bounds guard
             index = 0 if index < 0 else index
 

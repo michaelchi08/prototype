@@ -26,12 +26,13 @@ class FastDetector(object):
             nonmaxSuppression=nonmax_suppression
         )
 
-    def detect(self, frame):
+    def detect(self, frame, debug=False):
         keypoints = self.detector.detect(frame)
 
-        image = None
-        image = cv2.drawKeypoints(frame, keypoints, None)
-        cv2.imshow("Keypoints", image)
+        if debug is True:
+            image = None
+            image = cv2.drawKeypoints(frame, keypoints, None)
+            cv2.imshow("Keypoints", image)
 
         return [Keypoint(kp.pt) for kp in keypoints]
 
@@ -40,10 +41,22 @@ class FeatureTrack:
     """ Feature Track """
 
     def __init__(self, track_id, frame_id, keypoint):
-        self.track_id = 0
+        self.track_id = track_id
         self.frame_start = frame_id
         self.frame_end = frame_id
         self.track = [keypoint]
+
+    def update(self, frame_id, keypoint):
+        self.frame_end = frame_id
+        self.track.append(keypoint)
+
+    def __str__(self):
+        s = ""
+        s += "track_id: %d\n" % self.track_id
+        s += "frame_start: %d\n" % self.frame_start
+        s += "frame_end: %d\n" % self.frame_end
+        s += "track: %s" % self.track
+        return s
 
 
 class FeatureTracker:
@@ -51,6 +64,7 @@ class FeatureTracker:
 
     def __init__(self, detector):
         self.frame_id = 0
+        self.track_id = 0
         self.detector = detector
         self.feature_tracks = []
 
@@ -126,6 +140,19 @@ class FeatureTracker:
         img = cv2.add(frame, mask)
         cv2.imshow("Feature Tracks", img)
 
+    def add_feature_tracks(self, keypoints):
+        for kp in keypoints:
+            track = FeatureTrack(self.track_id, self.frame_id, kp)
+            self.feature_tracks.append(track)
+            self.track_id += 1
+            print(track)
+            print()
+
+    def update_feature_tracks(self, frame_id, keypoints, st):
+        for i in range(len(st)):
+            if st[i] == 1:
+                self.feature_tracks[i].update(frame_id, keypoints)
+
     def update(self, frame, debug=False):
         if self.frame_id > 0:
             # Track features
@@ -137,6 +164,7 @@ class FeatureTracker:
         elif self.frame_id == 0:
             # First frame
             self.kp_ref = self.detector.detect(frame)
+            self.add_feature_tracks(self.kp_ref)
 
         # Keep track of current frame
         self.kp_ref = self.kp_cur if self.kp_cur else self.kp_ref

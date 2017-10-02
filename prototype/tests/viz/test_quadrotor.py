@@ -29,4 +29,4 @@ class QuadPlotTest(unittest.TestCase):
         ax.set_xlabel("x")
         ax.set_ylabel("y")
         ax.set_zlabel("z")
-        plt.show()
+        # plt.show()

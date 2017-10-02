@@ -103,7 +103,7 @@ def camera_intrinsics(fx, fy, cx, cy):
     return K
 
 
-def rand3dpts(nb_features, feature_bounds):
+def rand3dfeatures(nb_features, feature_bounds):
     """ Generate random 3D features
 
     Args:

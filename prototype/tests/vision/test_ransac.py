@@ -56,4 +56,4 @@ class RANSACTest(unittest.TestCase):
         y = m_pred * x + c_pred
         plt.scatter(self.data[0, :], self.data[1, :])
         plt.plot(x, y)
-        plt.show()
+        # plt.show()
