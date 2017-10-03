@@ -5,6 +5,21 @@ from prototype.utils.utils import quat2rot
 
 
 def reprojection_error(K, image_point, rotation, translation, world_point):
+    """ Reprojection Error
+
+    Args:
+
+        K (np.array of size 3x3): Camera intrinsics
+        image_point (np.array of size 3x1): Image point
+        rotation (np.array of size 3x3): Rotation
+        translation (np.array of size 3x3): Translation
+        world_point (np.array of size 3x1): World point
+
+    Returns:
+
+        Reprojection error (float)
+
+    """
     # convert quaterion to rotation matrix R
     R = quat2rot(rotation)
     # print(R)

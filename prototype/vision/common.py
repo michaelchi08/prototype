@@ -8,6 +8,22 @@ from numpy import dot
 from prototype.utils.utils import deg2rad
 
 
+def normalize(points):
+    """ Normalize a collection of `points` in homogeneous coordinates so that
+    the last row equals 1. """
+    for row in points:
+        row /= points[-1]
+
+    return points
+
+
+def convert2homogeneous(points):
+    """ Convert a set of points (dim * n array) to homogeneous coordinates
+    where `points` is a numpy array matrix. Returns points in homogeneous
+    coordinates. """
+    return np.vstack((points, np.ones((1, points.shape[1]))))
+
+
 def focal_length(image_width, image_height, fov):
     """ Calculate focal length in the x and y axis from:
     - image width

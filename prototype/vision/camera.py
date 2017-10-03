@@ -5,6 +5,11 @@ import cv2
 
 class Camera(object):
     def __init__(self, index=0):
+        """ Constructor
+
+            index (int): Camera index
+
+        """
         self.frame = None
         self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -17,6 +22,13 @@ class Camera(object):
         self.out = cv2.VideoWriter('output.avi', fourcc, 120.0, (640, 480))
 
     def update(self):
+        """ Update camera
+
+        Returns:
+
+            Camera frame (np.array)
+
+        """
         status, self.frame = self.capture.read()
         if status is False:
             raise RuntimeError("Failed to read camera frame!")
@@ -24,15 +36,17 @@ class Camera(object):
         return self.frame
 
     def display(self):
+        """ Display image frame """
         cv2.imshow("Camera", self.frame)
         cv2.waitKey(1)
 
     def loop(self):
+        """ Loop camera
+
+
+        """
         frame_index = 0
         time_start = time.time()
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
-                    30,
-                    0.001)
 
         while True:
             self.update()
@@ -44,6 +58,9 @@ class Camera(object):
             # gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
             # ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
             # if ret is True:
+            # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,
+            #             30,
+            #             0.001)
             #     corners2 = cv2.cornerSubPix(gray,
             #                                 corners,
             #                                 (11, 11),

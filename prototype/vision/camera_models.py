@@ -7,6 +7,16 @@ from prototype.vision.common import projection_matrix
 
 class PinholeCameraModel(object):
     def __init__(self, image_width, image_height, hz, K):
+        """ Constructor
+
+        Args:
+
+            image_width (int): Image width
+            image_height (int): Image height
+            hz (int): Frame rate
+            K (np.array - size 3x3): Camera intrinsics
+
+        """
         self.image_width = image_width
         self.image_height = image_height
         self.hz = hz
@@ -16,7 +26,17 @@ class PinholeCameraModel(object):
         self.dt = 0.0
 
     def update(self, dt):
-        """Update camera"""
+        """Update camera
+
+        Args:
+
+            dt (float): Time difference
+
+        Returns:
+
+            Boolean to denote whether model has been updated
+
+        """
         self.dt += dt
 
         if self.dt > (1.0 / self.hz):
@@ -27,7 +47,19 @@ class PinholeCameraModel(object):
         return False
 
     def project(self, X, R, t):
-        """ Project 3D point to image plane """
+        """ Project 3D point to image plane
+
+        Args:
+
+            X (np.array): 3D features
+            R (np.array - size 3x3): Rotation matrix
+            t (np.array - size 3x1): Translation vector
+
+        Returns:
+
+            Projected 3D feature onto 2D image plane
+
+        """
         P = projection_matrix(self.K, R, dot(-R, t))
         x = dot(P, X)
         for i in range(3):
@@ -35,7 +67,20 @@ class PinholeCameraModel(object):
         return x
 
     def check_landmarks(self, dt, landmarks, rpy, t):
-        """ Check whether landmarks are observable by camera """
+        """ Check whether landmarks are observable by camera
+
+        Args:
+
+            dt (float): Time difference
+            landmarks (np.array): Landmarks
+            rpy (np.array or list - size 3): Roll, pitch and yaw
+            t (np.array - size 3): Translation vector
+
+        Returns:
+
+            Observed 3D features
+
+        """
         observed = []
 
         # pre-check

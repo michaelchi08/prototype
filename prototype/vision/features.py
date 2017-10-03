@@ -16,6 +16,14 @@ class FastDetector(object):
     """ Fast Detector """
 
     def __init__(self, **kwargs):
+        """ Constructor
+
+        Args:
+
+            threshold (float): Threshold
+            nonmax_supression (bool): Nonmax supression
+
+        """
         # Parameters
         threshold = kwargs.get("threshold", 25)
         nonmax_suppression = kwargs.get("nonmax_supression", True)
@@ -186,6 +194,14 @@ class FeatureTracker:
         self.tracks_alive = still_alive
 
     def draw_tracks(self, frame, debug=False):
+        """ Draw tracks
+
+        Args:
+
+            frame (np.array): Image frame
+            debug (bool): Debug mode
+
+        """
         if debug is False:
             return
 
@@ -202,11 +218,19 @@ class FeatureTracker:
         cv2.imshow("Feature Tracks", img)
 
     def update(self, frame, debug=False):
-        if self.frame_id > 0:
+        """ Update
+
+        Args:
+
+            frame (np.array): Image frame
+            debug (bool): Debug mode
+
+        """
+        if self.frame_id > 0:  # Update
             self.track_features(self.frame_prev, frame)
             self.draw_tracks(frame, debug)
 
-        elif self.frame_id == 0:
+        elif self.frame_id == 0:  # Initialize
             self.detect(frame)
 
         # Keep track of current frame

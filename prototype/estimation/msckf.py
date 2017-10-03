@@ -41,12 +41,6 @@ class MSCKF:
         self.S_p = kwargs.get("S_p")
         self.K = kwargs.get("K")
 
-        self.g_func = kwargs.get("g_func")
-        self.G_func = kwargs.get("G_func")
-
-        self.h_func = kwargs.get("h_func")
-        self.H_func = kwargs.get("H_func")
-
     def imu_state_update(self, dt):
         """ IMU state update """
         q_I_W, w_W = self.X_imu
@@ -63,8 +57,7 @@ class MSCKF:
 
         # q_I_W_dot = 0.5 * omega
 
-
-    def prediction_update(self, g_func, G_func, u, dt):
+    def prediction_update(self, u, dt):
         """ Prediction update """
         g = g_func(u, self.mu, dt)
         G = G_func(u, self.mu, dt)
@@ -72,12 +65,12 @@ class MSCKF:
         self.mu_p = g
         self.S_p = G * self.S * G.T + self.R
 
-    def measurement_update(self, h_func, H_func, y, dt):
+    def measurement_update(self, y, dt):
         """ Measurement update """
         h = h_func(self.mu_p)
         H = H_func(self.mu_p)
 
-        K = self.S_p * H.T * inv(H * self.S_p * H.T) + self.Q
+        K = self.S_p * H.T * (H * self.S_p * H.T).I + self.Q
         self.mu = self.mu_p + K * (y - h)
         self.S = (eye(len(self.mu)) - K * H) * self.S_p
 

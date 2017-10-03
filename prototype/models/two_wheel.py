@@ -9,30 +9,44 @@ from sympy import pprint
 
 def two_wheel_2d_model(x, u, dt):
     """ Two wheel 2D motion model """
-    g1 = x[0] + u[0] * cos(x[2]) * dt
-    g2 = x[1] + u[0] * sin(x[2]) * dt
-    g3 = x[2] + u[1] * dt
+    # g1 = x[0] + u[0] * cos(x[2]) * dt
+    # g2 = x[1] + u[0] * sin(x[2]) * dt
+    # g3 = x[2] + u[1] * dt
 
-    return np.array([g1, g2, g3])
+    gdot = np.array([[u[0, 0] * cos(x[2, 0]) * dt],
+                     [u[0, 0] * sin(x[2, 0]) * dt],
+                     [u[1, 0] * dt]])
+
+    return x + gdot
 
 
 def two_wheel_2d_linearized_model(x, u, dt):
     """ Two wheel 2D linearized motion model """
     G1 = 1.0
     G2 = 0.0
-    G3 = -u[0] * sin(x[2]) * dt
+    G3 = -u[0] * sin(x[2, 0]) * dt
 
     G4 = 0.0
     G5 = 1.0
-    G6 = u[0] * cos(x[2]) * dt
+    G6 = u[0] * cos(x[2, 0]) * dt
 
     G7 = 0.0
     G8 = 0.0
     G9 = 1.0
 
-    G = [[G1, G2, G3], [G4, G5, G6], [G7, G8, G9]]
+    return np.array([[G1, G2, G3],
+                     [G4, G5, G6],
+                     [G7, G8, G9]])
 
-    return np.array(G)
+
+def two_wheel_2d_measurement_model(x):
+    """ Two wheel measurement model """
+    return np.dot(np.eye(3), x)
+
+
+def two_wheel_2d_measurement_linearized_model(x):
+    """ Two wheel measurement model linearized """
+    return np.eye(3)
 
 
 def two_wheel_3d_model(x, u, dt):
