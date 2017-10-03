@@ -17,10 +17,10 @@ class EKF(object):
 
         Args:
 
-            mu (np.array - size Nx1): State vector
-            S (np.array - size NxN): Covariance matrix
-            R (np.array - size NxN): Motion noise matrix
-            Q (np.array - size NxN): Sensor noise matrix
+            mu (np.array): State vector
+            S (np.array): Covariance matrix
+            R (np.array): Motion noise matrix
+            Q (np.array): Sensor noise matrix
 
         Note: the data input should be in the correct numpy array shape. For
         example, mu has to be of shape Nx1 where N is the number of states in
@@ -34,9 +34,9 @@ class EKF(object):
         self.R = kwargs["R"]    # Motion noise matrix
         self.Q = kwargs["Q"]    # Sensor noise matrix
 
-        self.mu_p = None
-        self.S_p = None
-        self.K = None
+        self.mu_p = None        # Predicted state
+        self.S_p = None         # Predicted covariance matrix
+        self.K = None           # Kalman gain
 
         # Convert S, R, Q to numpy matrix
         self.S = np.matrix(self.S)
@@ -67,6 +67,6 @@ class EKF(object):
             dt (float): Time difference
 
         """
-        K = self.S_p * H.T * (H * self.S_p * H.T).I + self.Q
+        K = self.S_p * H.T * (H * self.S_p * H.T + self.Q).I
         self.mu = self.mu_p + K * (y - h)
         self.S = (eye(len(self.mu)) - K * H) * self.S_p

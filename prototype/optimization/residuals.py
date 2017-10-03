@@ -11,7 +11,7 @@ def reprojection_error(K, image_point, rotation, translation, world_point):
 
         K (np.array of size 3x3): Camera intrinsics
         image_point (np.array of size 3x1): Image point
-        rotation (np.array of size 3x3): Rotation
+        rotation (np.array of size 4x1): Quaternion(w, x, y, z)
         translation (np.array of size 3x3): Translation
         world_point (np.array of size 3x1): World point
 
