@@ -8,7 +8,6 @@ from prototype.models.quadrotor import QuadrotorModel
 
 
 class AttitudeControllerTest(unittest.TestCase):
-
     def setUp(self):
         self.quadrotor = QuadrotorModel()
         self.attitude_controller = AttitudeController()

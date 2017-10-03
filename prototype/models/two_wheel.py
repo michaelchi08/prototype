@@ -9,10 +9,6 @@ from sympy import pprint
 
 def two_wheel_2d_model(x, u, dt):
     """ Two wheel 2D motion model """
-    # g1 = x[0] + u[0] * cos(x[2]) * dt
-    # g2 = x[1] + u[0] * sin(x[2]) * dt
-    # g3 = x[2] + u[1] * dt
-
     gdot = np.array([[u[0, 0] * cos(x[2, 0]) * dt],
                      [u[0, 0] * sin(x[2, 0]) * dt],
                      [u[1, 0] * dt]])
@@ -24,11 +20,11 @@ def two_wheel_2d_linearized_model(x, u, dt):
     """ Two wheel 2D linearized motion model """
     G1 = 1.0
     G2 = 0.0
-    G3 = -u[0] * sin(x[2, 0]) * dt
+    G3 = -u[0, 0] * sin(x[2, 0]) * dt
 
     G4 = 0.0
     G5 = 1.0
-    G6 = u[0] * cos(x[2, 0]) * dt
+    G6 = u[0, 0] * cos(x[2, 0]) * dt
 
     G7 = 0.0
     G8 = 0.0
@@ -51,10 +47,10 @@ def two_wheel_2d_measurement_linearized_model(x):
 
 def two_wheel_3d_model(x, u, dt):
     """ Two wheel 3D motion model """
-    g1 = x[0] + u[0] * cos(x[3]) * dt
-    g2 = x[1] + u[0] * sin(x[3]) * dt
-    g3 = x[2] + u[1] * dt
-    g4 = x[3] + u[2] * dt
+    g1 = x[0, 0] + u[0] * cos(x[3, 0]) * dt
+    g2 = x[1, 0] + u[0] * sin(x[3, 0]) * dt
+    g3 = x[2, 0] + u[1] * dt
+    g4 = x[3, 0] + u[2] * dt
 
     return np.array([g1, g2, g3, g4])
 

@@ -1,6 +1,8 @@
 import os
 from math import pi
 
+import numpy as np
+
 from prototype.utils.utils import nwu2edn
 from prototype.utils.data import mat2csv
 from prototype.models.two_wheel import two_wheel_2d_model
@@ -48,7 +50,7 @@ class DatasetGenerator(object):
         # Write state file
         for i in range(len(self.time)):
             t = self.time[i]
-            x = self.robot_states[i]
+            x = self.robot_states[i].ravel().tolist()
 
             state_file.write(str(t) + ",")
             state_file.write(str(x[0]) + ",")
@@ -78,7 +80,7 @@ class DatasetGenerator(object):
 
             # Data
             t = self.time[i]
-            x = self.robot_states[i]
+            x = self.robot_states[i].ravel().tolist()
             observed = self.observed_landmarks[i]
 
             # Output time, robot state, and number of observed features
@@ -138,9 +140,9 @@ class DatasetGenerator(object):
         # Initialize states
         dt = 0.01
         time = 0.0
-        x = [0, 0, 0]
+        x = np.array([0, 0, 0]).reshape(3, 1)
         w = self.calculate_circle_angular_velocity(0.5, 1.0)
-        u = [1.0, w]
+        u = np.array([1.0, w]).reshape(2, 1)
         self.landmarks = self.generate_features()
 
         # Simulate two wheel robot

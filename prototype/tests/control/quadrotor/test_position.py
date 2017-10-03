@@ -8,7 +8,6 @@ from prototype.models.quadrotor import QuadrotorModel
 
 
 class PositionControllerTest(unittest.TestCase):
-
     def setUp(self):
         self.quadrotor = QuadrotorModel()
         self.position_controller = PositionController()

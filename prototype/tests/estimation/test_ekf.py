@@ -63,7 +63,7 @@ class EKFTest(unittest.TestCase):
             # EKF
             g = two_wheel_2d_model(ekf.mu, u, dt)
             G = two_wheel_2d_linearized_model(ekf.mu, u, dt)
-            ekf.prediction_update(u, g, G, dt)
+            ekf.prediction_update(g, G, dt)
 
             h = two_wheel_2d_measurement_model(ekf.mu)
             H = two_wheel_2d_measurement_linearized_model(ekf.mu)
@@ -80,5 +80,7 @@ class EKFTest(unittest.TestCase):
         state_estimated = np.matrix(state_estimated)
 
         # Plot trajectory
-        plot_trajectory(state_true, state_estimated)
-        plt.show()
+        debug = False
+        if debug:
+            plot_trajectory(state_true, state_estimated)
+            plt.show()

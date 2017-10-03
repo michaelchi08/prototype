@@ -23,8 +23,11 @@ class IMUTest(unittest.TestCase):
         sigma = 0.01
         print(abs(sigma - np.std(x, ddof=1)) < 0.01)
 
-        plt.plot(range(1000), x)
-        plt.show()
+        # Plot imu data
+        debug = False
+        if debug:
+            plt.plot(range(1000), x)
+            plt.show()
 
     # def test_generate_signal(self):
     #     dt = 1e-2

@@ -43,12 +43,11 @@ class EKF(object):
         self.R = np.matrix(self.R)
         self.Q = np.matrix(self.Q)
 
-    def prediction_update(self, u, g, G, dt):
+    def prediction_update(self, g, G, dt):
         """ Prediction update
 
         Args:
 
-            u (np.array): Input
             g (np.array): Process model
             G (np.array): Derivative of process model
             dt (float): Time difference

@@ -43,17 +43,18 @@ class MSCKF:
 
     def imu_state_update(self, dt):
         """ IMU state update """
-        q_I_W, w_W = self.X_imu
-
-        # update gyroscope
-        b_g = 0.0
-        n_g = wgn(0.0, 0.1)
-        w = w_W + C(q_I_W) * w_W + b_g + n_g
-
-        # update accelerometer
-        b_a = 0.0
-        n_a = wgn(0.0, 0.1)
-        a = C(q_I_W) * (a_W - g_W + 2 * skew(w_W) * v_I + skew(w_W)**2 * p_I) + b_a + n_a  # noqa
+        pass
+        # q_I_W, w_W = self.X_imu
+        #
+        # # update gyroscope
+        # b_g = 0.0
+        # n_g = wgn(0.0, 0.1)
+        # w = w_W + C(q_I_W) * w_W + b_g + n_g
+        #
+        # # update accelerometer
+        # b_a = 0.0
+        # n_a = wgn(0.0, 0.1)
+        # a = C(q_I_W) * (a_W - g_W + 2 * skew(w_W) * v_I + skew(w_W)**2 * p_I) + b_a + n_a  # noqa
 
         # q_I_W_dot = 0.5 * omega
 

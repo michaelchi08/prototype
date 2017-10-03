@@ -52,8 +52,10 @@ class RANSACTest(unittest.TestCase):
         self.assertTrue(abs(c_pred - self.c_true) < 0.5)
 
         # Plot RANSAC optimized result
-        x = np.linspace(0.0, 10.0, num=100)
-        y = m_pred * x + c_pred
-        plt.scatter(self.data[0, :], self.data[1, :])
-        plt.plot(x, y)
-        # plt.show()
+        debug = False
+        if debug:
+            x = np.linspace(0.0, 10.0, num=100)
+            y = m_pred * x + c_pred
+            plt.scatter(self.data[0, :], self.data[1, :])
+            plt.plot(x, y)
+            plt.show()
