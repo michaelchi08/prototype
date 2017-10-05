@@ -1,8 +1,10 @@
 import unittest
+from os.path import join
 
 import numpy as np
 import matplotlib.pylab as plt
 
+import prototype.tests as test
 from prototype.vision.camera_models import PinholeCameraModel
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
@@ -51,7 +53,8 @@ class PinholeCameraModelTest(unittest.TestCase):
 
     def test_example(self):
         # load points
-        points = np.loadtxt("data/house/house.p3d").T
+        points_file = join(test.TEST_DATA_PATH, "house/house.p3d")
+        points = np.loadtxt(points_file).T
         points = np.vstack((points, np.ones(points.shape[1])))
 
         # setup camera
@@ -62,6 +65,8 @@ class PinholeCameraModelTest(unittest.TestCase):
         x = camera.project(points, R, t)
 
         # plot projection
-        # plt.figure()
-        # plt.plot(x[0], x[1], 'k. ')
-        # plt.show()
+        debug = False
+        if debug:
+            plt.figure()
+            plt.plot(x[0], x[1], 'k. ')
+            plt.show()

@@ -9,7 +9,6 @@ from prototype.optimization.residuals import reprojection_error
 
 
 class ResidualTest(unittest.TestCase):
-
     def test_reprojection_error(self):
         debug = False
         dataset = DatasetGenerator()

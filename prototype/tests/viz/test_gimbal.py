@@ -37,6 +37,7 @@ class GimbalPlotTest(unittest.TestCase):
             ax.set_ylabel("y")
             ax.set_zlabel("z")
             plt.show()
+        plt.clf()
 
     def test_plot_elbow_manipulator(self):
         # Link angles
@@ -65,3 +66,4 @@ class GimbalPlotTest(unittest.TestCase):
             plt.xlim([0.0, 2.0])
             plt.ylim([0.0, 2.0])
             plt.show()
+        plt.clf()

@@ -121,7 +121,7 @@ def plot_3d_cube(ax, width, origin, orientation):
 class GimbalPlot:
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
-        self.attitude = np.array([deg2rad(0.0), deg2rad(0.0), 0.0])
+        self.attitude = np.array([deg2rad(10.0), deg2rad(10.0), 0.0])
 
         self.roll_motor_base = np.array([0.0, 0.0, -0.3])
         self.roll_motor_attitude = np.array([0.0, 0.0, 0.0])

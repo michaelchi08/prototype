@@ -1,8 +1,10 @@
 import sys
 import unittest
+from os.path import join
 
 import cv2
 
+import prototype.tests as test
 from prototype.data.kitti import VOSequence
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FastDetector
@@ -22,7 +24,7 @@ class KeypointTest(unittest.TestCase):
 class FastDetectorTest(unittest.TestCase):
     def test_detect(self):
         detector = FastDetector()
-        img = cv2.imread("data/empire/empire.jpg")
+        img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
         keypoints = detector.detect(img)
 
         self.assertTrue(len(keypoints) >= 3800)
@@ -77,7 +79,7 @@ class FeatureTrackerTest(unittest.TestCase):
             cv2.waitKey(1000000)
 
     def test_update(self):
-        debug = False
+        debug = True
         tracks_tracked = []
 
         # Loop through images

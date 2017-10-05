@@ -272,7 +272,7 @@ def quat2rot(q):
 
     Args:
 
-        q (np.array or list of size 4): Quaternion
+        q (np.array or list of size 4): Quaternion (w, x, y, z)
 
     Returns:
 

@@ -79,7 +79,7 @@ class KFTest(unittest.TestCase):
         state_estimated = np.matrix(state_estimated)
 
         # Plot trajectory
-        debug = True
+        debug = False
         if debug:
             plot_trajectory(state_true, state_estimated)
             plt.show()

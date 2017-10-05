@@ -6,6 +6,7 @@
 - [Span](#maths/linear_algebra/span)
 - [Rank](#maths/linear_algebra/rank)
 - [Determinants](#maths/linear_algebra/determinants)
+- [Eigenvectors and Eigenvalues](#maths/linear_algebra/eigen)
 - [Covariance matrix](#maths/linear_algebra/covariance_matrix)
 - [Skew Symmetric matrix](#maths/linear_algebra/skew_symmetric_matrix)
 - [SVD](#maths/linear_algebra/svd)
