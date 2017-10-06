@@ -7,7 +7,9 @@ import cv2
 import prototype.tests as test
 from prototype.data.kitti import VOSequence
 from prototype.vision.features import Keypoint
-from prototype.vision.features import FastDetector
+from prototype.vision.features import FASTDetector
+from prototype.vision.features import ORBDetector
+from prototype.vision.features import LKFeatureTracker
 from prototype.vision.features import FeatureTracker
 
 # GLOBAL VARIABLES
@@ -21,19 +23,36 @@ class KeypointTest(unittest.TestCase):
         self.assertEqual(kp.pt[1], 2)
 
 
-class FastDetectorTest(unittest.TestCase):
+class FASTDetectorTest(unittest.TestCase):
     def test_detect(self):
-        detector = FastDetector()
+        detector = FASTDetector()
         img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
-        keypoints = detector.detect(img)
+
+        debug = False
+        keypoints = detector.detect(img, debug)
+        if debug:
+            cv2.waitKey(0)
 
         self.assertTrue(len(keypoints) >= 3800)
 
 
-class FeatureTrackerTest(unittest.TestCase):
+class ORBDetectorTest(unittest.TestCase):
+    def test_detect(self):
+        detector = ORBDetector()
+        img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
+
+        debug = False
+        keypoints = detector.detect(img, debug)
+        if debug:
+            cv2.waitKey(0)
+
+        # self.assertTrue(len(keypoints) >= 100)
+
+
+class LKFeatureTrackerTest(unittest.TestCase):
     def setUp(self):
-        detector = FastDetector(threshold=100)
-        self.tracker = FeatureTracker(detector)
+        detector = FASTDetector(threshold=150)
+        self.tracker = LKFeatureTracker(detector)
         self.data = VOSequence(VO_DATA_PATH, "00")
 
     def test_detect(self):
@@ -79,7 +98,7 @@ class FeatureTrackerTest(unittest.TestCase):
             cv2.waitKey(1000000)
 
     def test_update(self):
-        debug = True
+        debug = False
         tracks_tracked = []
 
         # Loop through images
@@ -110,3 +129,56 @@ class FeatureTrackerTest(unittest.TestCase):
             import matplotlib.pylab as plt
             plt.plot(range(len(tracks_tracked)), tracks_tracked)
             plt.show()
+            plt.clf()
+
+
+class FeatureTrackerTests(unittest.TestCase):
+    def setUp(self):
+        self.tracker = FeatureTracker()
+        self.data = VOSequence(VO_DATA_PATH, "00")
+
+    def test_detect(self):
+        img = cv2.imread(self.data.image_0_files[0])
+        self.tracker.detect(img)
+
+        # self.assertTrue(len(self.tracker.tracks) > 10)
+        # self.assertEqual(self.tracker.track_id,
+        #                  len(self.tracker.tracks))
+        # self.assertEqual(self.tracker.track_id,
+        #                  len(self.tracker.tracks_alive))
+
+    # def test_match(self):
+    #     img1 = cv2.imread(self.data.image_0_files[0])
+    #     img2 = cv2.imread(self.data.image_0_files[1])
+    #     self.tracker.match(img1, img2)
+    #     cv2.waitKey(0)
+
+    def test_update(self):
+        debug = True
+
+        img_ref = cv2.imread(self.data.image_0_files[0])
+
+        # Loop through images
+        index = 1
+        while index <= len(self.data.image_0_files[1:]):
+            # Index out of bounds guard
+            index = 1 if index < 1 else index
+
+            # Feature tracker update
+            img_cur = cv2.imread(self.data.image_0_files[index])
+            self.tracker.match(img_ref, img_cur)
+
+            # Display image
+            if debug:
+                # cv2.imshow("VO Sequence " + self.data.sequence, img_cur)
+                key = cv2.waitKey(0)
+                if key == ord('q'):  # Quit
+                    sys.exit(1)
+                elif key == ord('p'):  # Previous image
+                    index -= 1
+                else:
+                    index += 1
+            else:
+                index += 1
+
+            img_ref = img_cur

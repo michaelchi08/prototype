@@ -1,8 +1,9 @@
 import cv2
+import sys
 import numpy as np
 
 
-class Keypoint(object):
+class Keypoint:
     """ Keypoint """
 
     def __init__(self, pt):
@@ -12,7 +13,7 @@ class Keypoint(object):
         return str(self.pt)
 
 
-class FastDetector(object):
+class FASTDetector:
     """ Fast Detector """
 
     def __init__(self, **kwargs):
@@ -24,25 +25,78 @@ class FastDetector(object):
             nonmax_supression (bool): Nonmax supression
 
         """
-        # Parameters
-        threshold = kwargs.get("threshold", 25)
-        nonmax_suppression = kwargs.get("nonmax_supression", True)
-
-        # Detector
         self.detector = cv2.FastFeatureDetector_create(
-            threshold=threshold,
-            nonmaxSuppression=nonmax_suppression
+            threshold=kwargs.get("threshold", 25),
+            nonmaxSuppression=kwargs.get("nonmax_supression", True)
         )
 
     def detect(self, frame, debug=False):
+        """ Detect
+
+        Args:
+
+            frame (np.array): Image frame
+            debug (bool): Debug mode
+
+        Returns:
+
+            List of Keypoints
+
+        """
+        # Detect
         keypoints = self.detector.detect(frame)
 
+        # Show debug image
         if debug is True:
             image = None
             image = cv2.drawKeypoints(frame, keypoints, None)
             cv2.imshow("Keypoints", image)
 
         return [Keypoint(kp.pt) for kp in keypoints]
+
+
+class ORBDetector:
+    """ ORB Detector """
+
+    def __init__(self, **kwargs):
+        """ Constructor """
+        self.detector = cv2.ORB_create(
+            nfeatures=kwargs.get("nfeatures", 500),
+            scaleFactor=kwargs.get("scaleFactor", 1.2),
+            nlevels=kwargs.get("nlevels", 8),
+            edgeThreshold=kwargs.get("edgeThreshold", 31),
+            firstLevel=kwargs.get("firstLevel", 0),
+            WTA_K=kwargs.get("WTA_K", 2),
+            scoreType=kwargs.get("scoreType", cv2.ORB_HARRIS_SCORE),
+            patchSize=kwargs.get("patchSize", 31),
+            fastThreshold=kwargs.get("fastThreshold", 20)
+        )
+
+    def detect(self, frame, debug=False):
+        """ Detect
+
+        Args:
+
+            frame (np.array): Image frame
+            debug (bool): Debug mode
+
+        Returns:
+
+            (keypoints, descriptors)
+
+        Tuple of list of keypoints and numpy array of descriptors
+
+        """
+        # Detect and compute descriptors
+        keypoints, descriptors = self.detector.detectAndCompute(frame, None)
+
+        # Show debug image
+        if debug is True:
+            image = None
+            image = cv2.drawKeypoints(frame, keypoints, None, color=(0, 255, 0))
+            cv2.imshow("Keypoints", image)
+
+        return [Keypoint(kp.pt) for kp in keypoints], descriptors
 
 
 class FeatureTrack:
@@ -94,15 +148,15 @@ class FeatureTrack:
         return s
 
 
-class FeatureTracker:
-    """ Feature Tracker """
+class LKFeatureTracker:
+    """ Lucas-Kanade Feature Tracker """
 
     def __init__(self, detector):
         """ Constructor
 
         Args:
 
-            detector (FastDetector): Feature detector
+            detector (FASTDetector): Feature detector
 
         """
         self.frame_id = 0
@@ -236,3 +290,85 @@ class FeatureTracker:
         # Keep track of current frame
         self.frame_prev = frame
         self.frame_id += 1
+
+
+class FeatureTracker:
+    """ Feature Tracker """
+
+    def __init__(self):
+        """ Constructor """
+        self.frame_id = 0
+        self.detector = ORBDetector(nfeatures=500, nlevels=8)
+
+        self.track_id = 0
+        self.tracks = {}
+        self.tracks_alive = []
+
+        self.frame_prev = None
+        self.kp_cur = None
+        self.kp_ref = None
+        self.min_nb_features = 100
+
+    def detect(self, frame):
+        """ Detect features
+
+        Detects and initializes feature tracks
+
+        Args:
+
+            frame_id (int): Frame id
+            frame (np.array): Frame
+
+        """
+        for kp in self.detector.detect(frame):
+            track = FeatureTrack(self.track_id, self.frame_id, kp)
+            self.tracks[self.track_id] = track
+            self.tracks_alive.append(self.track_id)
+            self.track_id += 1
+
+    def draw_matches(self, img_ref, img_cur, kps1, kps2, matches, match_mask):
+        # Vertically stack images with latest on top
+        img = np.vstack((img_cur, img_ref))
+
+        # Draw matches
+        for i in range(len(matches)):
+            if match_mask[i]:
+                p1 = list(kps1[matches[i].queryIdx].pt)
+                p1[1] += img.shape[0] / 2.0
+                p1 = (int(p1[0]), int(p1[1]))
+
+                p2 = list(kps2[matches[i].trainIdx].pt)
+                p2 = (int(p2[0]), int(p2[1]))
+
+                cv2.line(img, p2, p1, (0, 255, 0), 1)
+
+        # Show matches
+        cv2.imshow("Matches", img)
+
+    def match(self, img_ref, img_cur):
+        kps1, des1 = self.detector.detector.detectAndCompute(img_ref, None)
+        kps2, des2 = self.detector.detector.detectAndCompute(img_cur, None)
+
+        # Setup matcher
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+        # Perform matching and sort based on distance
+        matches = bf.match(des1, des2)
+        matches = sorted(matches, key=lambda x: x.distance)
+
+        # Perform RANSAC (by utilizing findFundamentalMat()) on matches
+        match_mask = None
+        if len(matches) > 10:
+            src_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
+            src_pts = src_pts.reshape(-1, 1, 2)
+            dst_pts = np.float32([kps2[m.trainIdx].pt for m in matches])
+            dst_pts = dst_pts.reshape(-1, 1, 2)
+
+            M, mask = cv2.findFundamentalMat(src_pts, dst_pts)
+            match_mask = mask.ravel().tolist()
+
+        else:
+            print("Not enough matches! - ({}/{})".format(len(matches), 10))
+
+        # Draw matches
+        self.draw_matches(img_ref, img_cur, kps1, kps2, matches, match_mask)
