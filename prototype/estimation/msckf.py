@@ -92,10 +92,13 @@ class MSCKF:
         self.X_imu = zero(5, 1)
 
         # IMU system noise vector
-        self.n_imu = np.block([n_g, n_wg, n_a, n_wa])  # IMU noise vector
+        self.n_imu = np.block([n_g.ravel(),
+                               n_wg.ravel(),
+                               n_a.ravel(),
+                               n_wa.ravel()]).reshape((12, 1))
 
         # IMU covariance matrix
-        self.Q_imu = I(12, 12) * self.n_imu
+        self.Q_imu = I(12) * self.n_imu
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """ Jacobian F matrix
@@ -165,25 +168,30 @@ class MSCKF:
 
         return G
 
+    def J(self):
+        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+        C_IC = C(self.cam_q_IC)
+        N = 30
+
     def prediction_update(self, a_m, w_m, dt):
         """ IMU state update """
         w_G = np.array([0.0, 0.0, 1.0]).reshape((3, 1))
         G_g = np.array([0.0, 0.0, 1.0]).reshape((3, 1))
 
         # IMU error state estimates
-        q_hat_IG, b_hat_g, G_v_hat_I, b_hat_a, G_p_hat_I = self.X_imu
+        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
 
         # Calculate new accel and gyro estimates
         a_hat = a_m - b_hat_a
         w_hat = w_m - b_hat_g - C(q_hat_IG) * w_G
 
         # Update IMU states (reverse order)
-        G_p_hat_I = G_v_hat_I
+        p_hat_G_I = v_hat_G_I
         b_hat_a = b_hat_a + zero(3, 1)
-        G_v_hat_I = G_v_hat_I + C(q_hat_IG) * a_hat - 2 * skew(w_G) * G_v_hat_I - skew(w_G)**2 * G_p_I + G_g  # noqa
+        v_hat_G_I = v_hat_G_I + C(q_hat_IG) * a_hat - 2 * skew(w_G) * v_hat_G_I - skew(w_G)**2 * G_p_I + G_g  # noqa
         b_hat_g = b_hat_g + zero(3, 1)
         q_hat_IG = q_hat_IG + 0.5 * Omega(w_hat) * q_hat_IG
-        self.X_imu = np.array(q_hat_IG, b_hat_g, G_v_hat_I, b_hat_a, G_p_hat_I)
+        self.X_imu = np.array(q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I)
         self.X_imu = self.X_imu.reshape((15, 1))
 
         # Build the jacobians F and G
@@ -197,3 +205,20 @@ class MSCKF:
         self.P_imu = Phi * self.P_imu + self.P_imu * Phi.T + G * self.Q_imu * G.T  # noqa
         self.P_cam = self.P_cam
         self.P_imu_cam = Phi * self.P_imu_cam
+
+    def state_augmentation(self):
+        # IMU error state estimates
+        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+
+        # Using current IMU pose estimate, calculate camera pose
+        # -- Camera rotation
+        q_CG = quatmul(self.cam_q_CI, q_IG)
+        # -- Camera translation
+        C_IG = quat2rot(q_hat_IG)
+        p_G_C = p_hat_G_I + C_IG.T * self.cam_p_C_I
+
+        # Build covariance matrix
+        P = np.block([[self.P_imu, self.P_imu_cam],
+                      [self.P_imu_cam.T, self.P_cam]])
+
+        # Camera pose Jacobian

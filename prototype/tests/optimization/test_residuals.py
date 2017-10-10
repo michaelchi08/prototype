@@ -15,15 +15,15 @@ class ResidualTest(unittest.TestCase):
         dataset.simulate_test_data()
 
         K = dataset.camera.K
-        landmarks = dataset.landmarks
-        observed = dataset.observed_landmarks
+        features = dataset.features
+        observed = dataset.observed_features
         robot_states = dataset.robot_states
 
         # for i in range(len(robot_states)):
         for i in range(2):
             x, y, theta = robot_states[i]
-            image_point, landmark_id = observed[i][0]
-            feature = nwu2edn(np.array(landmarks[landmark_id]))
+            image_point, feature_id = observed[i][0]
+            feature = nwu2edn(np.array(features[feature_id]))
             euler = nwu2edn(np.array([0.0, 0.0, theta]))
             rotation = euler2quat(euler, 123)
             translation = np.array([-y, 0.0, x])
@@ -31,7 +31,7 @@ class ResidualTest(unittest.TestCase):
             if debug:
                 print("K:", K)
                 print("image_point:", image_point)
-                print("landmark_id:", landmark_id)
+                print("feature_id:", feature_id)
                 print("feature:", feature)
                 print("rotation:", rotation)
                 print("translation:", translation)

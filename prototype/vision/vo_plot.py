@@ -9,15 +9,15 @@ from matplotlib.patches import Rectangle
 # from matplotlib.patches import PathPatch
 
 DATASET_PATH = "/tmp/test"
-LANDMARK_DATA_FILE = "landmarks.dat"
+LANDMARK_DATA_FILE = "features.dat"
 
 
-def load_landmark_data(dataset_path):
+def load_feature_data(dataset_path):
     # setup
     csv_file = open(dataset_path + "/" + LANDMARK_DATA_FILE, 'r')
     csv_reader = csv.reader(csv_file)
 
-    # parse landmarks file
+    # parse features file
     data = []
     for line in csv_reader:
         f3d = np.array([float(line[0]), float(line[1]), float(line[2])])
@@ -39,7 +39,7 @@ def load_single_observed_data(fp):
         "nb_observations": None,
         "state": None,
         "keypoints": [],
-        "landmark_ids": []
+        "feature_ids": []
     }
 
     # parse time, nb_observations and robot state
@@ -48,7 +48,7 @@ def load_single_observed_data(fp):
     data["state"] = np.array([float(x[0]), float(x[1]), float(x[2])])
     data["nb_observations"] = int(next(csv_reader, None)[0])
 
-    # parse observed landmarks
+    # parse observed features
     keypoint_line = True
     for line in csv_reader:
         if keypoint_line:
@@ -56,8 +56,8 @@ def load_single_observed_data(fp):
             data["keypoints"].append(keypoint)
             keypoint_line = False
         else:
-            landmark_id = int(line[0])
-            data["landmark_ids"].append(landmark_id)
+            feature_id = int(line[0])
+            data["feature_ids"].append(feature_id)
             keypoint_line = True
 
     # convert list of vectors into 1 matrix, where each column is 1 observation
@@ -99,15 +99,15 @@ def plot_camera(ax):
     art3d.pathpatch_2d_to_3d(p, z=0, zdir="y")
 
 
-def plot_3d(landmark_data, observed_data):
+def plot_3d(feature_data, observed_data):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
     # plot 3d points
     ax.scatter(
-        landmark_data[0, :],
-        landmark_data[1, :],
-        landmark_data[2, :],
+        feature_data[0, :],
+        feature_data[1, :],
+        feature_data[2, :],
         c="r",
         s=5,
         depthshade=False)
@@ -124,7 +124,7 @@ def plot_3d(landmark_data, observed_data):
         input("Time Step: " + str(i))
         print("State: " + str(obs["state"]))
         print("Number of features: " + str(obs["nb_observations"]))
-        print("Landmark IDs: " + str(obs["landmark_ids"]))
+        print("Landmark IDs: " + str(obs["feature_ids"]))
         print()
 
         for line in lines:
@@ -134,10 +134,10 @@ def plot_3d(landmark_data, observed_data):
                 pass
 
         for j in range(obs["nb_observations"]):
-            landmark_id = obs["landmark_ids"][j]
-            landmark = landmark_data[:, landmark_id]
-            lines += ax.plot([obs["state"][0], landmark[0]],
-                             [obs["state"][1], landmark[1]],
-                             [0.0, landmark[2]], "b-")
+            feature_id = obs["feature_ids"][j]
+            feature = feature_data[:, feature_id]
+            lines += ax.plot([obs["state"][0], feature[0]],
+                             [obs["state"][1], feature[1]],
+                             [0.0, feature[2]], "b-")
 
         fig.canvas.draw()

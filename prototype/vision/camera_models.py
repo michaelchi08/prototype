@@ -66,13 +66,13 @@ class PinholeCameraModel(object):
             x[i] /= x[2]
         return x
 
-    def check_landmarks(self, dt, landmarks, rpy, t):
-        """ Check whether landmarks are observable by camera
+    def check_features(self, dt, features, rpy, t):
+        """ Check whether features are observable by camera
 
         Args:
 
             dt (float): Time difference
-            landmarks (np.array): Landmarks
+            features (np.array): Landmarks
             rpy (np.array or list - size 3): Roll, pitch and yaw
             t (np.array - size 3): Translation vector
 
@@ -93,10 +93,10 @@ class PinholeCameraModel(object):
         # projection matrix
         P = projection_matrix(self.K, R, dot(-R, t))
 
-        # check which landmarks are observable from camera
-        for i in range(len(landmarks)):
+        # check which features are observable from camera
+        for i in range(len(features)):
             # convert feature in NWU to EDN coordinate system
-            point = landmarks[i]
+            point = features[i]
             point_edn = [0, 0, 0, 0]
             point_edn[0] = -point[1]
             point_edn[1] = -point[2]

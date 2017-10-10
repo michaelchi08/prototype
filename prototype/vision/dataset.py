@@ -24,10 +24,10 @@ class DatasetGenerator(object):
             "z": {"min": -10.0, "max": 10.0}
         }
 
-        self.landmarks = []
+        self.features = []
         self.time = []
         self.robot_states = []
-        self.observed_landmarks = []
+        self.observed_features = []
 
     def generate_features(self):
         """ Setup features """
@@ -71,7 +71,7 @@ class DatasetGenerator(object):
         # Setup
         index_file = open(os.path.join(save_dir, "index.dat"), "w")
 
-        # Output observed landmarks
+        # Output observed features
         for i in range(len(self.time)):
             # Setup output file
             output_path = save_dir + "/observed_" + str(i) + ".dat"
@@ -81,24 +81,24 @@ class DatasetGenerator(object):
             # Data
             t = self.time[i]
             x = self.robot_states[i].ravel().tolist()
-            observed = self.observed_landmarks[i]
+            observed = self.observed_features[i]
 
             # Output time, robot state, and number of observed features
             obs_file.write(str(t) + '\n')
             obs_file.write(','.join(map(str, x)) + '\n')
             obs_file.write(str(len(observed)) + '\n')
 
-            # Output observed landmarks
-            for obs in self.observed_landmarks[i]:
-                img_pt, landmark_id = obs
+            # Output observed features
+            for obs in self.observed_features[i]:
+                img_pt, feature_id = obs
 
                 # Convert to string
                 img_pt = ','.join(map(str, img_pt[0:2]))
-                landmark_id = str(landmark_id)
+                feature_id = str(feature_id)
 
                 # Write to file
                 obs_file.write(img_pt + '\n')
-                obs_file.write(landmark_id + '\n')
+                obs_file.write(feature_id + '\n')
 
             # Close observed file
             obs_file.close()
@@ -114,7 +114,7 @@ class DatasetGenerator(object):
             save_dir (str): Path to save output
 
         """
-        mat2csv(os.path.join(save_dir, "landmarks.dat"), self.landmarks)
+        mat2csv(os.path.join(save_dir, "features.dat"), self.features)
 
     def calculate_circle_angular_velocity(self, r, v):
         """ Calculate target circle angular velocity given a desired circle
@@ -143,7 +143,7 @@ class DatasetGenerator(object):
         x = np.array([0, 0, 0]).reshape(3, 1)
         w = self.calculate_circle_angular_velocity(0.5, 1.0)
         u = np.array([1.0, w]).reshape(2, 1)
-        self.landmarks = self.generate_features()
+        self.features = self.generate_features()
 
         # Simulate two wheel robot
         for i in range(300):
@@ -154,10 +154,10 @@ class DatasetGenerator(object):
             rpy = nwu2edn([0.0, 0.0, x[2]])
             t = nwu2edn([x[0], x[1], 0.0])
 
-            # Check landmark
-            observed = self.camera.check_landmarks(dt, self.landmarks, rpy, t)
+            # Check feature
+            observed = self.camera.check_features(dt, self.features, rpy, t)
             if observed is not None:
-                self.observed_landmarks.append(observed)
+                self.observed_features.append(observed)
                 self.robot_states.append(x)
                 self.time.append(time)
 
@@ -178,7 +178,7 @@ class DatasetGenerator(object):
         # Simulate test data
         self.simulate_test_data()
 
-        # Output landmarks and robot state
+        # Output features and robot state
         self.output_features(save_dir)
         self.output_robot_state(save_dir)
         self.output_observed(save_dir)
