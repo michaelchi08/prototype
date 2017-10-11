@@ -61,7 +61,7 @@ class Feature:
 class FeatureTrack:
     """ Feature Track """
 
-    def __init__(self, track_id, frame_id, data):
+    def __init__(self, track_id, frame_id, data0, data1=None):
         """ Constructor
 
         Args:
@@ -72,9 +72,13 @@ class FeatureTrack:
 
         """
         self.track_id = track_id
-        self.frame_start = frame_id
+        self.frame_start = frame_id - 1
         self.frame_end = frame_id
-        self.track = [data]
+
+        if data1 is not None:
+            self.track = [data0, data1]
+        else:
+            self.track = [data0]
 
     def update(self, frame_id, data):
         """ Update feature track
@@ -359,17 +363,24 @@ class FeatureTracker:
 
     def __init__(self):
         """ Constructor """
-        self.frame_id = 0
+        # Detector and matcher
         self.detector = ORBDetector(nfeatures=1000, nlevels=8)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
-        self.track_id = 0
-        self.tracks_buffer = {}
-        self.tracks_alive = []
-        self.max_buffer_size = math.inf
+        # Counters
+        self.counter_frame_id = 0
+        self.counter_track_id = 0
 
-        self.keyframe = None
-        self.feature_threshold = 0.4
+        # Feature tracks
+        self.tracks_alive = []
+        self.tracks_dead = []
+        self.tracks_buffer = {}
+        self.max_buffer_size = 10000
+
+        # Image, feature, unmatched features references
+        self.img_ref = None
+        self.fea_ref = None
+        self.unmatched = []
 
     def detect(self, frame):
         """ Detect features
@@ -383,7 +394,7 @@ class FeatureTracker:
         """
         return self.detector.detect(frame)
 
-    def match(self, tracks, features):
+    def match(self, track_ids, f0, f1):
         """ Match features to feature tracks
 
         The idea is that with the current features, we want to match it against
@@ -391,25 +402,20 @@ class FeatureTracker:
 
         Args:
 
-            tracks (List of FeatureTrack): Current feature tracks
-            features (List of Features): Current features
+            track_ids (List of int): Track IDs that the feature f0 belongs to
+            f0 (List of Feature): Reference features
+            f1 (List of Feature): Current features
 
         Returns:
 
-            (feature track id, feature index)
+            (feature track id, f0 index, f1 index)
 
         """
         # Convert Features to cv2.KeyPoint and descriptors (np.array)
-        kps1 = []
-        des1 = []
-        for t in tracks:
-            f = t.last()
-            kps1.append(cv2.KeyPoint(f.pt[0], f.pt[1], f.size))
-            des1.append(f.des)
-        des1 = np.array(des1)
-
-        kps2 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in features]
-        des2 = np.array([f.des for f in features])
+        kps1 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f0]
+        des1 = np.array([f.des for f in f0])
+        kps2 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f1]
+        des2 = np.array([f.des for f in f1])
 
         # Perform matching and sort based on distance
         # Note: arguments to the brute-force matcher is (query descriptors,
@@ -433,31 +439,83 @@ class FeatureTracker:
             if match_mask[i] == 1:
                 final_matches.append(matches[i])
 
-        # Return matches in the form of (feature track id, feature index)
+        # Convert matches in the form of (feature track id, f0 index, f1 index)
         result = []
+        matched_indicies = {}
         for m in final_matches:
-            match = (tracks[m.trainIdx].track_id, m.queryIdx)
-            result.append(match)
+            result.append((track_ids[m.trainIdx], m.trainIdx, m.queryIdx))
+            matched_indicies[m.queryIdx] = True
 
-        return result
+        # Obtain list of unmatched features
+        unmatched = []
+        for i in range(len(f1)):
+            if i not in matched_indicies:
+                unmatched.append(f1[i])
 
-    def draw_matches(self,
-                     img_ref, img_cur,
-                     tracks, features,
-                     matches):
+        return result, unmatched
+
+    def update_feature_tracks(self, track_ids, matches, f0, f1):
+        """ Update feature tracks
+
+        Args:
+
+            matches (Tuple of float): (feature track id, feature index)
+            f0 (List of Features): Reference features
+            f1 (List of Features): Current features
+
+        """
+        tracks_updated = {}
+        matched_features = []
+
+        # Create or update feature tracks
+        for m in matches:
+            track_id, f0_idx, f1_idx = m
+
+            # Create new feature track
+            if track_id is None:
+                track_id = self.counter_track_id
+                track = FeatureTrack(track_id, self.counter_frame_id,
+                                     f0[f0_idx], f1[f1_idx])
+                self.tracks_buffer[track_id] = track
+                self.counter_track_id += 1
+                track_ids.append(track_id)
+
+            # Update existing feature track
+            else:
+                track = self.tracks_buffer[track_id]
+                track.update(self.counter_frame_id, f1[f1_idx])
+
+            # Update current track ids
+            tracks_updated[track_id] = 1
+            matched_features.append(f1[f1_idx])
+
+        # Drop dead feature tracks
+        tracks_alive = []
+        for track_id in track_ids:
+            if track_ids is not None and track_id in tracks_updated:
+                tracks_alive.append(track_id)
+            elif track_id is not None:
+                self.tracks_dead.append(track_id)
+
+        # # Clear feature tracks that are too old
+        # if len(self.tracks_buffer) > self.max_buffer_size:
+        #     end = min(len(self.tracks_dead), self.max_buffer_size)
+        #     for i in range(end):
+        #         track_id = self.tracks_dead[i]
+        #         del self.tracks_buffer[track_id]
+
+        return tracks_alive, matched_features
+
+    def draw_matches(self, img_ref, img_cur, f0, f1, matches):
         """ Draw matches
-
-        NOTE: Call this before calling FeatureTracker.update_feature_tracks(),
-        else the feature track last keypoint will be the same as the current
-        feature keypoint matched.
 
         Args:
 
             img_ref (np.array): Reference image
             img_cur (np.array): Current image
-            tracks (List of FeatureTrack): Feature tracks currently tracking
-            features (List of Features): Current features
-            matches (Tuple of float): (feature track id, feature index)
+            f0 (List of Features): Reference features
+            f1 (List of Features): Current features
+            matches (Tuple of float): (feature track id, f0 index, f1 index)
 
         """
         # Vertically stack images with latest frame on top
@@ -465,9 +523,9 @@ class FeatureTracker:
 
         # Draw matches
         for m in matches:
-            track_id, feature_idx = m
-            kp1 = self.tracks_buffer[track_id].track[0].pt
-            kp2 = features[feature_idx].pt
+            track_id, f0_idx, f1_idx = m
+            kp1 = f0[f0_idx].pt
+            kp2 = f1[f1_idx].pt
 
             # Point 1
             p1 = np.array(kp1)
@@ -482,54 +540,7 @@ class FeatureTracker:
 
         return img
 
-    def init_feature_tracks(self, features):
-        """ Initialize feature tracks
-
-        Args:
-
-            features (List of Features): Features
-
-        """
-        # Make sure tracks alive is clear
-        self.tracks_alive.clear()
-
-        # Initialize each feature with its own FeatureTrack
-        for f in features:
-            track = FeatureTrack(self.track_id, self.frame_id, f)
-            self.tracks_buffer[self.track_id] = track
-            self.tracks_alive.append(track)
-            self.track_id += 1
-
-    def update_feature_tracks(self, features, matches):
-        """ Update feature tracks
-
-        Args:
-
-            features (List of Features): Current features
-            matches (Tuple of float): (feature track id, feature index)
-
-        """
-        # Update feature tracks currently tracking
-        tracks_updated = {}
-        for m in matches:
-            track_id, feature_idx = m
-            track = self.tracks_buffer[track_id]
-            feature = features[feature_idx]
-            track.update(self.frame_id, feature)
-            tracks_updated[track_id] = 1
-
-        # Drop dead feature tracks
-        tracks_still_alive = []
-        for t in self.tracks_alive:
-            if t.track_id in tracks_updated:
-                tracks_still_alive.append(t)
-        self.tracks_alive = list(tracks_still_alive)
-
-        # Clear feature tracks that are too old
-        # if len(self.tracks_buffer) > self.max_buffer_size:
-        #     self.tracks_buffer = self.tracks_buffer[500:-1]
-
-    def update(self, img_cur):
+    def update(self, img_cur, debug=False):
         """ Update tracker with current image
 
         Args:
@@ -538,26 +549,37 @@ class FeatureTracker:
 
         """
         # Initialize tracker
-        if self.keyframe is None:
-            features = self.detect(img_cur)
-            self.keyframe = Keyframe(img_cur, features)
-            self.init_feature_tracks(self.keyframe.features)
-            self.frame_id += 1
+        if self.fea_ref is None:
+            self.fea_ref = self.detect(img_cur)
+            self.tracks_alive = [None for i in range(len(self.fea_ref))]
+            self.img_ref = img_cur
+            self.counter_frame_id += 1
             return
 
+        # Detect features on latest image frame
+        fea_cur = self.detect(img_cur)
+
+        # Stack unmatched with tracked features
+        self.tracks_alive += [None for i in range(len(self.unmatched))]
+        self.fea_ref += self.unmatched
+
         # Match features
-        features = self.detect(img_cur)
-        matches = self.match(self.tracks_alive, features)
+        matches, self.unmatched = self.match(self.tracks_alive,
+                                             self.fea_ref,
+                                             fea_cur)
 
         # Draw matches
-        img = self.draw_matches(self.keyframe.image, img_cur,
-                                self.tracks_alive, features,
-                                matches)
-        cv2.imshow("Matches", img)
+        if debug:
+            img = self.draw_matches(self.img_ref, img_cur,
+                                    self.fea_ref, fea_cur,
+                                    matches)
+            cv2.imshow("Matches", img)
 
         # Update
-        self.update_feature_tracks(features, matches)
-        if len(matches) < len(self.keyframe.features) * self.feature_threshold:
-            self.keyframe.update(img_cur, features)
-            self.init_feature_tracks(self.keyframe.features)
-        self.frame_id += 1
+        update_results = self.update_feature_tracks(self.tracks_alive,
+                                                    matches,
+                                                    self.fea_ref,
+                                                    fea_cur)
+        self.tracks_alive, self.fea_ref = update_results
+        self.img_ref = img_cur
+        self.counter_frame_id += 1

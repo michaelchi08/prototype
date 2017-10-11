@@ -1,8 +1,10 @@
 import sys
+import time
 import unittest
 from os.path import join
 
 import cv2
+import matplotlib.pylab as plt
 
 import prototype.tests as test
 from prototype.data.kitti import VOSequence
@@ -148,89 +150,120 @@ class FeatureTrackerTests(unittest.TestCase):
         img0 = cv2.imread(self.data.image_0_files[0])
         img1 = cv2.imread(self.data.image_0_files[1])
 
-        # Intialize tracker
+        # Obtain features in both frames
         f0 = self.tracker.detect(img0)
-        self.tracker.init_feature_tracks(f0)
+        f1 = self.tracker.detect(img1)
+
+        # Create track ids dictionary
+        track_ids = [None for f in f0]
 
         # Perform matching
-        f1 = self.tracker.detect(img1)
-        matches = self.tracker.match(self.tracker.tracks_alive, f1)
+        matches = self.tracker.match(track_ids, f0, f1)
 
         self.assertTrue(len(matches) < len(f0))
-
-    def test_draw_matches(self):
-        img0 = cv2.imread(self.data.image_0_files[0])
-        img1 = cv2.imread(self.data.image_0_files[1])
-
-        # Intialize tracker
-        f0 = self.tracker.detect(img0)
-        self.tracker.init_feature_tracks(f0)
-
-        # Perform matching
-        f1 = self.tracker.detect(img1)
-        matches = self.tracker.match(self.tracker.tracks_alive, f1)
-
-        # Draw matches
-        img = self.tracker.draw_matches(img0, img1,
-                                        self.tracker.tracks_alive, f1,
-                                        matches)
-
-        # Show matches
-        debug = True
-        if debug:
-            cv2.imshow("Matches", img)
-            cv2.waitKey(0)
-
-    def test_init_feature_tracks(self):
-        img = cv2.imread(self.data.image_0_files[0])
-
-        features = self.tracker.detect(img)
-        self.tracker.keyframe = Keyframe(img, features)
-        self.tracker.init_feature_tracks(self.tracker.keyframe.features)
-
-        self.assertTrue(self.tracker.tracks_buffer, len(features))
-        self.assertTrue(self.tracker.tracks_alive, len(features))
-        self.assertEqual(self.tracker.track_id, len(features))
 
     def test_update_feature_tracks(self):
         img0 = cv2.imread(self.data.image_0_files[0])
         img1 = cv2.imread(self.data.image_0_files[1])
         img2 = cv2.imread(self.data.image_0_files[2])
+        img3 = cv2.imread(self.data.image_0_files[3])
 
-        # Initialize feature tracks
+        # Obtain features from images
         f0 = self.tracker.detect(img0)
-        self.tracker.keyframe = Keyframe(img0, f0)
-        self.tracker.init_feature_tracks(self.tracker.keyframe.features)
-
-        print("tracks alive: ", len(self.tracker.tracks_alive))
-
-        # Update feature tracks
         f1 = self.tracker.detect(img1)
-        m1 = self.tracker.match(self.tracker.tracks_alive, f1)
-        self.tracker.update_feature_tracks(f1, m1)
-
-        print("tracks alive: ", len(self.tracker.tracks_alive))
-
-        # Update feature tracks
         f2 = self.tracker.detect(img2)
-        m2 = self.tracker.match(self.tracker.tracks_alive, f2)
-        self.tracker.update_feature_tracks(f2, m2)
+        f3 = self.tracker.detect(img3)
 
-        print("tracks alive: ", len(self.tracker.tracks_alive))
+        # Create track ids dictionary
+        track_ids = [None for f in f0]
+
+        # First match
+        matches, unmatched = self.tracker.match(track_ids, f0, f1)
+        track_ids, f1 = self.tracker.update_feature_tracks(
+            track_ids,
+            matches,
+            f0,
+            f1
+        )
+
+        self.assertTrue(len(track_ids) > 100)
+        self.assertEqual(len(track_ids), len(f1))
+        self.assertEqual(len(self.tracker.tracks_dead), 0)
+
+        # Stack unmatched with tracked features
+        track_ids += [None for i in range(len(unmatched))]
+        f1 += unmatched
+
+        # Second match
+        matches, unmatched = self.tracker.match(track_ids, f1, f2)
+        track_ids, f2 = self.tracker.update_feature_tracks(
+            track_ids,
+            matches,
+            f1,
+            f2
+        )
+
+        self.assertTrue(len(track_ids) > 100)
+        self.assertEqual(len(track_ids), len(f2))
+        self.assertTrue(len(self.tracker.tracks_dead) > 0)
+
+        # Stack unmatched with tracked features
+        track_ids += [None for i in range(len(unmatched))]
+        f2 += unmatched
+
+        # Third match
+        matches, unmatched = self.tracker.match(track_ids, f2, f3)
+        track_ids, f3 = self.tracker.update_feature_tracks(
+            track_ids,
+            matches,
+            f2,
+            f3
+        )
+
+        self.assertTrue(len(track_ids) > 100)
+        self.assertEqual(len(track_ids), len(f3))
+        self.assertTrue(len(self.tracker.tracks_dead) > 0)
 
         # # Plot feature tracks
-        # import matplotlib.pylab as plt
-        # for track in self.tracker.tracks_alive:
-        #     track_x = []
-        #     track_y = []
-        #     for feature in track.track:
-        #         track_x.append(feature.pt[0])
-        #         track_y.append(feature.pt[1])
-        #     plt.plot(track_x, track_y)
-        # plt.show()
+        # debug = False
+        # if debug:
+        #     for track_id in track_ids:
+        #         track_x = []
+        #         track_y = []
+        #         for feature in self.tracker.tracks_buffer[track_id].track:
+        #             track_x.append(feature.pt[0])
+        #             track_y.append(feature.pt[1])
+        #         plt.plot(track_x, track_y)
+        #     plt.show()
+
+    def test_draw_matches(self):
+        img0 = cv2.imread(self.data.image_0_files[0])
+        img1 = cv2.imread(self.data.image_0_files[1])
+
+        # Obtain features
+        f0 = self.tracker.detect(img0)
+        f1 = self.tracker.detect(img1)
+        track_ids = [None for i in range(len(f0))]
+
+        # Perform matching
+        matched, unmatched = self.tracker.match(track_ids, f0, f1)
+
+        # Draw matches
+        img = self.tracker.draw_matches(img0, img1,
+                                        f0, f1,
+                                        matched)
+
+        # Show matches
+        debug = False
+        if debug:
+            cv2.imshow("Matches", img)
+            cv2.waitKey(0)
 
     def test_update(self):
         debug = True
+
+        tracked = []
+        storage = []
 
         # Loop through images
         index = 0
@@ -240,17 +273,25 @@ class FeatureTrackerTests(unittest.TestCase):
 
             # Feature tracker update
             img = cv2.imread(self.data.image_0_files[index])
-            self.tracker.update(img)
+            self.tracker.update(img, debug)
+
+            # Record tracker stats
+            tracked.append(len(self.tracker.tracks_alive))
+            storage.append(len(self.tracker.tracks_buffer))
 
             # Display image
             if debug:
                 # cv2.imshow("VO Sequence " + self.data.sequence, img)
                 key = cv2.waitKey(0)
                 if key == ord('q'):  # Quit
-                    sys.exit(1)
+                    index = len(self.data.image_0_files[:1000]) + 1
                 elif key == ord('p'):  # Previous image
                     index -= 1
                 else:
                     index += 1
             else:
                 index += 1
+
+        plt.plot(range(len(tracked)), tracked)
+        plt.plot(range(len(storage)), storage)
+        plt.show()
