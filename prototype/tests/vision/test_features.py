@@ -141,6 +141,14 @@ class FeatureTrackerTests(unittest.TestCase):
         self.tracker = FeatureTracker()
         self.data = VOSequence(VO_DATA_PATH, "00")
 
+    def test_initialize(self):
+        img = cv2.imread(self.data.image_0_files[0])
+        self.tracker.initialize(img)
+
+        self.assertTrue(self.tracker.img_ref is not None)
+        self.assertTrue(self.tracker.fea_ref is not None)
+        self.assertTrue(len(self.tracker.tracks_alive) > 0)
+
     def test_detect(self):
         img = cv2.imread(self.data.image_0_files[0])
         features = self.tracker.detect(img)
@@ -151,16 +159,14 @@ class FeatureTrackerTests(unittest.TestCase):
         img1 = cv2.imread(self.data.image_0_files[1])
 
         # Obtain features in both frames
-        f0 = self.tracker.detect(img0)
+        self.tracker.initialize(img0)
+        f0 = self.tracker.fea_ref
         f1 = self.tracker.detect(img1)
 
-        # Create track ids dictionary
-        track_ids = [None for f in f0]
-
         # Perform matching
-        matches = self.tracker.match(track_ids, f0, f1)
+        matches = self.tracker.match(f0, f1)
 
-        self.assertTrue(len(matches) < len(f0))
+        self.assertTrue(len(matches) < len(self.tracker.fea_ref))
 
     def test_update_feature_tracks(self):
         img0 = cv2.imread(self.data.image_0_files[0])
@@ -169,84 +175,59 @@ class FeatureTrackerTests(unittest.TestCase):
         img3 = cv2.imread(self.data.image_0_files[3])
 
         # Obtain features from images
-        f0 = self.tracker.detect(img0)
+        self.tracker.initialize(img0)
+        f0 = self.tracker.fea_ref
         f1 = self.tracker.detect(img1)
-        f2 = self.tracker.detect(img2)
-        f3 = self.tracker.detect(img3)
-
-        # Create track ids dictionary
-        track_ids = [None for f in f0]
 
         # First match
-        matches, unmatched = self.tracker.match(track_ids, f0, f1)
-        track_ids, f1 = self.tracker.update_feature_tracks(
-            track_ids,
-            matches,
-            f0,
-            f1
-        )
+        matches = self.tracker.match(f0, f1)
+        self.tracker.update_feature_tracks(matches, f0, f1)
 
-        self.assertTrue(len(track_ids) > 100)
-        self.assertEqual(len(track_ids), len(f1))
+        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertEqual(len(self.tracker.tracks_dead), 0)
 
-        # Stack unmatched with tracked features
-        track_ids += [None for i in range(len(unmatched))]
-        f1 += unmatched
-
         # Second match
-        matches, unmatched = self.tracker.match(track_ids, f1, f2)
-        track_ids, f2 = self.tracker.update_feature_tracks(
-            track_ids,
-            matches,
-            f1,
-            f2
-        )
+        f2 = self.tracker.detect(img2)
+        matches = self.tracker.match(f1, f2)
+        self.tracker.update_feature_tracks(matches, f1, f2)
 
-        self.assertTrue(len(track_ids) > 100)
-        self.assertEqual(len(track_ids), len(f2))
+        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertTrue(len(self.tracker.tracks_dead) > 0)
-
-        # Stack unmatched with tracked features
-        track_ids += [None for i in range(len(unmatched))]
-        f2 += unmatched
 
         # Third match
-        matches, unmatched = self.tracker.match(track_ids, f2, f3)
-        track_ids, f3 = self.tracker.update_feature_tracks(
-            track_ids,
-            matches,
-            f2,
-            f3
-        )
+        f3 = self.tracker.detect(img3)
+        matches = self.tracker.match(f2, f3)
+        self.tracker.update_feature_tracks(matches, f2, f3)
 
-        self.assertTrue(len(track_ids) > 100)
-        self.assertEqual(len(track_ids), len(f3))
+        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertTrue(len(self.tracker.tracks_dead) > 0)
 
-        # # Plot feature tracks
-        # debug = False
-        # if debug:
-        #     for track_id in track_ids:
-        #         track_x = []
-        #         track_y = []
-        #         for feature in self.tracker.tracks_buffer[track_id].track:
-        #             track_x.append(feature.pt[0])
-        #             track_y.append(feature.pt[1])
-        #         plt.plot(track_x, track_y)
-        #     plt.show()
+        # Plot feature tracks
+        debug = False
+        if debug:
+            for track_id in self.tracker.tracks_alive:
+                track_x = []
+                track_y = []
+                for feature in self.tracker.tracks_buffer[track_id].track:
+                    track_x.append(feature.pt[0])
+                    track_y.append(feature.pt[1])
+                plt.plot(track_x, track_y)
+            plt.show()
 
     def test_draw_matches(self):
         img0 = cv2.imread(self.data.image_0_files[0])
         img1 = cv2.imread(self.data.image_0_files[1])
 
         # Obtain features
-        f0 = self.tracker.detect(img0)
+        self.tracker.initialize(img0)
+        f0 = self.tracker.fea_ref
         f1 = self.tracker.detect(img1)
-        track_ids = [None for i in range(len(f0))]
 
         # Perform matching
-        matched, unmatched = self.tracker.match(track_ids, f0, f1)
+        matched = self.tracker.match(f0, f1)
 
         # Draw matches
         img = self.tracker.draw_matches(img0, img1,
