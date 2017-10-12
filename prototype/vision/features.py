@@ -364,7 +364,7 @@ class FeatureTracker:
     def __init__(self):
         """ Constructor """
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=1000, nlevels=8)
+        self.detector = ORBDetector(nfeatures=100, nlevels=8)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         # Counters
@@ -424,28 +424,28 @@ class FeatureTracker:
             (feature track id, f0 index, f1 index)
 
         """
-        # Stack unmatched with tracked features
+        # Stack previously unmatched features with tracked features
         if len(self.unmatched):
             self.tracks_alive += [None for i in range(len(self.unmatched))]
             f0 += self.unmatched
 
         # Convert Features to cv2.KeyPoint and descriptors (np.array)
-        kps1 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f0]
-        des1 = np.array([f.des for f in f0])
-        kps2 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f1]
-        des2 = np.array([f.des for f in f1])
+        kps0 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f0]
+        des0 = np.array([f.des for f in f0])
+        kps1 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f1]
+        des1 = np.array([f.des for f in f1])
 
         # Perform matching and sort based on distance
         # Note: arguments to the brute-force matcher is (query descriptors,
-        # train descriptors), here we use des2 as the query descriptors becase
-        # des2 represents the latest descriptors from the latest image frame
-        matches = self.matcher.match(des2, des1)
+        # train descriptors), here we use des1 as the query descriptors becase
+        # des1 represents the latest descriptors from the latest image frame
+        matches = self.matcher.match(des1, des0)
         matches = sorted(matches, key=lambda x: x.distance)
 
         # Perform RANSAC (by utilizing findFundamentalMat()) on matches
         # This acts as a stage 2 filter where outliers are rejected
-        src_pts = np.float32([kps1[m.trainIdx].pt for m in matches])
-        dst_pts = np.float32([kps2[m.queryIdx].pt for m in matches])
+        src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
+        dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
         src_pts = src_pts.reshape(-1, 1, 2)
         dst_pts = dst_pts.reshape(-1, 1, 2)
         M, mask = cv2.findFundamentalMat(src_pts, dst_pts)
@@ -467,11 +467,11 @@ class FeatureTracker:
             matched_indicies[m.queryIdx] = True
 
         # Update list of unmatched features
-        unmatched = []
-        for i in range(len(f1)):
+        nb_unmatched = len(f1)
+        self.unmatched.clear()
+        for i in range(nb_unmatched):
             if i not in matched_indicies:
-                unmatched.append(f1[i])
-        self.unmatched = unmatched
+                self.unmatched.append(f1[i])
 
         return result
 
@@ -504,19 +504,27 @@ class FeatureTracker:
             # Update existing feature track
             else:
                 track = self.tracks_buffer[track_id]
-                track.update(self.counter_frame_id, f1[f1_idx])
+                feature = f1[f1_idx]
+                track.update(self.counter_frame_id, feature)
 
             # Update current track ids
             tracks_updated[track_id] = 1
             matched_features.append(f1[f1_idx])
 
-        # Drop dead feature tracks
+        # Drop dead feature tracks and reference features
         tracks_alive = []
+        self.fea_ref.clear()
+        # Reference features should correspond to current tracks
+
         for track_id in self.tracks_alive:
             if track_id is not None and track_id in tracks_updated:
                 tracks_alive.append(track_id)
+                track = self.tracks_buffer[track_id]
+                self.fea_ref.append(track.last())
+
             elif track_id is not None:
                 self.tracks_dead.append(track_id)
+
         self.tracks_alive = list(tracks_alive)
 
         # Clear feature tracks that are too old
@@ -566,6 +574,7 @@ class FeatureTracker:
         Args:
 
             img_cur (np.array): Current image
+            debug (bool): Debug mode
 
         """
         # Initialize tracker
@@ -578,7 +587,6 @@ class FeatureTracker:
 
         # Match features
         matches = self.match(self.fea_ref, fea_cur)
-        self.update_feature_tracks(matches, self.fea_ref, fea_cur)
 
         # Draw matches
         if debug:
@@ -588,5 +596,5 @@ class FeatureTracker:
             cv2.imshow("Matches", img)
 
         # Update
+        self.update_feature_tracks(matches, self.fea_ref, fea_cur)
         self.img_ref = img_cur
-        self.fea_ref = fea_cur

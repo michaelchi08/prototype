@@ -176,32 +176,31 @@ class FeatureTrackerTests(unittest.TestCase):
 
         # Obtain features from images
         self.tracker.initialize(img0)
-        f0 = self.tracker.fea_ref
         f1 = self.tracker.detect(img1)
 
         # First match
-        matches = self.tracker.match(f0, f1)
-        self.tracker.update_feature_tracks(matches, f0, f1)
+        matches = self.tracker.match(self.tracker.fea_ref, f1)
+        self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f1)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertTrue(len(self.tracker.tracks_alive) > 0)
         self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertEqual(len(self.tracker.tracks_dead), 0)
 
         # Second match
         f2 = self.tracker.detect(img2)
-        matches = self.tracker.match(f1, f2)
-        self.tracker.update_feature_tracks(matches, f1, f2)
+        matches = self.tracker.match(self.tracker.fea_ref, f2)
+        self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f2)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertTrue(len(self.tracker.tracks_alive) > 0)
         self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertTrue(len(self.tracker.tracks_dead) > 0)
 
         # Third match
         f3 = self.tracker.detect(img3)
-        matches = self.tracker.match(f2, f3)
-        self.tracker.update_feature_tracks(matches, f2, f3)
+        matches = self.tracker.match(self.tracker.fea_ref, f3)
+        self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f3)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 100)
+        self.assertTrue(len(self.tracker.tracks_alive) > 0)
         self.assertEqual(len(self.tracker.tracks_alive), len(matches))
         self.assertTrue(len(self.tracker.tracks_dead) > 0)
 
@@ -240,21 +239,63 @@ class FeatureTrackerTests(unittest.TestCase):
             cv2.imshow("Matches", img)
             cv2.waitKey(0)
 
+    def plot_storage(self, storage):
+        plt.figure()
+        plt.plot(range(len(storage)), storage)
+        plt.title("Num of tracks over time")
+        plt.xlabel("Frame No.")
+        plt.ylabel("Num of Tracks")
+
+    def plot_tracked(self, tracked):
+        plt.figure()
+        plt.plot(range(len(tracked)), tracked)
+        plt.title("Matches per Frame")
+        plt.xlabel("Frame No.")
+        plt.ylabel("Num of Tracks")
+
+    def plot_tracks(self, fig, ax):
+        ax.cla()
+        ax.set_xlim([0, 1000])
+        ax.set_ylim([0, 300])
+        for track_id in self.tracker.tracks_alive:
+            track_x = []
+            track_y = []
+
+            if track_id is not None:
+                for feature in self.tracker.tracks_buffer[track_id].track:
+                    track_x.append(feature.pt[0])
+                    track_y.append(feature.pt[1])
+                ax.plot(track_x, track_y)
+                fig.canvas.draw()
+
     def test_update(self):
         debug = True
 
+        # Stats
         tracked = []
         storage = []
 
+        # Plot tracks
+        # plt.ion()
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # ax.set_title("Tracks")
+        # ax.set_xlabel("pixel")
+        # ax.set_ylabel("pixel")
+
         # Loop through images
         index = 0
-        while index <= len(self.data.image_0_files[:1000]):
+        nb_images = len(self.data.image_0_files[:200])
+        time_start = time.time()
+
+        while index <= nb_images:
             # Index out of bounds guard
             index = 0 if index < 0 else index
 
             # Feature tracker update
             img = cv2.imread(self.data.image_0_files[index])
             self.tracker.update(img, debug)
+            # self.plot_tracks(fig, ax)
 
             # Record tracker stats
             tracked.append(len(self.tracker.tracks_alive))
@@ -263,9 +304,9 @@ class FeatureTrackerTests(unittest.TestCase):
             # Display image
             if debug:
                 # cv2.imshow("VO Sequence " + self.data.sequence, img)
-                key = cv2.waitKey(0)
+                key = cv2.waitKey(1)
                 if key == ord('q'):  # Quit
-                    index = len(self.data.image_0_files[:1000]) + 1
+                    index = nb_images + 1
                 elif key == ord('p'):  # Previous image
                     index -= 1
                 else:
@@ -273,6 +314,9 @@ class FeatureTrackerTests(unittest.TestCase):
             else:
                 index += 1
 
-        plt.plot(range(len(tracked)), tracked)
-        plt.plot(range(len(storage)), storage)
-        plt.show()
+        time_elapsed = time.time() - time_start  # NOQA
+        # print("fps: ", float(index) / time_elapsed)
+
+        # self.plot_tracked(tracked)
+        # self.plot_storage(storage)
+        # plt.show()
