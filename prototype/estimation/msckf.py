@@ -4,24 +4,56 @@ from prototype.utils.utils import quat2rot
 
 
 def skew(v):
-    """ Return skew symmetric matrix """
-    return np.array([[0.0, -v[2], v[1]],
+    """ Skew symmetric matrix
+
+    Args:
+
+        v (np.array): vector of size 3
+
+    Returns:
+
+        Skew symetric matrix (np.matrix)
+
+    """
+    return np.matrix([[0.0, -v[2], v[1]],
                      [v[2], 0.0, -v[0]],
                      [-v[1], v[0], 0.0]])
 
 
 def C(q):
-    """ Return rotation matrix parameterized by a quaternion (w, x, y, z) """
+    """ Rotation matrix parameterized by a quaternion (w, x, y, z)
+
+    Args:
+
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Rotation matrix (np.matrix)
+
+    """
     return np.matrix(quat2rot(q))
 
 
 def wgn(mu, sigma):
-    """ Return Gaussian White Noise """
+    """ Gaussian White Noise
+
+    Args:
+
+        mu (float): Mean
+        sigma (float): Variance
+
+
+    Returns:
+
+        Gaussian white noise as a float scalar value
+
+    """
     return np.random.normal(mu, sigma, 1)[0]
 
 
 def Omega(w):
-    """ Return Omega
+    """ Omega function
 
     Args:
 
@@ -29,14 +61,14 @@ def Omega(w):
 
     Returns:
 
-        Differential form of an angular velocity
+        Differential form of an angular velocity (np.array)
 
     """
     return np.block([[-skew(w), w], [-w, 0.0]])
 
 
 def zero(m, n):
-    """ Return zero matrix of size mxn
+    """ Zero matrix of size mxn
 
     Args:
 
@@ -45,7 +77,7 @@ def zero(m, n):
 
     Returns:
 
-        Numpy matrix of an mxn zero matrix
+        mxn zero matrix (np.matrix)
 
     """
     return np.matrix(np.zeros((m, n)))
@@ -60,10 +92,31 @@ def I(n):
 
     Returns:
 
-        Identity matrix of size nxn
+        Identity matrix of size nxn (np.matrix)
 
     """
     return np.matrix(np.eye(n))
+
+
+def quatmul(p, q):
+    """ Quaternion multiplication
+
+    Args:
+
+        p (np.array): Quaternion (w, x, y, z)
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Product of p and q as a quaternion (w, x, y, z)
+
+    """
+    p4, p1, p2, p3 = q
+    q4, q1, q2, q3 = q
+    return np.array([[q4 * p1 + q3 * p2 - q2 * p3 + q1 * p4],
+                     [-q3 * p1 + q4 * p2 + q1 * p3 + q2 * p4],
+                     [q2 * p1 - q1 * p2 + q4 * p3 + q3 * p4],
+                     [-q1 * p1 - q2 * p2 - q3 * p3 + q4 * p4]])
 
 
 class MSCKF:
@@ -100,8 +153,12 @@ class MSCKF:
         # IMU covariance matrix
         self.Q_imu = I(12) * self.n_imu
 
+        # Camera extrinsics
+        self.cam_p_I_C = np.array([0.0, 0.0, 0.0])
+        self.cam_q_CI = np.array([1.0, 0.0, 0.0, 0.0])
+
     def F(self, w_hat, q_hat, a_hat, w_G):
-        """ Jacobian F matrix
+        """ Transition Jacobian F matrix
 
         Aka predicition or transition matrix in an EKF
 
@@ -136,7 +193,7 @@ class MSCKF:
         return F
 
     def G(self, q_hat):
-        """ Jacobian G matrix
+        """ Input Jacobian G matrix
 
         A matrix that maps the input vector (IMU gaussian noise) to the state
         vector (IMU error state vector), it tells us how the inputs affect the
@@ -168,10 +225,29 @@ class MSCKF:
 
         return G
 
-    def J(self):
+    def J(self, cam_q_CI, cam_p_I_C, q_hat_IG, N):
+        """ Jacobian J matrix
+
+        Args:
+
+            cam_q_CI (np.array): Rotation from IMU to camera frame
+                                 in quaternion (w, x, y, z)
+            cam_p_I_C (np.array): Position of camera frame from IMU
+            q_hat_IG (np.array): Rotation from global to IMU frame
+
+        """
         q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
-        C_IC = C(self.cam_q_IC)
-        N = 30
+        C_CI = C(cam_q_CI)
+        C_IG = C(q_hat_IG)
+
+        J = zero(6, 15 + 6 * N)
+
+        # -- First row --
+        J[0:3, 0:3] = C_CI
+
+        # -- Second row --
+        J[3:6, 0:3] = skew(C_IG.T * cam_p_I_C)
+        J[3:6, 9:12] = I(3)
 
     def prediction_update(self, a_m, w_m, dt):
         """ IMU state update """
@@ -182,8 +258,8 @@ class MSCKF:
         q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
 
         # Calculate new accel and gyro estimates
-        a_hat = a_m - b_hat_a
-        w_hat = w_m - b_hat_g - C(q_hat_IG) * w_G
+        a_hat = a_m - b_hat_a * dt
+        w_hat = w_m - b_hat_g - C(q_hat_IG) * w_G * dt
 
         # Update IMU states (reverse order)
         p_hat_G_I = v_hat_G_I
@@ -210,15 +286,28 @@ class MSCKF:
         # IMU error state estimates
         q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
 
-        # Using current IMU pose estimate, calculate camera pose
+        # Using current IMU pose estimate to calculate camera pose
         # -- Camera rotation
-        q_CG = quatmul(self.cam_q_CI, q_IG)
+        q_CG = quatmul(self.cam_q_CI, q_hat_IG)
         # -- Camera translation
         C_IG = quat2rot(q_hat_IG)
-        p_G_C = p_hat_G_I + C_IG.T * self.cam_p_C_I
+        p_G_C = p_hat_G_I + C_IG.T * self.cam_p_I_C
 
-        # Build covariance matrix
+        # Camera pose Jacobian
+        N = 1
+        J = self.J(self.cam_q_CI, self.cam_p_I_C, q_hat_IG, N)
+
+        # Build covariance matrix (without new camera state)
         P = np.block([[self.P_imu, self.P_imu_cam],
                       [self.P_imu_cam.T, self.P_cam]])
 
-        # Camera pose Jacobian
+        # Augment MSCKF covariance matrix (with new camera state)
+        X = np.block([[I(15 + 6 * N)], [J]])
+        P = X * P * X.T
+
+        self.X_cam[N] = p_G_C
+        self.X_cam[N] = q_CG
+
+    def estimate_features(self, cam_states, observations, noise_params):
+        pass
+
