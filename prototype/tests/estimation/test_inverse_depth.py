@@ -25,13 +25,17 @@ class InverseDepthTest(unittest.TestCase):
         dt = 0.01
 
         X = camera_motion_model(X, dt)
-        print("X:", X)
+        # print("X:", X)
+
+        self.assertEqual(X.shape, (13, 1))
 
     def test_h_C(self):
         y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
         q_WC = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
-        h_C(y, r_W_C, q_WC)
+
+        h = h_C(y, r_W_C, q_WC)
+        self.assertEqual(h.shape, (2, 1))
 
     def test_feature_init(self):
         r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))

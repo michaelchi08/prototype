@@ -1,3 +1,0 @@
-# prototype.models.ackerman
-
-

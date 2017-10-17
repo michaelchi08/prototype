@@ -64,24 +64,12 @@ def linearity_index_xyz_parameterization():
     print()
 
 
-def quatangle(angle):
-    """ Quaternion from angle """
-    roll, pitch, yaw = angle
+# def derive_J_jacobian():
+#     r_W_C = sympy.symbols("r_W_C")
+#
+#     y =
 
-    cy = cos(yaw / 2.0)
-    sy = sin(yaw / 2.0)
-    cr = cos(roll / 2.0)
-    sr = sin(roll / 2.0)
-    cp = cos(pitch / 2.0)
-    sp = sin(pitch / 2.0)
 
-    q = np.zeros(4)
-    q[0] = cy * cr * cp + sy * sr * sp
-    q[1] = cy * sr * cp - sy * cr * sp
-    q[2] = cy * cr * sp + sy * sr * cp
-    q[3] = sy * cr * cp - cy * sr * sp
-
-    return q
 
 
 def R(q):
@@ -114,8 +102,8 @@ def camera_motion_model(X, dt):
     """
     a_W = 0.0
     alpha_W = 0.0
-    V_W_k = a_W * dt
-    Omega_W = alpha_W * dt
+    V_W_k = a_W * dt        # Linear velocity Gaussian process
+    Omega_W = alpha_W * dt  # Angular velocity Guassian process
 
     # Expand state vector to its constituence
     r_W_C_k = X[0:3, 0].reshape(3, 1)  # Position
@@ -132,7 +120,7 @@ def camera_motion_model(X, dt):
     return np.vstack([r_W_C_kp1, q_WC_kp1, v_W_kp1, w_W_kp1])
 
 
-def h_C(y, r_W_C, q_WC):
+def h_C(y, r_W_C, q_WC, K, image_size):
     """ Observation of a point from a camera location
 
     Args:
@@ -140,6 +128,8 @@ def h_C(y, r_W_C, q_WC):
         y (np.array): 3D scene point vector
         r_W_C (np.array): Camera position (x, y, z)
         q_WC (np.array): Camera orientation quaternion (w, x, y, z)
+        K (np.array): Camera intrinsics matrix
+        image_size (List of float): Image size (image_width, image_height)
 
     Returns:
 
@@ -163,9 +153,19 @@ def h_C(y, r_W_C, q_WC):
     # Feature observed from camera
     h = R_CW * (cam_0 + (1.0 / rho) * m)
 
-    # Homogeneous coordinates to pixel coordinates
-    u = h[0] / h[2]
-    v = h[1] / h[2]
+    # Convert homogeneous coordinates to normalized coordinates
+    u = h[0, 0] / h[2, 0]
+    v = h[1, 0] / h[2, 0]
+
+    # Apply camera calibration to convert normalized to pixel coordinates
+    fx = K[0, 0]  # Focal length x-axis
+    fy = K[1, 1]  # Focal length y-axis
+    px = K[0, 2]  # Principle center x-axis
+    py = K[1, 2]  # Principle center y-axis
+    dx, dy = image_size  # Image size (image width, image height)
+
+    u = px - fx / dx * u
+    v = py - fy / dy * v
 
     return np.array([[u], [v]])
 

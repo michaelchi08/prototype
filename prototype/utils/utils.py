@@ -263,7 +263,7 @@ def quatmul(p, q):
                      [-qx * px - qy * py - qz * pz + qw * pw]])
 
 
-def quatyeuler(q, euler_seq):
+def quat2euler(q, euler_seq):
     qw, qx, qy, qz = q
     qw2 = pow(qw, 2)
     qx2 = pow(qx, 2)
@@ -452,5 +452,3 @@ def nwu2edn(nwu):
     edn[1] = -nwu[2]
     edn[2] = nwu[0]
     return edn
-
-
