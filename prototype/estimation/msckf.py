@@ -98,27 +98,6 @@ def I(n):
     return np.matrix(np.eye(n))
 
 
-def quatmul(p, q):
-    """ Quaternion multiplication
-
-    Args:
-
-        p (np.array): Quaternion (w, x, y, z)
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Product of p and q as a quaternion (w, x, y, z)
-
-    """
-    p4, p1, p2, p3 = q
-    q4, q1, q2, q3 = q
-    return np.array([[q4 * p1 + q3 * p2 - q2 * p3 + q1 * p4],
-                     [-q3 * p1 + q4 * p2 + q1 * p3 + q2 * p4],
-                     [q2 * p1 - q1 * p2 + q4 * p3 + q3 * p4],
-                     [-q1 * p1 - q2 * p2 - q3 * p3 + q4 * p4]])
-
-
 class MSCKF:
     """ Multi-State Constraint Kalman Filter
 

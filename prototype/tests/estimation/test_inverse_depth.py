@@ -5,19 +5,27 @@ import numpy as np
 from prototype.estimation.inverse_depth import h_C
 from prototype.estimation.inverse_depth import feature_init
 from prototype.estimation.inverse_depth import camera_motion_model
-from prototype.estimation.inverse_depth import linearity_index_inverse_depth
-from prototype.estimation.inverse_depth import linearity_index_xyz_parameterization
+# from prototype.estimation.inverse_depth import linearity_index_inverse_depth
+# from prototype.estimation.inverse_depth import linearity_index_xyz_parameterization
 
 
 class InverseDepthTest(unittest.TestCase):
-    def test_linearity_index_inverse_depth(self):
-        linearity_index_inverse_depth()
+    # def test_linearity_index_inverse_depth(self):
+    #     linearity_index_inverse_depth()
+    #
+    # def test_linearity_index_xyz_parameterization(self):
+    #     linearity_index_xyz_parameterization()
 
-    def test_linearity_index_xyz_parameterization(self):
-        linearity_index_xyz_parameterization()
+    def test_camera_motion_model(self):
+        r_W_C = np.array([[0.0], [0.0], [0.0]])
+        q_WC = np.array([[1.0], [0.0], [0.0], [0.0]])
+        v_W = np.array([[0.0], [0.0], [0.0]])
+        w_C = np.array([[0.0], [0.0], [0.0]])
+        X = np.block([[r_W_C], [q_WC], [v_W], [w_C]])
+        dt = 0.01
 
-    # def test_camera_motion_model(self):
-    #     camera_motion_model(X, dt)
+        X = camera_motion_model(X, dt)
+        print("X:", X)
 
     def test_h_C(self):
         y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0])

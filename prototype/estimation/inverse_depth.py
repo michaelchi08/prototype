@@ -7,6 +7,7 @@ import sympy
 import numpy as np
 
 from prototype.utils.utils import quat2rot
+from prototype.utils.utils import quatmul
 
 
 def linearity_index_inverse_depth():
@@ -63,6 +64,26 @@ def linearity_index_xyz_parameterization():
     print()
 
 
+def quatangle(angle):
+    """ Quaternion from angle """
+    roll, pitch, yaw = angle
+
+    cy = cos(yaw / 2.0)
+    sy = sin(yaw / 2.0)
+    cr = cos(roll / 2.0)
+    sr = sin(roll / 2.0)
+    cp = cos(pitch / 2.0)
+    sp = sin(pitch / 2.0)
+
+    q = np.zeros(4)
+    q[0] = cy * cr * cp + sy * sr * sp
+    q[1] = cy * sr * cp - sy * cr * sp
+    q[2] = cy * cr * sp + sy * sr * cp
+    q[3] = sy * cr * cp - cy * sr * sp
+
+    return q
+
+
 def R(q):
     """ Rotation matrix parameterized by a quaternion (w, x, y, z)
 
@@ -94,18 +115,21 @@ def camera_motion_model(X, dt):
     a_W = 0.0
     alpha_W = 0.0
     V_W_k = a_W * dt
-    Omega_C = alpha_W * dt
+    Omega_W = alpha_W * dt
 
     # Expand state vector to its constituence
-    r_W_C_k, q_W_C_k, v_W_k, w_C_k = X
+    r_W_C_k = X[0:3, 0].reshape(3, 1)  # Position
+    q_WC_k = X[3:7, 0].reshape(4, 1)   # Orientation
+    v_W_k = X[7:10, 0].reshape(3, 1)   # Linear velocity
+    w_W_k = X[10:, 0].reshape(3, 1)    # Angular velocity
 
     # Update state
     r_W_C_kp1 = r_W_C_k + (v_W_k + V_W_k) * dt
-    q_W_C_kp1 = q_W_C_k
+    q_WC_kp1 = quatmul(q_WC_k, quatangle(w_W_k + Omega_W) * dt)
     v_W_kp1 = v_W_k + V_W_k
-    w_C_kp1 = w_C_k + Omega_C
+    w_W_kp1 = w_W_k + Omega_W
 
-    return np.array([r_W_C_kp1, q_W_C_kp1, v_W_kp1, w_C_kp1]).reshape((16, 1))
+    return np.vstack([r_W_C_kp1, q_WC_kp1, v_W_kp1, w_W_kp1])
 
 
 def h_C(y, r_W_C, q_WC):

@@ -242,7 +242,28 @@ def euler2quat(euler, euler_seq):
         raise RuntimeError(error_msg)
 
 
-def quat2euler(q, euler_seq):
+def quatmul(p, q):
+    """ Quaternion multiplication
+
+    Args:
+
+        p (np.array): Quaternion (w, x, y, z)
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Product of p and q as a quaternion (w, x, y, z)
+
+    """
+    pw, px, py, pz = q
+    qw, qx, qy, qz = q
+    return np.array([[qw * px + qz * py - qy * pz + qx * pw],
+                     [-qz * px + qw * py + qx * pz + qy * pw],
+                     [qy * px - qx * py + qw * pz + qz * pw],
+                     [-qx * px - qy * py - qz * pz + qw * pw]])
+
+
+def quatyeuler(q, euler_seq):
     qw, qx, qy, qz = q
     qw2 = pow(qw, 2)
     qx2 = pow(qx, 2)
