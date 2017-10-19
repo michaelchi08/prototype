@@ -1,13 +1,21 @@
+from math import cos
+from math import sin
+
+import numpy as np
+
+from prototype.utils.quaternion import quatnormalize
+
+
 def rotx(theta):
-    """ Rotation matrix around x-axis (counter-clockwise)
+    """ Rotation matrix around x-axis (counter-clockwise, right-handed)
 
     Args:
 
-        theta (float): Rotation around x in radians
+        theta (float): Rotation around x-axis in radians
 
     Returns:
 
-        3 x 3 Rotation matrix
+        Rotation matrix (np.array)
 
     """
     return np.array([[1.0, 0.0, 0.0],
@@ -16,15 +24,15 @@ def rotx(theta):
 
 
 def roty(theta):
-    """ Rotation matrix around y-axis (counter-clockwise)
+    """ Rotation matrix around y-axis (counter-clockwise, right-handed)
 
     Args:
 
-        theta (float): Rotation around y in radians
+        theta (float): Rotation around y-axis in radians
 
     Returns:
 
-        3 x 3 Rotation matrix
+        Rotation matrix (np.array)
 
     """
     return np.array([[cos(theta), 0.0, sin(theta)],
@@ -33,15 +41,15 @@ def roty(theta):
 
 
 def rotz(theta):
-    """ Rotation matrix around z-axis (counter-clockwise)
+    """ Rotation matrix around z-axis (counter-clockwise, right-handed)
 
     Args:
 
-        theta (float): Rotation around y in radians
+        theta (float): Rotation around z-axis in radians
 
     Returns:
 
-        3 x 3 Rotation matrix
+        Rotation matrix (np.array)
 
     """
     return np.array([[cos(theta), -sin(theta), 0.0],
@@ -51,45 +59,59 @@ def rotz(theta):
 
 def euler2rot(euler, euler_seq):
     """ Convert euler to rotation matrix R
-    This function assumes we are performing an extrinsic rotation.
+    This function assumes we are performing a body fixed intrinsic rotation.
 
     Source:
-        Euler Angles, Quaternions and Transformation Matrices
-        https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770024290.pdf
+
+        Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
+        Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
+        Princeton University Press, 1999. Print.
+
+        Page 86.
+
+    Args:
+
+        euler (np.array): Euler angle (roll, pitch, yaw)
+        euler_seq (float): Euler rotation sequence
+
+    Returns:
+
+        Rotation matrix (np.array)
+
     """
-    if euler_seq == 123:
-        t1, t2, t3 = euler
+    if euler_seq == 123:  # i.e. XYZ rotation sequence (body to world)
+        phi, theta, psi = euler
 
-        R11 = cos(t2) * cos(t3)
-        R12 = -cos(t2) * sin(t3)
-        R13 = sin(t2)
+        R11 = cos(psi) * cos(theta)
+        R12 = sin(psi) * cos(theta)
+        R13 = -sin(theta)
 
-        R21 = sin(t1) * sin(t2) * cos(t3) + cos(t1) * sin(t3)
-        R22 = -sin(t1) * sin(t2) * sin(t3) + cos(t1) * cos(t3)
-        R23 = -sin(t1) * cos(t2)
+        R21 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
+        R22 = sin(psi) * sin(theta) * sin(phi) + cos(psi) * cos(phi)
+        R23 = cos(theta) * sin(phi)
 
-        R31 = -cos(t1) * sin(t2) * cos(t3) + sin(t1) * sin(t3)
-        R32 = cos(t1) * sin(t2) * sin(t3) + sin(t1) * cos(t3)
-        R33 = cos(t1) * cos(t2)
+        R31 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
+        R32 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
+        R33 = cos(theta) * cos(phi)
 
-    elif euler_seq == 321:
-        t3, t2, t1 = euler
+    elif euler_seq == 321:  # i.e. ZYX rotation sequence (world to body)
+        phi, theta, psi = euler
 
-        R11 = cos(t1) * cos(t2)
-        R12 = cos(t1) * sin(t2) * sin(t3) - sin(t1) * cos(t3)
-        R13 = cos(t1) * sin(t2) * cos(t3) + sin(t1) * sin(t3)
+        R11 = cos(psi) * cos(theta)
+        R12 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
+        R13 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
 
-        R21 = sin(t1) * cos(t2)
-        R22 = sin(t1) * sin(t2) * sin(t3) + cos(t1) * cos(t3)
-        R23 = sin(t1) * sin(t2) * cos(t3) - cos(t1) * sin(t3)
+        R21 = sin(psi) * cos(theta)
+        R22 = sin(psi) * sin(theta) * sin(phi) + cos(psi) * cos(phi)
+        R23 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
 
-        R31 = -sin(t2)
-        R32 = cos(t2) * sin(t3)
-        R33 = cos(t2) * cos(t3)
+        R31 = -sin(theta)
+        R32 = cos(theta) * sin(phi)
+        R33 = cos(theta) * cos(phi)
 
     else:
-        error_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
-        raise RuntimeError(error_msg)
+        err_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
+        raise RuntimeError(err_msg)
 
     return np.array([[R11, R12, R13],
                      [R21, R22, R23],
@@ -98,43 +120,42 @@ def euler2rot(euler, euler_seq):
 
 def euler2quat(euler, euler_seq):
     """ Convert euler to quaternion
-    This function assumes we are performing an extrinsic rotation.
+    This function assumes we are performing an intrinsic rotation.
 
     Source:
-        Euler Angles, Quaternions and Transformation Matrices
-        https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770024290.pdf
+
+        Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
+        Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
+        Princeton University Press, 1999. Print.
+
+        Page 167.
+
+    Args:
+
+        euler (np.array): Euler angle (roll, pitch, yaw)
+        euler_seq (float): Euler rotation sequence
+
+    Returns:
+
+        Quaternion (np.array)
+
     """
+    if euler_seq == 321:
+        phi, theta, psi = euler
+        c_phi = cos(phi / 2.0)
+        c_theta = cos(theta / 2.0)
+        c_psi = cos(psi / 2.0)
+        s_phi = sin(phi / 2.0)
+        s_theta = sin(theta / 2.0)
+        s_psi = sin(psi / 2.0)
 
-    if euler_seq == 123:
-        t1, t2, t3 = euler
-        c1 = cos(t1 / 2.0)
-        c2 = cos(t2 / 2.0)
-        c3 = cos(t3 / 2.0)
-        s1 = sin(t1 / 2.0)
-        s2 = sin(t2 / 2.0)
-        s3 = sin(t3 / 2.0)
+        qw = c_psi * c_theta * c_phi + s_psi * s_theta * s_phi
+        qx = c_psi * c_theta * s_psi - s_psi * s_theta * c_phi
+        qy = c_psi * s_theta * c_phi + s_psi * c_theta * s_phi
+        qz = s_psi * c_theta * c_phi - c_psi * s_theta * s_phi
 
-        w = -s1 * s2 * s3 + c1 * c2 * c3
-        x = s1 * c2 * c3 + s2 * s3 * c1
-        y = -s1 * s3 * c2 + s2 * c1 * c3
-        z = s1 * s2 * c3 + s3 * c1 * c2
-        return quatnormalize([w, x, y, z])
-
-    elif euler_seq == 321:
-        t3, t2, t1 = euler
-        c1 = cos(t1 / 2.0)
-        c2 = cos(t2 / 2.0)
-        c3 = cos(t3 / 2.0)
-        s1 = sin(t1 / 2.0)
-        s2 = sin(t2 / 2.0)
-        s3 = sin(t3 / 2.0)
-
-        w = s1 * s2 * s3 + c1 * c2 * c3
-        x = -s1 * s2 * c3 + s3 * c1 * c2
-        y = s1 * s3 * c2 + s2 * c1 * c3
-        z = s1 * c2 * c3 - s1 * s3 * c1
-        return quatnormalize([w, x, y, z])
+        return quatnormalize([qw, qx, qy, qz])
 
     else:
-        error_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
-        raise RuntimeError(error_msg)
+        err_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
+        raise RuntimeError(err_msg)

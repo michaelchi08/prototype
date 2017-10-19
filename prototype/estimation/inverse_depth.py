@@ -8,6 +8,7 @@ import numpy as np
 
 from prototype.utils.utils import quat2rot
 from prototype.utils.utils import quatmul
+from prototype.utils.quaternion import quatangle
 
 
 def linearity_index_inverse_depth():
@@ -68,8 +69,6 @@ def linearity_index_xyz_parameterization():
 #     r_W_C = sympy.symbols("r_W_C")
 #
 #     y =
-
-
 
 
 def R(q):

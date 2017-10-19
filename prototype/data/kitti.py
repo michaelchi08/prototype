@@ -3,7 +3,7 @@ from os.path import realpath
 
 import numpy as np
 
-from prototype.utils.fs import walkdir
+from prototype.utils.filesystem import walkdir
 
 
 class VOSequence:

@@ -1,7 +1,8 @@
 from math import sqrt
 from math import cos
 from math import sin
-from math import acos
+from math import asin
+from math import atan2
 
 import numpy as np
 
@@ -29,22 +30,22 @@ def quatmul(p, q):
     """
     pw, px, py, pz = q
     qw, qx, qy, qz = q
-    return np.array([[qw * px + qz * py - qy * pz + qx * pw],
-                     [-qz * px + qw * py + qx * pz + qy * pw],
-                     [qy * px - qx * py + qw * pz + qz * pw],
-                     [-qx * px - qy * py - qz * pz + qw * pw]])
+    return np.array([[pw * qw - px * qx - py * qy - pz * qz],
+                     [pw * qx + px * qw + py * qz - pz * qy],
+                     [pw * qy - px * qz + py * qw + pz * qx],
+                     [pw * qz + px * qy - py * qx + pz * qw]])
 
 
-def quatnormalize(q):
-    """ Normalize quaternion
+def quatnorm(q):
+    """ Calculate the norm of a quaternion
 
     Args:
 
-        q (np.array or list of size 4)
+        q (np.array): Quaternion (w, x, y, z)
 
     Returns:
 
-        Normalized quaternion
+        Norm of a quaternion
 
     """
     qw, qx, qy, qz = q
@@ -52,14 +53,60 @@ def quatnormalize(q):
     qx2 = pow(qx, 2)
     qy2 = pow(qy, 2)
     qz2 = pow(qz, 2)
+    return sqrt(qw2 + qx2 + qy2 + qz2)
 
-    mag = sqrt(qw2 + qx2 + qy2 + qz2)
-    q[0] = q[0] / mag
-    q[1] = q[1] / mag
-    q[2] = q[2] / mag
-    q[3] = q[3] / mag
+
+def quatnormalize(q):
+    """ Normalize quaternion
+
+    Args:
+
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Normalized quaternion
+
+    """
+    n = quatnorm(q)
+    q[0] = q[0] / n
+    q[1] = q[1] / n
+    q[2] = q[2] / n
+    q[3] = q[3] / n
 
     return q
+
+
+def quatconj(q):
+    """ Conjugate of a quaternion
+
+    Args:
+
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Conjugate of a quaternion
+
+    """
+    qw, qx, qy, qz = q
+    return np.array([[qw], -[qx], -[qy], -[qz]])
+
+
+def quatinv(q):
+    """ Inverse quaternion
+
+    Args:
+
+        q (np.array): Quaternion (w, x, y, z)
+
+    Returns:
+
+        Inverted quaternion
+
+    """
+    q_conj = quatconj(q)
+    return q_conj / pow(quatnorm(q), 2)
 
 
 def quatangle(angle):
@@ -94,10 +141,7 @@ def quat2rot(q):
         3 x 3 rotation matrix
 
     """
-    qw = q[0]
-    qx = q[1]
-    qy = q[2]
-    qz = q[3]
+    qw, qx, qy, qz = q
 
     qw2 = pow(qw, 2)
     qx2 = pow(qx, 2)
@@ -145,82 +189,3 @@ def quat2euler(q, euler_seq):
     else:
         error_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
         raise RuntimeError(error_msg)
-
-
-class Quaternion:
-    def from_axis_angle(theta, v):
-        theta = theta
-        v = normalize(v)
-
-        new_quaternion = Quaternion()
-        new_quaternion._axis_angle_to_q(theta, v)
-        return new_quaternion
-
-    def from_value(value):
-        new_quaternion = Quaternion()
-        new_quaternion._val = value
-        return new_quaternion
-
-    def _axis_angle_to_q(self, theta, v):
-        x = v[0]
-        y = v[1]
-        z = v[2]
-
-        w = cos(theta/2.)
-        x = x * sin(theta/2.)
-        y = y * sin(theta/2.)
-        z = z * sin(theta/2.)
-
-        self._val = np.array([w, x, y, z])
-
-    def _quatmul(self, q2):
-        w1, x1, y1, z1 = self._val
-        w2, x2, y2, z2 = q2._val
-        w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-        x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-        y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
-        z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
-
-        result = Quaternion.from_value(np.array((w, x, y, z)))
-        return result
-
-    def _vecmul(self, v):
-        q2 = Quaternion.from_value(np.append((0.0), v))
-        return (self * q2 * self.get_conjugate())._val[1:]
-
-    def conjugate(self):
-        w, x, y, z = self._val
-        result = Quaternion.from_value(np.array((w, -x, -y, -z)))
-        return result
-
-    def get_axis_angle(self):
-        w, v = self._val[0], self._val[1:]
-        theta = acos(w) * 2.0
-
-        return theta, normalize(v)
-
-    def tolist(self):
-        return self._val.tolist()
-
-    def vector_norm(self):
-        w, v = self.get_axis_angle()
-        return np.linalg.norm(v)
-
-    def __mul__(self, b):
-        if isinstance(b, Quaternion):
-            return self._quatmul(b)
-
-        elif isinstance(b, (list, tuple, np.ndarray)):
-            if len(b) != 3:
-                e = "Input vector has invalid length {}".format(len(b))
-                raise Exception(e)
-
-            return self._vecmul(b)
-
-        else:
-            e = "Multiplication with unknown type {}".format(type(b))
-            raise Exception(e)
-
-    def __repr__(self):
-        theta, v = self.get_axis_angle()
-        return "((%.6f; %.6f, %.6f, %.6f))" % (theta, v[0], v[1], v[2])

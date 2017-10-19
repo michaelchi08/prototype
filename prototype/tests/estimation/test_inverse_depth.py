@@ -29,18 +29,18 @@ class InverseDepthTest(unittest.TestCase):
 
         self.assertEqual(X.shape, (13, 1))
 
-    def test_h_C(self):
-        y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
-        r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
-        q_WC = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+    # def test_h_C(self):
+    #     y = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+    #     r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
+    #     q_WC = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+    #
+    #     h = h_C(y, r_W_C, q_WC)
+    #     self.assertEqual(h.shape, (2, 1))
 
-        h = h_C(y, r_W_C, q_WC)
-        self.assertEqual(h.shape, (2, 1))
-
-    def test_feature_init(self):
-        r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
-        q_WC = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
-        pixel = np.array([0.0, 0.0]).reshape((2, 1))
-        y = feature_init(r_W_C, q_WC, pixel)
-
-        self.assertEqual(y.shape, (6, 1))
+    # def test_feature_init(self):
+    #     r_W_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
+    #     q_WC = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+    #     pixel = np.array([0.0, 0.0]).reshape((2, 1))
+    #     y = feature_init(r_W_C, q_WC, pixel)
+    #
+    #     self.assertEqual(y.shape, (6, 1))

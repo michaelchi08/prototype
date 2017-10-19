@@ -3,7 +3,7 @@ import os
 import cv2
 import numpy as np
 
-from prototype.utils.fs import walkdir
+from prototype.utils.filesystem import walkdir
 from prototype.vision.vo import BasicVO
 
 
