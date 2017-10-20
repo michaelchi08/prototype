@@ -3,7 +3,6 @@ from random import uniform as randf
 
 import scipy.linalg
 import numpy as np
-from numpy import dot
 
 from prototype.utils.utils import deg2rad
 
@@ -52,7 +51,7 @@ def projection_matrix(K, R, t):
     extrinsics = np.array([[R[0, 0], R[0, 1], R[0, 2], t[0]],
                            [R[1, 0], R[1, 1], R[1, 2], t[1]],
                            [R[2, 0], R[2, 1], R[2, 2], t[2]]])
-    P = dot(K, extrinsics)
+    P = np.dot(K, extrinsics)
     return P
 
 

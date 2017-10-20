@@ -13,7 +13,7 @@ from prototype.vision.common import rand3dfeatures
 class PinholeCameraModelTest(unittest.TestCase):
     def test_constructor(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        camera = PinholeCameraModel(640, 640, 10, K)
+        camera = PinholeCameraModel(640, 640, K, hz=10)
 
         self.assertEqual(camera.image_width, 640)
         self.assertEqual(camera.image_height, 640)
@@ -23,7 +23,7 @@ class PinholeCameraModelTest(unittest.TestCase):
 
     def test_update(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        camera = PinholeCameraModel(640, 640, 10, K)
+        camera = PinholeCameraModel(640, 640, K, hz=10)
         retval = camera.update(0.11)
 
         self.assertTrue(retval)
@@ -33,7 +33,7 @@ class PinholeCameraModelTest(unittest.TestCase):
     def test_check_features(self):
         # setup camera
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        camera = PinholeCameraModel(640, 640, 10, K)
+        camera = PinholeCameraModel(640, 640, K, hz=10)
 
         # setup random 3d features
         nb_features = 100
@@ -61,7 +61,7 @@ class PinholeCameraModelTest(unittest.TestCase):
         K = np.eye(3)
         R = np.eye(3)
         t = np.array([0, 0, 0])
-        camera = PinholeCameraModel(320, 240, 60, K)
+        camera = PinholeCameraModel(320, 240, K, hz=60)
         x = camera.project(points, R, t)
 
         # plot projection

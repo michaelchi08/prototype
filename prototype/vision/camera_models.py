@@ -1,20 +1,19 @@
 import numpy as np
-from numpy import dot
 
 from prototype.utils.utils import euler2rot
 from prototype.vision.common import projection_matrix
 
 
 class PinholeCameraModel(object):
-    def __init__(self, image_width, image_height, hz, K):
+    def __init__(self, image_width, image_height, K, hz=None):
         """ Constructor
 
         Args:
 
             image_width (int): Image width
             image_height (int): Image height
-            hz (int): Frame rate
             K (np.array - size 3x3): Camera intrinsics
+            hz (int): Frame rate
 
         """
         self.image_width = image_width
@@ -46,6 +45,9 @@ class PinholeCameraModel(object):
 
         return False
 
+    def P(self, R, t):
+        return np.dot(self.K, np.block([R, np.dot(-R, t)]))
+
     def project(self, X, R, t):
         """ Project 3D point to image plane
 
@@ -60,11 +62,11 @@ class PinholeCameraModel(object):
             Projected 3D feature onto 2D image plane
 
         """
-        P = projection_matrix(self.K, R, dot(-R, t))
-        x = dot(P, X)
+        P = projection_matrix(self.K, R, np.dot(-R, t))
+        x = np.dot(P, X)
         for i in range(3):
             x[i] /= x[2]
-        return x
+        return x.reshape((3, 1))
 
     def check_features(self, dt, features, rpy, t):
         """ Check whether features are observable by camera
@@ -91,7 +93,7 @@ class PinholeCameraModel(object):
         R = euler2rot(rpy, 123)
 
         # projection matrix
-        P = projection_matrix(self.K, R, dot(-R, t))
+        P = projection_matrix(self.K, R, np.dot(-R, t))
 
         # check which features are observable from camera
         for i in range(len(features)):
@@ -105,7 +107,7 @@ class PinholeCameraModel(object):
             point_edn = np.array(point_edn)
 
             # project 3D world point to 2D image plane
-            img_pt = dot(P, point_edn)
+            img_pt = np.dot(P, point_edn)
 
             # check to see if feature is valid and infront of camera
             if img_pt[2] < 1.0:

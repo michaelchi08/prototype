@@ -16,7 +16,7 @@ class DatasetGenerator(object):
 
     def __init__(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        self.camera = PinholeCameraModel(640, 640, 10, K)
+        self.camera = PinholeCameraModel(640, 640, K, hz=10)
         self.nb_features = 100
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
