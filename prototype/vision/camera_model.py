@@ -66,7 +66,7 @@ class PinholeCameraModel(object):
         x = np.dot(P, X)
         for i in range(3):
             x[i] /= x[2]
-        return x.reshape((3, 1))
+        return x
 
     def check_features(self, dt, features, rpy, t):
         """ Check whether features are observable by camera

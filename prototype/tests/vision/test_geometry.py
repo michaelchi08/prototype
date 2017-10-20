@@ -9,7 +9,7 @@ from prototype.utils.utils import deg2rad
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
-from prototype.vision.camera_models import PinholeCameraModel
+from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.geometry import triangulate
 from prototype.vision.geometry import triangulate_point
 

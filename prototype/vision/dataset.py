@@ -8,7 +8,7 @@ from prototype.utils.data import mat2csv
 from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
-from prototype.vision.camera_models import PinholeCameraModel
+from prototype.vision.camera_model import PinholeCameraModel
 
 
 class DatasetGenerator(object):
