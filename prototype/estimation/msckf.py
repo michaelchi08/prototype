@@ -1,6 +1,7 @@
 import numpy as np
 
 from prototype.utils.utils import quat2rot
+from prototype.vision.geometry import triangulate
 
 
 def skew(v):
@@ -96,6 +97,21 @@ def I(n):
 
     """
     return np.matrix(np.eye(n))
+
+
+class CameraState:
+    """ Camera state """
+    def __init__(self, p_G_C, q_GC):
+        """ Constructor
+
+        Args:
+
+            p_G_C (np.array): Position of camera in Global frame
+            q_G_C (np.array): Orientation of camera in Global frame
+
+        """
+        self.p_G_C = p_G_C
+        self.q_GC = q_GC
 
 
 class MSCKF:
@@ -287,6 +303,49 @@ class MSCKF:
         self.X_cam[N] = p_G_C
         self.X_cam[N] = q_CG
 
-    def estimate_features(self, cam_states, observations, noise_params):
-        pass
+    def estimate_feature(self, cam_model, cam_states, track, noise_params):
+        """ Estimate feature 3D location by optimizing over inverse depth
+        paramterization using Gauss Newton Optimization
 
+        Args:
+
+            cam_states (list of CameraState): Camera states
+            track (FeatureTrack): Feature track
+            K (np.array): Camera intrinsics
+            noise_params (np.array): Camera noise parameters
+
+        Returns:
+
+            Estimated feature 3D location
+
+        """
+        N = len(cam_states)
+
+        # Calculate relative rotation and translation from Cam 0 to Cam 1
+        C_C0_G = quat2rot(cam_states[0].q_CG)
+        C_C1_G = quat2rot(cam_states[1].q_CG)
+        C_C1_C0 = C_C1_G * C_C0_G.T
+        t_G_C0 = cam_states[0].p_G_C
+        t_C0_C1C0 = C_C1_G * (t_G_C0 - cam_states[1].p_G_C)
+
+        # Calculate initial estimate of 3D position
+        x1 = track.track[0]
+        x2 = track.track[1]
+        P1 = cam_model.P(np.eye(3), np.zeros((3, 1)))  # Set Cam 0 as origin
+        P2 = cam_model.P(C_C1_C0, t_C0_C1C0)
+        X = triangulate(x1, x2, P1, P2)
+
+        # Inverse depth parameterization
+        alpha = X[0] / X[2]
+        beta = X[1] / X[2]
+        rho = 1.0 / X[2]
+
+        # Gauss Newton optimization
+        N = len(cam_states)
+        for i in range(N):
+            # Calculate relative rotation and translation from Cam 0 to Cam 1
+            C_Ci_G = quat2rot(cam_states[i].q_CG)
+            C_Ci_C0 = C_Ci_G * C_C0_G.T
+            t_C0_CiC0 = C_Ci_C0 * (t_G_C0 - cam_states[i].p_G_C)
+
+            h = C_Ci_C0 * np.array([alpha, beta, 1.0]) + rho * t_C0_CiC0

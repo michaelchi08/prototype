@@ -15,7 +15,6 @@ from prototype.vision.geometry import triangulate_point
 
 
 class GeometryTest(unittest.TestCase):
-
     def setUp(self):
         # Generate random features
         nb_features = 100
@@ -27,13 +26,14 @@ class GeometryTest(unittest.TestCase):
         features = rand3dfeatures(nb_features, feature_bounds)
 
         # Pinhole Camera model
-        img_width = 640
-        img_height = 480
+        image_width = 640
+        image_height = 480
         fov = 60
-        fx, fy = focal_length(img_width, img_height, fov)
-        K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
+        fx, fy = focal_length(image_width, image_height, fov)
+        cx, cy = (image_width / 2.0, image_height / 2.0)
+        K = camera_intrinsics(fx, fy, cx, cy)
 
-        self.cam = PinholeCameraModel(img_width, img_height, K)
+        self.cam = PinholeCameraModel(image_width, image_height, K)
 
         # Rotation and translation of camera 0 and camera 1
         self.R_0 = np.eye(3)

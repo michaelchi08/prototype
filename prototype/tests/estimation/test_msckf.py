@@ -4,7 +4,18 @@ import numpy as np
 
 from prototype.estimation.msckf import skew
 from prototype.estimation.msckf import C
+from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
+
+
+class CameraStateTest(unittest.TestCase):
+    def test_init(self):
+        p_G_C = np.array([1.0, 2.0, 3.0])
+        q_GC = np.array([1.0, 2.0, 3.0])
+        cam = CameraState(p_G_C, q_GC)
+
+        self.assertTrue(np.array_equal(p_G_C, cam.p_G_C))
+        self.assertTrue(np.array_equal(q_GC, cam.q_GC))
 
 
 class MSCKFTest(unittest.TestCase):
@@ -67,6 +78,24 @@ class MSCKFTest(unittest.TestCase):
         # dt = 0.0
         # self.msckf.prediction_update(dt)
         pass
+
+    def test_estimate_features(self):
+        # Setup camera states
+        N = 10
+        cam_states = []
+        p_G_C = np.array([1.0, 2.0, 3.0])
+        q_GC = np.array([1.0, 2.0, 3.0])
+        for i in range(N):
+            cam_states.append(CameraState(p_G_C, q_GC))
+
+        # Setup observations
+        observations = []
+
+        # Setup imu noise parameters
+        noise_params = []
+
+        # Estimate features
+        self.msckf.estimate_features(cam_states, observations, noise_params)
 
     def test_measurement_update(self):
         pass
