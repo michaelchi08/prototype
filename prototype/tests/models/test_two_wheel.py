@@ -3,10 +3,13 @@ import unittest
 import numpy as np
 
 from prototype.models.two_wheel import two_wheel_2d_model
+from prototype.models.two_wheel import two_wheel_2d_deriv
 from prototype.models.two_wheel import two_wheel_3d_model
 
 
 class TwoWheelTest(unittest.TestCase):
+    def test_two_wheel_2d_deriv(self):
+        two_wheel_2d_deriv()
 
     def test_two_wheel_2d_model(self):
         # setup

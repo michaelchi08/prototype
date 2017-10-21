@@ -1,7 +1,8 @@
+import sympy
 import numpy as np
 
 from prototype.utils.utils import quat2rot
-from prototype.vision.geometry import triangulate
+from prototype.vision.geometry import triangulate_point
 
 
 def skew(v):
@@ -99,19 +100,51 @@ def I(n):
     return np.matrix(np.eye(n))
 
 
+def derive_ba_inverse_depth_jacobian():
+    # Create symbols
+    alpha, beta, rho = sympy.symbols("alpha,beta,rho")
+    C11, C12, C13 = sympy.symbols("C11,C12,C13")
+    C21, C22, C23 = sympy.symbols("C21,C22,C23")
+    C31, C32, C33 = sympy.symbols("C31,C32,C33")
+    px, py, pz = sympy.symbols("px,py,pz")
+    zx, zy = sympy.symbols("zx,zy")
+
+    # Rotation matrix, inverse depth, position and measurement vector
+    C_Ci_C1 = np.array([[C11, C12, C13],
+                        [C21, C22, C23],
+                        [C31, C32, C33]])
+    x = np.array([alpha, beta, 1.0])
+    p_Ci_C1_Ci = np.array([px, py, pz])
+    z = np.array([zx, zy])
+
+    # Reprojection Error with inverse depth parameterization
+    h = np.dot(C_Ci_C1, x) + np.dot(rho, p_Ci_C1_Ci)
+    e = z - np.array([h[0] / h[2], h[1] / h[2]])
+
+    # Symbolically derive the jacobian of de / dy
+    # where y = [alpha, beta, rho]
+    dedy = sympy.Matrix([e])
+    dedalpha = sympy.simplify(dedy.jacobian([alpha]))
+    dedbeta = sympy.simplify(dedy.jacobian([beta]))
+    dedrho = sympy.simplify(dedy.jacobian([rho]))
+    J = [dedalpha, dedbeta, dedrho]
+
+    return J
+
+
 class CameraState:
     """ Camera state """
-    def __init__(self, p_G_C, q_GC):
+    def __init__(self, p_G_C, q_C_G):
         """ Constructor
 
         Args:
 
             p_G_C (np.array): Position of camera in Global frame
-            q_G_C (np.array): Orientation of camera in Global frame
+            q_C_G (np.array): Orientation of camera in Global frame
 
         """
         self.p_G_C = p_G_C
-        self.q_GC = q_GC
+        self.q_C_G = q_C_G
 
 
 class MSCKF:
@@ -322,30 +355,30 @@ class MSCKF:
         N = len(cam_states)
 
         # Calculate relative rotation and translation from Cam 0 to Cam 1
-        C_C0_G = quat2rot(cam_states[0].q_CG)
-        C_C1_G = quat2rot(cam_states[1].q_CG)
-        C_C1_C0 = C_C1_G * C_C0_G.T
+        C_C0_G = quat2rot(cam_states[0].q_C_G)
+        C_C1_G = quat2rot(cam_states[1].q_C_G)
+        C_C1_C0 = np.dot(C_C1_G, C_C0_G.T)
         t_G_C0 = cam_states[0].p_G_C
-        t_C0_C1C0 = C_C1_G * (t_G_C0 - cam_states[1].p_G_C)
+        t_C0_C1C0 = np.dot(C_C1_G, (t_G_C0 - cam_states[1].p_G_C))
 
         # Calculate initial estimate of 3D position
-        x1 = track.track[0]
-        x2 = track.track[1]
+        x1 = np.block([track.track[0].pt, 1.0])
+        x2 = np.block([track.track[1].pt, 1.0])
         P1 = cam_model.P(np.eye(3), np.zeros((3, 1)))  # Set Cam 0 as origin
-        P2 = cam_model.P(C_C1_C0, t_C0_C1C0)
-        X = triangulate(x1, x2, P1, P2)
+        P2 = cam_model.P(C_C1_C0, t_C0_C1C0.reshape((3, 1)))
+        X = triangulate_point(x1, x2, P1, P2)
 
         # Inverse depth parameterization
         alpha = X[0] / X[2]
         beta = X[1] / X[2]
         rho = 1.0 / X[2]
 
-        # Gauss Newton optimization
-        N = len(cam_states)
-        for i in range(N):
-            # Calculate relative rotation and translation from Cam 0 to Cam 1
-            C_Ci_G = quat2rot(cam_states[i].q_CG)
-            C_Ci_C0 = C_Ci_G * C_C0_G.T
-            t_C0_CiC0 = C_Ci_C0 * (t_G_C0 - cam_states[i].p_G_C)
-
-            h = C_Ci_C0 * np.array([alpha, beta, 1.0]) + rho * t_C0_CiC0
+        # # Gauss Newton optimization
+        # N = len(cam_states)
+        # for i in range(N):
+        #     # Calculate relative rotation and translation from Cam 0 to Cam 1
+        #     C_Ci_G = quat2rot(cam_states[i].q_C_G)
+        #     C_Ci_C0 = C_Ci_G * C_C0_G.T
+        #     t_C0_CiC0 = C_Ci_C0 * (t_G_C0 - cam_states[i].p_G_C)
+        #
+        #     h = C_Ci_C0 * np.array([alpha, beta, 1.0]) + rho * t_C0_CiC0

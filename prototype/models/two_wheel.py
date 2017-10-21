@@ -56,7 +56,6 @@ def two_wheel_3d_model(x, u, dt):
 
 
 def two_wheel_2d_deriv():
-    f1, f2, f3, f4, f5 = sympy.symbols("f1,f2,f3,f4,f5")
     x1, x2, x3, x4, x5 = sympy.symbols("x1,x2,x3,x4,x5")
     dt = sympy.symbols("dt")
 
@@ -72,7 +71,6 @@ def two_wheel_2d_deriv():
 
 
 def two_wheel_3d_deriv():
-    f1, f2, f3, f4, f5, f6, f7 = sympy.symbols("f1,f2,f3,f4,f5,f6,f7")
     x1, x2, x3, x4, x5, x6, x7 = sympy.symbols("x1,x2,x3,x4,x5,x6,x7")
     dt = sympy.symbols("dt")
 

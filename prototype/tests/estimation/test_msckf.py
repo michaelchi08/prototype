@@ -1,21 +1,28 @@
 import unittest
 
+import sympy
 import numpy as np
 
 from prototype.estimation.msckf import skew
 from prototype.estimation.msckf import C
+from prototype.estimation.msckf import derive_ba_inverse_depth_jacobian
 from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
+from prototype.vision.common import focal_length
+from prototype.vision.common import camera_intrinsics
+from prototype.vision.camera_model import PinholeCameraModel
+from prototype.vision.features import Keypoint
+from prototype.vision.features import FeatureTrack
 
 
 class CameraStateTest(unittest.TestCase):
     def test_init(self):
         p_G_C = np.array([1.0, 2.0, 3.0])
-        q_GC = np.array([1.0, 2.0, 3.0])
-        cam = CameraState(p_G_C, q_GC)
+        q_C_G = np.array([1.0, 0.0, 0.0, 0.0])
+        cam = CameraState(p_G_C, q_C_G)
 
         self.assertTrue(np.array_equal(p_G_C, cam.p_G_C))
-        self.assertTrue(np.array_equal(q_GC, cam.q_GC))
+        self.assertTrue(np.array_equal(q_C_G, cam.q_C_G))
 
 
 class MSCKFTest(unittest.TestCase):
@@ -25,6 +32,12 @@ class MSCKFTest(unittest.TestCase):
                            n_wg=0.001 * np.ones(3).reshape((3, 1)),
                            n_wa=0.001 * np.ones(3).reshape((3, 1)))
         pass
+
+    def test_derive_ba_inverse_depth_jacobian(self):
+        J = derive_ba_inverse_depth_jacobian()
+        sympy.pprint(J[0])
+        sympy.pprint(J[1])
+        sympy.pprint(J[2])
 
     def test_skew(self):
         X = skew(np.array([1.0, 2.0, 3.0]))
@@ -79,23 +92,34 @@ class MSCKFTest(unittest.TestCase):
         # self.msckf.prediction_update(dt)
         pass
 
-    def test_estimate_features(self):
-        # Setup camera states
+    def test_estimate_feature(self):
+        # Pinhole Camera model
+        image_width = 640
+        image_height = 480
+        fov = 60
+        fx, fy = focal_length(image_width, image_height, fov)
+        cx, cy = (image_width / 2.0, image_height / 2.0)
+        K = camera_intrinsics(fx, fy, cx, cy)
+        cam_model = PinholeCameraModel(image_width, image_height, K)
+
+        # Camera states
         N = 10
         cam_states = []
         p_G_C = np.array([1.0, 2.0, 3.0])
-        q_GC = np.array([1.0, 2.0, 3.0])
+        q_C_G = np.array([1.0, 0.0, 0.0, 0.0])
         for i in range(N):
-            cam_states.append(CameraState(p_G_C, q_GC))
+            cam_states.append(CameraState(p_G_C, q_C_G))
 
-        # Setup observations
-        observations = []
+        # Features
+        kp1 = Keypoint([0.0, 0.0], 21)
+        kp2 = Keypoint([0.0, 0.0], 21)
+        track = FeatureTrack(0, 0, kp1, kp2)
 
         # Setup imu noise parameters
-        noise_params = []
+        noise_params = np.array([1.0, 1.0])
 
-        # Estimate features
-        self.msckf.estimate_features(cam_states, observations, noise_params)
+        # Estimate feature
+        self.msckf.estimate_feature(cam_model, cam_states, track, noise_params)
 
     def test_measurement_update(self):
         pass
