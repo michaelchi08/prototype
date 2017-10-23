@@ -1,7 +1,8 @@
 import sympy
 import numpy as np
 
-from prototype.utils.utils import quat2rot
+from prototype.utils.quaternion import quatmul
+from prototype.utils.quaternion import quat2rot
 from prototype.vision.geometry import triangulate_point
 
 
@@ -18,8 +19,8 @@ def skew(v):
 
     """
     return np.matrix([[0.0, -v[2], v[1]],
-                     [v[2], 0.0, -v[0]],
-                     [-v[1], v[0], 0.0]])
+                      [v[2], 0.0, -v[0]],
+                      [-v[1], v[0], 0.0]])
 
 
 def C(q):
@@ -134,6 +135,7 @@ def derive_ba_inverse_depth_jacobian():
 
 class CameraState:
     """ Camera state """
+
     def __init__(self, p_G_C, q_C_G):
         """ Constructor
 
@@ -158,6 +160,7 @@ class MSCKF:
         APA
 
     """
+
     def __init__(self, **kwargs):
         n_g = kwargs["n_g"]    # Gyro Noise
         n_a = kwargs["n_a"]    # Accel Noise
@@ -336,7 +339,7 @@ class MSCKF:
         self.X_cam[N] = p_G_C
         self.X_cam[N] = q_CG
 
-    def estimate_feature(self, cam_model, cam_states, track, noise_params):
+    def estimate_feature(self, cam_model, cam_states, track, debug=False):
         """ Estimate feature 3D location by optimizing over inverse depth
         paramterization using Gauss Newton Optimization
 
@@ -345,40 +348,112 @@ class MSCKF:
             cam_states (list of CameraState): Camera states
             track (FeatureTrack): Feature track
             K (np.array): Camera intrinsics
-            noise_params (np.array): Camera noise parameters
 
         Returns:
 
-            Estimated feature 3D location
+            (k, r, alpha, beta, rho)
+
+            k (int): Optimized over k iterations
+            r (np.array): Residual vector over all camera states
+            alpha (float): X / Z of 3D feature location
+            beta (float): Y / Z of 3D feature location
+            rho (float): 1 / Z of 3D feature location
 
         """
-        N = len(cam_states)
-
-        # Calculate relative rotation and translation from Cam 0 to Cam 1
-        C_C0_G = quat2rot(cam_states[0].q_C_G)
-        C_C1_G = quat2rot(cam_states[1].q_C_G)
-        C_C1_C0 = np.dot(C_C1_G, C_C0_G.T)
-        t_G_C0 = cam_states[0].p_G_C
-        t_C0_C1C0 = np.dot(C_C1_G, (t_G_C0 - cam_states[1].p_G_C))
-
         # Calculate initial estimate of 3D position
+        # -- Calculate rotation and translation of camera 0 and 1
+        C_C0_G = np.matrix(quat2rot(cam_states[0].q_C_G))
+        C_C1_G = np.matrix(quat2rot(cam_states[1].q_C_G))
+        p_G_C0 = cam_states[0].p_G_C.reshape((3, 1))
+        p_G_C1 = cam_states[1].p_G_C.reshape((3, 1))
+        # -- Set camera 0 as origin, work out rotation and translation of
+        # -- camera 1 relative to to camera 0
+        C_C0_C1 = C_C0_G * C_C1_G.T
+        t_C0_C1C0 = C_C0_G * (p_G_C1 - p_G_C0)
+        # -- Triangulate
         x1 = np.block([track.track[0].pt, 1.0])
         x2 = np.block([track.track[1].pt, 1.0])
-        P1 = cam_model.P(np.eye(3), np.zeros((3, 1)))  # Set Cam 0 as origin
-        P2 = cam_model.P(C_C1_C0, t_C0_C1C0.reshape((3, 1)))
+        P1 = cam_model.P(np.eye(3), np.ones(3).reshape((3, 1)))
+        P2 = cam_model.P(C_C0_C1, t_C0_C1C0.reshape((3, 1)))
         X = triangulate_point(x1, x2, P1, P2)
 
-        # Inverse depth parameterization
+        # Create inverse depth params (these are to be optimized)
         alpha = X[0] / X[2]
         beta = X[1] / X[2]
         rho = 1.0 / X[2]
 
-        # # Gauss Newton optimization
-        # N = len(cam_states)
-        # for i in range(N):
-        #     # Calculate relative rotation and translation from Cam 0 to Cam 1
-        #     C_Ci_G = quat2rot(cam_states[i].q_C_G)
-        #     C_Ci_C0 = C_Ci_G * C_C0_G.T
-        #     t_C0_CiC0 = C_Ci_C0 * (t_G_C0 - cam_states[i].p_G_C)
-        #
-        #     h = C_Ci_C0 * np.array([alpha, beta, 1.0]) + rho * t_C0_CiC0
+        # Gauss Newton optimization
+        r_Jprev = float("inf")  # residual jacobian
+
+        for k in range(10):
+            N = len(cam_states)
+            r = zero(2 * N, 1)
+            J = zero(2 * N, 3)
+
+            # Calculate residuals
+            for i in range(N):
+                # Get camera current rotation and translation
+                C_Ci_G = np.matrix(quat2rot(cam_states[i].q_C_G))
+                p_G_Ci = cam_states[i].p_G_C.reshape((3, 1))
+
+                # Set camera 0 as origin, work out rotation and translation
+                # of camera i relative to to camera 0
+                C_C0_Ci = C_Ci_G * C_C0_G.T
+                t_Ci_CiC0 = C_Ci_G * (p_G_C0 - p_G_Ci)
+
+                # Project estimated feature location to image plane
+                h = (C_C0_Ci * np.array([[alpha], [beta], [1]])) + (rho * t_Ci_CiC0)  # NOQA
+
+                # Calculate reprojection error
+                # -- Camera intrinsics
+                cx, cy = cam_model.K[0, 2], cam_model.K[1, 2]
+                fx, fy = cam_model.K[0, 0], cam_model.K[1, 1]
+                # -- Convert measurment to normalized pixel coordinates
+                z = track.track[i].pt
+                z = np.array([(z[0] - cx) / fx, (z[1] - cy) / fy])
+                # -- Convert feature location to normalized pixel coordinates
+                x = np.array([h[0, 0] / h[2, 0], h[1, 0] / h[2, 0]])
+                # -- Reprojcetion error
+                r[2 * i:(2 * (i + 1))] = np.array(z - x).reshape((2, 1))
+
+                # Form the Jacobian
+                drdalpha = np.array([
+                    -C_Ci_G[0, 0] / h[2] + (h[0] / h[2]**2) * C_Ci_G[2, 0],
+                    -C_Ci_G[1, 0] / h[2] + (h[1] / h[2]**2) * C_Ci_G[2, 0]
+                ])
+                drdbeta = np.array([
+                    -C_Ci_G[0, 1] / h[2] + (h[0] / h[2]**2) * C_Ci_G[2, 1],
+                    -C_Ci_G[1, 1] / h[2] + (h[1] / h[2]**2) * C_Ci_G[2, 1]
+                ])
+                drdrho = np.array([
+                    -t_Ci_CiC0[0] / h[2] + (h[0] / h[2]**2) * t_Ci_CiC0[2],
+                    -t_Ci_CiC0[1] / h[2] + (h[1] / h[2]**2) * t_Ci_CiC0[2]
+                ])
+                J[2 * i:(2 * (i + 1)), 0] = drdalpha.reshape((2, 1))
+                J[2 * i:(2 * (i + 1)), 1] = drdbeta.reshape((2, 1))
+                J[2 * i:(2 * (i + 1)), 2] = drdrho.reshape((2, 1))
+
+            # Update esitmated params using Gauss Newton
+            delta = np.linalg.inv(J.T * J) * J.T * r
+            theta_km1 = np.array([alpha, beta, rho]).reshape((3, 1))
+            theta_k = theta_km1 - delta
+            alpha = theta_k[0, 0]
+            beta = theta_k[1, 0]
+            rho = theta_k[2, 0]
+
+            # Check how fast the residuals are converging to 0
+            r_Jnew = 0.5 * r.T * r
+            r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
+            r_Jprev = r_Jnew
+
+            if r_J < 0.0001:
+                break
+
+        # debug
+        if debug:
+            print(k)
+            print(alpha)
+            print(beta)
+            print(rho)
+
+        return (k, r, alpha, beta, rho)

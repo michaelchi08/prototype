@@ -53,7 +53,7 @@ class PinholeCameraModel(object):
 
         Args:
 
-            X (np.array): 3D features
+            X (np.array - size 4xN): 3D features in Homogeneous coordinates
             R (np.array - size 3x3): Rotation matrix
             t (np.array - size 3x1): Translation vector
 
@@ -62,10 +62,15 @@ class PinholeCameraModel(object):
             Projected 3D feature onto 2D image plane
 
         """
+        # Project 3D point to image plane
         P = projection_matrix(self.K, R, np.dot(-R, t))
         x = np.dot(P, X)
-        for i in range(3):
-            x[i] /= x[2]
+
+        # Normalize pixel coordinates
+        x[0] /= x[2]
+        x[1] /= x[2]
+        x[2] /= x[2]
+
         return x
 
     def check_features(self, dt, features, rpy, t):

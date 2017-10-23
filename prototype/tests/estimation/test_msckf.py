@@ -3,6 +3,8 @@ import unittest
 import sympy
 import numpy as np
 
+from prototype.utils.euler import euler2quat
+from prototype.utils.quaternion import quat2rot
 from prototype.estimation.msckf import skew
 from prototype.estimation.msckf import C
 from prototype.estimation.msckf import derive_ba_inverse_depth_jacobian
@@ -33,11 +35,14 @@ class MSCKFTest(unittest.TestCase):
                            n_wa=0.001 * np.ones(3).reshape((3, 1)))
         pass
 
-    def test_derive_ba_inverse_depth_jacobian(self):
-        J = derive_ba_inverse_depth_jacobian()
-        sympy.pprint(J[0])
-        sympy.pprint(J[1])
-        sympy.pprint(J[2])
+    # def test_derive_ba_inverse_depth_jacobian(self):
+    #     J = derive_ba_inverse_depth_jacobian()
+    #
+    #     debug = False
+    #     if debug:
+    #         sympy.pprint(J[0])
+    #         sympy.pprint(J[1])
+    #         sympy.pprint(J[2])
 
     def test_skew(self):
         X = skew(np.array([1.0, 2.0, 3.0]))
@@ -103,23 +108,26 @@ class MSCKFTest(unittest.TestCase):
         cam_model = PinholeCameraModel(image_width, image_height, K)
 
         # Camera states
-        N = 10
         cam_states = []
-        p_G_C = np.array([1.0, 2.0, 3.0])
-        q_C_G = np.array([1.0, 0.0, 0.0, 0.0])
-        for i in range(N):
-            cam_states.append(CameraState(p_G_C, q_C_G))
+        # -- Camera state 0
+        p_G_C0 = np.array([0.0, 0.0, 0.0])
+        q_C0_G = np.array([1.0, 0.0, 0.0, 0.0])
+        cam_states.append(CameraState(p_G_C0, q_C0_G))
+        # -- Camera state 1
+        p_G_C1 = np.array([1.0, 0.0, 0.0])
+        q_C1_G = euler2quat([0.0, 0.0, 0.0], 321)
+        cam_states.append(CameraState(p_G_C1, q_C1_G))
 
         # Features
-        kp1 = Keypoint([0.0, 0.0], 21)
-        kp2 = Keypoint([0.0, 0.0], 21)
-        track = FeatureTrack(0, 0, kp1, kp2)
-
-        # Setup imu noise parameters
-        noise_params = np.array([1.0, 1.0])
+        landmark = np.array([1.0, 2.0, 10.0, 1.0])
+        kp1 = cam_model.project(landmark, quat2rot(q_C0_G), p_G_C0) + np.array([0.1, 0.1, 0.0])
+        kp2 = cam_model.project(landmark, quat2rot(q_C1_G), p_G_C1) + np.array([0.1, 0.1, 0.0])
+        kp1 = Keypoint(kp1[:2], 21)
+        kp2 = Keypoint(kp2[:2], 21)
+        track = FeatureTrack(0, 1, kp1, kp2)
 
         # Estimate feature
-        self.msckf.estimate_feature(cam_model, cam_states, track, noise_params)
+        self.msckf.estimate_feature(cam_model, cam_states, track)
 
     def test_measurement_update(self):
         pass
