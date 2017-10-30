@@ -67,7 +67,8 @@ def Omega(w):
         Differential form of an angular velocity (np.array)
 
     """
-    return np.block([[-skew(w), w], [-w, 0.0]])
+    w = w.reshape((3, 1))
+    return np.block([[-skew(w), w], [-w.T, 0.0]])
 
 
 def zero(m, n):
@@ -133,6 +134,49 @@ def derive_ba_inverse_depth_jacobian():
     return J
 
 
+def derive_H_f_j():
+    # Create symbols
+    # C11, C12, C13 = sympy.symbols("C11,C12,C13")
+    # C21, C22, C23 = sympy.symbols("C21,C22,C23")
+    # C31, C32, C33 = sympy.symbols("C31,C32,C33")
+    # pxf, pyf, pzf = sympy.symbols("pxf,pyf,pzf")
+    # pxc, pyc, pzc = sympy.symbols("pxc,pyc,pzc")
+    # X, Y, Z = sympy.symbols("X,Y,Z")
+    #
+    # C_Ci_G = np.array([[C11, C12, C13],
+    #                    [C21, C22, C23],
+    #                    [C31, C32, C33]])
+    # p_f = np.array([pxf, pyf, pzf])
+    # p_c = np.array([pxc, pyc, pzc])
+
+    # X = np.dot(C_Ci_G, (p_f - p_c))
+    # X = sympy.Matrix(X)
+    # sympy.pprint(X.jacobian([pxf]))
+
+    pass
+
+
+def derive_radtan_distortion():
+    x, y, z = sympy.symbols("x y z")
+    k1, k2, k3 = sympy.symbols("k1 k2 k3")
+
+    u = x / z
+    v = y / z
+    r = u**2 + v**2
+    d_r = 1 + k1 * r + k2 * r**2 + k3 * r**3
+
+    print(sympy.pprint(d_r))
+    print(sympy.pprint(d_r.diff(x)))
+
+
+def sandbox():
+    from sympy import symbols
+    from sympy.vector import QuaternionOrienter
+
+    q0, q1, q2, q3 = symbols('q0 q1 q2 q3')
+    q_orienter = QuaternionOrienter(q0, q1, q2, q3)
+
+
 class CameraState:
     """ Camera state """
 
@@ -186,7 +230,7 @@ class MSCKF:
 
         # Camera extrinsics
         self.cam_p_I_C = np.array([0.0, 0.0, 0.0])
-        self.cam_q_CI = np.array([1.0, 0.0, 0.0, 0.0])
+        self.cam_q_C_I = np.array([1.0, 0.0, 0.0, 0.0])
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """ Transition Jacobian F matrix
@@ -207,17 +251,14 @@ class MSCKF:
         """
         # F matrix
         F = zero(15, 15)
-
         # -- First row --
         F[0:3, 0:3] = -skew(w_hat)
         F[0:3, 3:6] = np.ones((3, 3))
-
         # -- Third Row --
         F[6:9, 0:3] = -C(q_hat).T * skew(a_hat)
         F[6:9, 6:9] = -2.0 * skew(w_G)
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skew(w_G)**2
-
         # -- Fifth Row --
         F[12:15, 6:9] = np.ones((3, 3))
 
@@ -241,43 +282,39 @@ class MSCKF:
         """
         # G matrix
         G = zero(15, 12)
-
         # -- First row --
         G[0:3, 0:3] = np.ones((3, 3))
-
         # -- Second row --
         G[3:6, 3:6] = np.ones((3, 3))
-
         # -- Third row --
         G[6:9, 6:9] = -C(q_hat).T
-
         # -- Fourth row --
         G[9:12, 9:12] = np.ones((3, 3))
 
         return G
 
-    def J(self, cam_q_CI, cam_p_I_C, q_hat_IG, N):
+    def J(self, cam_q_C_I, cam_p_I_C, q_hat_I_G, N):
         """ Jacobian J matrix
 
         Args:
 
-            cam_q_CI (np.array): Rotation from IMU to camera frame
+            cam_q_C_I (np.array): Rotation from IMU to camera frame
                                  in quaternion (w, x, y, z)
             cam_p_I_C (np.array): Position of camera frame from IMU
-            q_hat_IG (np.array): Rotation from global to IMU frame
+            q_hat_I_G (np.array): Rotation from global to IMU frame
 
         """
-        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
-        C_CI = C(cam_q_CI)
-        C_IG = C(q_hat_IG)
+        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+        C_C_I = C(cam_q_C_I)
+        C_I_G = C(q_hat_I_G)
 
         J = zero(6, 15 + 6 * N)
 
         # -- First row --
-        J[0:3, 0:3] = C_CI
+        J[0:3, 0:3] = C_C_I
 
         # -- Second row --
-        J[3:6, 0:3] = skew(C_IG.T * cam_p_I_C)
+        J[3:6, 0:3] = skew(C_I_G.T * cam_p_I_C)
         J[3:6, 9:12] = I(3)
 
     def prediction_update(self, a_m, w_m, dt):
@@ -286,24 +323,24 @@ class MSCKF:
         G_g = np.array([0.0, 0.0, 1.0]).reshape((3, 1))
 
         # IMU error state estimates
-        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
 
         # Calculate new accel and gyro estimates
         a_hat = a_m - b_hat_a * dt
-        w_hat = w_m - b_hat_g - C(q_hat_IG) * w_G * dt
+        w_hat = w_m - b_hat_g - C(q_hat_I_G) * w_G * dt
 
         # Update IMU states (reverse order)
         p_hat_G_I = v_hat_G_I
         b_hat_a = b_hat_a + zero(3, 1)
-        v_hat_G_I = v_hat_G_I + C(q_hat_IG) * a_hat - 2 * skew(w_G) * v_hat_G_I - skew(w_G)**2 * G_p_I + G_g  # noqa
+        v_hat_G_I = v_hat_G_I + C(q_hat_I_G) * a_hat - 2 * skew(w_G) * v_hat_G_I - skew(w_G)**2 * G_p_I + G_g  # noqa
         b_hat_g = b_hat_g + zero(3, 1)
-        q_hat_IG = q_hat_IG + 0.5 * Omega(w_hat) * q_hat_IG
-        self.X_imu = np.array(q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I)
+        q_hat_I_G = q_hat_I_G + 0.5 * Omega(w_hat) * q_hat_I_G
+        self.X_imu = np.array(q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I)
         self.X_imu = self.X_imu.reshape((15, 1))
 
         # Build the jacobians F and G
-        F = self.F(w_hat, q_hat_IG, a_hat, w_G)
-        G = self.G(q_hat_IG)
+        F = self.F(w_hat, q_hat_I_G, a_hat, w_G)
+        G = self.G(q_hat_I_G)
 
         # State transition matrix
         Phi = I(15) + F * dt
@@ -315,18 +352,18 @@ class MSCKF:
 
     def state_augmentation(self):
         # IMU error state estimates
-        q_hat_IG, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
 
         # Using current IMU pose estimate to calculate camera pose
         # -- Camera rotation
-        q_CG = quatmul(self.cam_q_CI, q_hat_IG)
+        q_CG = quatmul(self.cam_q_C_I, q_hat_I_G)
         # -- Camera translation
-        C_IG = quat2rot(q_hat_IG)
-        p_G_C = p_hat_G_I + C_IG.T * self.cam_p_I_C
+        C_I_G = quat2rot(q_hat_I_G)
+        p_G_C = p_hat_G_I + C_I_G.T * self.cam_p_I_C
 
         # Camera pose Jacobian
         N = 1
-        J = self.J(self.cam_q_CI, self.cam_p_I_C, q_hat_IG, N)
+        J = self.J(self.cam_q_C_I, self.cam_p_I_C, q_hat_I_G, N)
 
         # Build covariance matrix (without new camera state)
         P = np.block([[self.P_imu, self.P_imu_cam],
@@ -354,7 +391,7 @@ class MSCKF:
             (k, r, alpha, beta, rho)
 
             k (int): Optimized over k iterations
-            r (np.array): Residual vector over all camera states
+            r (np.array - size 2Nx1): Residual vector over all camera states
             alpha (float): X / Z of 3D feature location
             beta (float): Y / Z of 3D feature location
             rho (float): 1 / Z of 3D feature location
@@ -398,11 +435,11 @@ class MSCKF:
 
                 # Set camera 0 as origin, work out rotation and translation
                 # of camera i relative to to camera 0
-                C_C0_Ci = C_Ci_G * C_C0_G.T
+                C_Ci_C0 = C_Ci_G * C_C0_G.T
                 t_Ci_CiC0 = C_Ci_G * (p_G_C0 - p_G_Ci)
 
                 # Project estimated feature location to image plane
-                h = (C_C0_Ci * np.array([[alpha], [beta], [1]])) + (rho * t_Ci_CiC0)  # NOQA
+                h = (C_Ci_C0 * np.array([[alpha], [beta], [1]])) + (rho * t_Ci_CiC0)  # noqa
 
                 # Calculate reprojection error
                 # -- Camera intrinsics
@@ -446,6 +483,7 @@ class MSCKF:
             r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
             r_Jprev = r_Jnew
 
+            # break loop if not making any progress
             if r_J < 0.0001:
                 break
 
@@ -456,4 +494,19 @@ class MSCKF:
             print(beta)
             print(rho)
 
-        return (k, r, alpha, beta, rho)
+        return (k, np.array(r), alpha, beta, rho)
+
+    # def measurement_update(self):
+    #     # Calculate Kalman gain
+    #     K = (P * T_H.T) / (T_H * P * T_H.T + R_n)
+    #     # == (P*T_H.T) * inv(T_H*P*T_H.T + R_n)
+    #
+    #     # State correction
+    #     dX = K * r_n
+    #     msckfState = updateState(msckfState, dX)
+    #
+    #     # Covariance correction
+    #     tempMat = (eye(12 + 6 * size(msckfState.camStates, 2)) - K * T_H)
+    #     # tempMat = (eye(12 + 6*size(msckfState.camStates,2)) - K*H_o);
+    #
+    #     P_corrected = tempMat * P * tempMat.T + K * R_n * K.T

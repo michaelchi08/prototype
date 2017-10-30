@@ -6,7 +6,7 @@ is also known as the error-state Kalman filter, where the formulation has
 a notion of true, nominal and error state values, the true-state being
 expressed as a suitable composition of the nominal and error states. The
 idea is to consider the nominal state as a large-signal (integrable in
-a non-linear fashion) and hte error-state as a small signal (thus linearly
+a non-linear fashion) and the error-state as a small signal (thus linearly
 integrable and suitable for linear-Guassian filtering).
 
 The error-state filter can be explained as follows. On one side,

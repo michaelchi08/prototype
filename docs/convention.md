@@ -22,6 +22,7 @@ Angular velocity of C with respect to B expressed in G
 
 Quaternion that rotates from G to C
 
+  q_C_G
   C_C_G
   R_C_G
 
