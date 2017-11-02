@@ -7,25 +7,70 @@ from math import atan2
 import numpy as np
 
 
-def normalize(v, tolerance=0.00001):
-    mag2 = sum(n * n for n in v)
-    if abs(mag2 - 1.0) > tolerance:
-        mag = sqrt(mag2)
-        v = tuple(n / mag for n in v)
-    return np.array(v)
-
-
-def quatmul(p, q):
-    """ Quaternion multiplication
+def quatnorm(q):
+    """ Norm of quaternion
 
     Args:
 
-        p (np.array): Quaternion (w, x, y, z)
-        q (np.array): Quaternion (w, x, y, z)
+        q (np.array - 4x1): Quaternion (w, x, y, z)
+
+    Return:
+
+        Norm of quaternion (float)
+
+    """
+    q1, q2, q3, q4 = q.ravel()
+    return sqrt(sum(x**2 for x in q))
+
+
+def quatnormalize(q):
+    """ Normalize quaternion
+
+    Args:
+
+        q (np.array - 4x1): Quaternion (w, x, y, z)
+
+    Return:
+
+        Normalized quaternion (np.array - 4x1)
+
+    """
+    q1, q2, q3, q4 = q.ravel()
+    mag = quatnorm(q)
+    q1 = q1 / mag
+    q2 = q2 / mag
+    q3 = q3 / mag
+    q4 = q4 / mag
+    return np.array([[q1], [q2], [q3], [q4]])
+
+
+def quatconj(q):
+    """ Conjugate / inverse of a quaternion
+
+    Args:
+
+        q (np.array - 4x1): Quaternion (w, x, y, z)
+
+    Return:
+
+        Quaternion conjugate (np.array - 4x1)
+
+    """
+    qw, qx, qy, qz = q.ravel()
+    return np.array([[qw], [-qx], [-qy], [-qz]])
+
+
+def quatmul(p, q):
+    """ Multiply Hamiltonian quaternion
+
+    Args:
+
+        p (np.array): 1st Quaternion (w, x, y, z)
+        q (np.array): 2nd Quaternion (w, x, y, z)
 
     Returns:
 
-        Product of p and q as a quaternion (w, x, y, z)
+        Product of quaternion multiplication (np.array - 4x1)
 
     """
     pw, px, py, pz = q
@@ -34,79 +79,6 @@ def quatmul(p, q):
                      [pw * qx + px * qw + py * qz - pz * qy],
                      [pw * qy - px * qz + py * qw + pz * qx],
                      [pw * qz + px * qy - py * qx + pz * qw]])
-
-
-def quatnorm(q):
-    """ Calculate the norm of a quaternion
-
-    Args:
-
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Norm of a quaternion
-
-    """
-    qw, qx, qy, qz = q
-    qw2 = pow(qw, 2)
-    qx2 = pow(qx, 2)
-    qy2 = pow(qy, 2)
-    qz2 = pow(qz, 2)
-    return sqrt(qw2 + qx2 + qy2 + qz2)
-
-
-def quatnormalize(q):
-    """ Normalize quaternion
-
-    Args:
-
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Normalized quaternion
-
-    """
-    n = quatnorm(q)
-    q[0] = q[0] / n
-    q[1] = q[1] / n
-    q[2] = q[2] / n
-    q[3] = q[3] / n
-
-    return q
-
-
-def quatconj(q):
-    """ Conjugate of a quaternion
-
-    Args:
-
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Conjugate of a quaternion
-
-    """
-    qw, qx, qy, qz = q
-    return np.array([[qw], -[qx], -[qy], -[qz]])
-
-
-def quatinv(q):
-    """ Inverse quaternion
-
-    Args:
-
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Inverted quaternion
-
-    """
-    q_conj = quatconj(q)
-    return q_conj / pow(quatnorm(q), 2)
 
 
 def quatangle(angle):

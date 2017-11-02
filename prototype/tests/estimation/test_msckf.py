@@ -3,8 +3,7 @@ import unittest
 import sympy
 import numpy as np
 
-from prototype.utils.euler import euler2quat
-from prototype.estimation.msckf import quat2rot
+from prototype.utils.quaternion.jpl import quat2rot
 from prototype.estimation.msckf import skew
 from prototype.estimation.msckf import Omega
 from prototype.estimation.msckf import C
@@ -49,11 +48,11 @@ class MSCKFTest(unittest.TestCase):
         cam_states = []
         # -- Camera state 0
         p_G_C0 = np.array([0.0, 0.0, 0.0])
-        q_C0_G = np.array([1.0, 0.0, 0.0, 0.0])
+        q_C0_G = np.array([0.0, 0.0, 0.0, 1.0])
         cam_states.append(CameraState(p_G_C0, q_C0_G))
         # -- Camera state 1
         p_G_C1 = np.array([1.0, 0.0, 0.0])
-        q_C1_G = euler2quat([0.1, 0.0, 0.0], 321)
+        q_C1_G = np.array([0.0, 0.0, 0.0, 1.0])
         cam_states.append(CameraState(p_G_C1, q_C1_G))
 
         # Features
@@ -132,13 +131,39 @@ class MSCKFTest(unittest.TestCase):
                                               track_cam_states)
         p_G_f, k, r = results
 
+        print()
+        print("landmark:")
+        print(landmark)
+        print()
+        print("p_G_f:")
+        print(p_G_f)
+
         self.assertTrue(k < 10)
-        self.assertTrue((p_G_f[0, 0] - landmark[0]) < 0.1)
-        self.assertTrue((p_G_f[1, 0] - landmark[1]) < 0.1)
-        self.assertTrue((p_G_f[2, 0] - landmark[2]) < 0.1)
+        self.assertTrue(abs(p_G_f[0, 0] - landmark[0]) < 0.1)
+        self.assertTrue(abs(p_G_f[1, 0] - landmark[1]) < 0.1)
+        self.assertTrue(abs(p_G_f[2, 0] - landmark[2]) < 0.1)
 
     def test_calculate_track_residual(self):
-        pass
+        # Generate test case
+        data = self.create_test_case_1()
+        (cam_model, track, track_cam_states, landmark) = data
 
-    def test_measurement_update(self):
-        pass
+        # Estimate feature
+        results = self.msckf.estimate_feature(cam_model,
+                                              track,
+                                              track_cam_states)
+        p_G_f, k, r = results
+
+        # Calculate track residual
+        residual = self.msckf.calculate_track_residual(cam_model,
+                                                       track,
+                                                       track_cam_states,
+                                                       p_G_f,
+                                                       True)
+        print()
+        print("residual:")
+        print(residual)
+
+
+    # def test_measurement_update(self):
+    #     pass

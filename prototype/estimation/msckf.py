@@ -2,76 +2,9 @@ import sympy
 import numpy as np
 from numpy.linalg import inv
 
+from prototype.utils.quaternion.jpl import quatmul
+from prototype.utils.quaternion.jpl import quat2rot
 from prototype.vision.geometry import triangulate_point
-
-
-def quatmul(p, q):
-    """ JPL Quaternion multiplication
-
-    Source:
-
-        Page 3.
-
-        Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
-        for 3D attitude estimation." University of Minnesota, Dept. of Comp.
-        Sci. & Eng., Tech. Rep 2 (2005): 2005.
-
-    Args:
-
-        p (np.array - 4x1): 1st Quaternion (x, y, z, w)
-        q (np.array - 4x1): 2nd Quaternion (x, y, z, w)
-
-    Return:
-
-        Product of quaternion multiplication
-
-    """
-    p1, p2, p3, p4 = p.ravel()
-    q1, q2, q3, q4 = q.ravel()
-
-    return np.array([[q4 * p1 + q3 * p2 - q2 * p3 + q1 * p4],
-                     [-q3 * p1 + q4 * p2 + q1 * p3 + q2 * p4],
-                     [q2 * p1 - q1 * p2 + q4 * p3 + q3 * p4],
-                     [-q1 * p1 - q2 * p2 - q3 * p3 + q4 * p4]])
-
-
-def quat2rot(q):
-    """ JPL Quaternion to rotation matrix
-
-    Source:
-
-        Page 9.
-
-        Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
-        for 3D attitude estimation." University of Minnesota, Dept. of Comp.
-        Sci. & Eng., Tech. Rep 2 (2005): 2005.
-
-    Args:
-
-        q (np.array - 4x1): 1st Quaternion (x, y, z, w)
-
-    Return:
-
-        Product of quaternion multiplication
-
-    """
-    q1, q2, q3, q4 = q.ravel()
-
-    R11 = 1.0 - 2.0 * q2**2.0 - 2.0 * q3**2.0
-    R12 = 2.0 * (q1 * q2 + q3 * q4)
-    R13 = 2.0 * (q1 * q3 - q2 * q4)
-
-    R21 = 2.0 * (q1 * q2 - q3 * q4)
-    R22 = 1.0 - 2.0 * q1**2.0 - 2.0 * q3**2.0
-    R23 = 2.0 * (q2 * q3 + q1 * q4)
-
-    R31 = 2.0 * (q1 * q3 + q2 * q4)
-    R32 = 2.0 * (q2 * q3 - q1 * q4)
-    R33 = 1.0 - 2.0 * q1**2.0 - 2.0 * q2**2.0
-
-    return np.matrix([[R11, R12, R13],
-                      [R21, R22, R23],
-                      [R31, R32, R33]])
 
 
 def skew(v):
@@ -206,9 +139,9 @@ class MSCKF:
         # IMU error state vector
         # X_imu = [q_I_G   # Orientation
         #          b_g     # Gyroscope Bias
-        #          G_v_I   # Velocity
+        #          v_G_I   # Velocity
         #          b_a     # Accelerometer Bias
-        #          G_p_I]  # Position
+        #          p_G_I]  # Position
         self.X_imu = zero(5, 1)
 
         # IMU system noise vector
@@ -221,8 +154,8 @@ class MSCKF:
         self.Q_imu = I(12) * self.n_imu
 
         # Camera extrinsics
-        self.cam_p_I_C = np.array([0.0, 0.0, 0.0])
-        self.cam_q_C_I = np.array([1.0, 0.0, 0.0, 0.0])
+        self.cam_p_I_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
+        self.cam_q_C_I = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """ Transition Jacobian F matrix
@@ -292,7 +225,7 @@ class MSCKF:
 
             cam_q_C_I (np.array): Rotation from IMU to camera frame
                                  in quaternion (x, y, z, w)
-            cam_p_I_C (np.array): Position of camera frame from IMU
+            cam_p_I_C (np.array): Position of camera in IMU frame
             q_hat_I_G (np.array): Rotation from global to IMU frame
 
         """
@@ -304,10 +237,58 @@ class MSCKF:
 
         # -- First row --
         J[0:3, 0:3] = C_C_I
-
         # -- Second row --
         J[3:6, 0:3] = skew(C_I_G.T * cam_p_I_C)
         J[3:6, 9:12] = I(3)
+
+        return J
+
+    def H(self, cam_states, track, p_G_f, null_space_trick=True):
+        """ Form the Jacobian measurement matrix
+
+        - $H^{(j)}_x$ of j-th feature track with respect to state $X$
+        - $H^{(j)}_f$ of j-th feature track with respect to feature position
+
+        Args:
+
+            cam_states (list of CameraState): N Camera states
+            track (FeatureTrack): Feature track of length M
+
+        Returns:
+
+            H_x_j jacobian matrix (np.matrix - 2*M x (12+6)N)
+
+        """
+        N = len(cam_states)
+        M = track.tracked_length()
+        H_f_j = zero(2 * M, 3)
+        H_x_j = zero(2 * M, 12 + 6 * N)
+
+        # Form measurement jacobians
+        pose_idx = N - M
+        for i in range(M):
+            # Feature position in camera frame
+            C_C_G = quat2rot(cam_states[pose_idx].q_C_G)
+            p_G_C = cam_states[pose_idx].p_G_C
+            p_C_f = C_C_G * (p_G_f - p_G_C)
+            X, Y, Z = p_C_f.ravel()
+
+            # dh / dg
+            dhdg = (1.0 / Z) * np.array([[1.0, 0.0, -X / Z],
+                                         [0.0, 1.0, -Y / Z]])
+
+            # H_f_j measurement jacobian w.r.t feature
+            H_f_j[(2 * i):(2 * i + 2), :] = dhdg * C_C_G
+
+            # H_x_j measurement jacobian w.r.t state
+            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 1:12 + 6 * (pose_idx) + 3] = dhdg * skew(p_C_f)
+            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 4:12 + 6 * (pose_idx) + 6] = -dhdg * C_C_G
+
+        # Perform null space tricks as per Mourikis 2007
+        if null_space_trick:
+            pass
+
+        return H_x_j
 
     def prediction_update(self, a_m, w_m, dt):
         """ IMU state update """
@@ -473,31 +454,32 @@ class MSCKF:
 
         return (p_G_f, k, np.array(r))
 
-    def calculate_track_residual(self, track, track_cam_states, p_G_f):
+    def calculate_track_residual(self,
+                                 cam_model,
+                                 track,
+                                 track_cam_states,
+                                 p_G_f,
+                                 debug=False):
         """ Calculate the residual of a single feature track
-
-        It is important to note the residual calculated in this function is
-        different compared to the residual calculated when using
-        `MSCKF.estimate_feature()`. During feature estimation, it is optimizing
-        over the inverse depth params but the feature point estimated during the
-        optimization is in the camera frame, **hence the residual was in the
-        camera frame**.
-
-        **Here we are calculating the residual in the global frame**
 
         Args:
 
             p_G_f (np.array - 3x1): Feature position in global frame
             track (FeatureTrack): A single feature track
-            track_cam_states (list of CameraState): Camera states where feature
-                                                    track was observed
+            track_cam_states (list of CameraState): N Camera states where
+                                                    feature track was observed
 
         Returns:
 
-            Residual vector (np.array)
+            Residual vector (np.array - 2*Nx1)
 
         """
+        # Residual vector
         r_j = []
+
+        # Camera intrinsics
+        cx, cy = cam_model.K[0, 2], cam_model.K[1, 2]
+        fx, fy = cam_model.K[0, 0], cam_model.K[1, 1]
 
         # Calculate residual vector
         for i in range(len(track_cam_states)):
@@ -506,13 +488,26 @@ class MSCKF:
             p_C_f = C_C_G * (p_G_f - track_cam_states[i].p_G_C)
 
             # Calculate predicted measurement at pose i of feature track j
-            zhat_i_j = np.array([[p_C_f[0] / p_C_f[2]], [p_C_f[1] / p_C_f[2]]])
+            z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0]],
+                                  [p_C_f[1, 0] / p_C_f[2, 0]]])
 
-            # Append to residual vector
-            residual = track.track[i] - zhat_i_j
+            # Convert measurment to normalized pixel coordinates
+            z = track.track[i].pt
+            z = np.array([[(z[0] - cx) / fx],
+                          [(z[1] - cy) / fy]])
+
+            # Residual
+            residual = z - z_hat_i_j
             r_j.append(residual)
 
-        return np.array(r_j)
+            # Debug
+            if debug:
+                print()
+                print("p_C_f:\n", p_C_f)
+                print("z:\n", z)
+                print("z_hat:\n", z_hat_i_j)
+
+        return np.array(r_j).reshape((2 * len(track_cam_states), 1))
 
     def state_augmentation(self):
         # IMU error state estimates
@@ -520,7 +515,7 @@ class MSCKF:
 
         # Using current IMU pose estimate to calculate camera pose
         # -- Camera rotation
-        q_CG = quatmul(self.cam_q_C_I, q_hat_I_G)
+        q_C_G = quatmul(self.cam_q_C_I, q_hat_I_G)
         # -- Camera translation
         C_I_G = quat2rot(q_hat_I_G)
         p_G_C = p_hat_G_I + C_I_G.T * self.cam_p_I_C
@@ -538,7 +533,7 @@ class MSCKF:
         P = X * P * X.T
 
         self.X_cam[N] = p_G_C
-        self.X_cam[N] = q_CG
+        self.X_cam[N] = q_C_G
 
     def measurement_update(self):
         # # Build MSCKF covariance matrix

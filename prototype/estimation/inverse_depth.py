@@ -6,9 +6,9 @@ from math import sqrt
 import sympy
 import numpy as np
 
-from prototype.utils.utils import quat2rot
-from prototype.utils.utils import quatmul
-from prototype.utils.quaternion import quatangle
+from prototype.utils.quaternion.hamiltonian import quat2rot
+from prototype.utils.quaternion.hamiltonian import quatmul
+from prototype.utils.quaternion.hamiltonian import quatangle
 
 
 def linearity_index_inverse_depth():

@@ -8,6 +8,8 @@ from math import sqrt
 
 import numpy as np
 
+from prototype.utils.quaternion.hamiltonian import quatnormalize
+
 
 def deg2rad(d):
     """ Convert degrees to radians
@@ -71,33 +73,6 @@ def wrap360(euler_angle):
     else:
         euler_angle += 360.0
         return fmod(euler_angle, 360.0)
-
-
-def quatnormalize(q):
-    """ Normalize quaternion
-
-    Args:
-
-        q (np.array or list of size 4)
-
-    Returns:
-
-        Normalized quaternion
-
-    """
-    qw, qx, qy, qz = q
-    qw2 = pow(qw, 2)
-    qx2 = pow(qx, 2)
-    qy2 = pow(qy, 2)
-    qz2 = pow(qz, 2)
-
-    mag = sqrt(qw2 + qx2 + qy2 + qz2)
-    q[0] = q[0] / mag
-    q[1] = q[1] / mag
-    q[2] = q[2] / mag
-    q[3] = q[3] / mag
-
-    return q
 
 
 def rotx(theta):
@@ -205,6 +180,7 @@ def euler2quat(euler, euler_seq):
     Source:
         Euler Angles, Quaternions and Transformation Matrices
         https://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19770024290.pdf
+
     """
 
     if euler_seq == 123:
@@ -242,27 +218,6 @@ def euler2quat(euler, euler_seq):
         raise RuntimeError(error_msg)
 
 
-def quatmul(p, q):
-    """ Quaternion multiplication
-
-    Args:
-
-        p (np.array): Quaternion (w, x, y, z)
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
-        Product of p and q as a quaternion (w, x, y, z)
-
-    """
-    pw, px, py, pz = q
-    qw, qx, qy, qz = q
-    return np.array([[qw * px + qz * py - qy * pz + qx * pw],
-                     [-qz * px + qw * py + qx * pz + qy * pw],
-                     [qy * px - qx * py + qw * pz + qz * pw],
-                     [-qx * px - qy * py - qz * pz + qw * pw]])
-
-
 def quat2euler(q, euler_seq):
     qw, qx, qy, qz = q
     qw2 = pow(qw, 2)
@@ -286,46 +241,6 @@ def quat2euler(q, euler_seq):
     else:
         error_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
         raise RuntimeError(error_msg)
-
-
-def quat2rot(q):
-    """ Quaternion to rotation matrix
-
-    Args:
-
-        q (np.array or list of size 4): Quaternion (w, x, y, z)
-
-    Returns:
-
-        3 x 3 rotation matrix
-
-    """
-    qw = q[0]
-    qx = q[1]
-    qy = q[2]
-    qz = q[3]
-
-    qw2 = pow(qw, 2)
-    qx2 = pow(qx, 2)
-    qy2 = pow(qy, 2)
-    qz2 = pow(qz, 2)
-
-    # homogeneous form
-    R11 = qw2 + qx2 - qy2 - qz2
-    R12 = 2 * (qx * qy - qw * qz)
-    R13 = 2 * (qx * qz + qw * qy)
-
-    R21 = 2 * (qx * qy + qw * qz)
-    R22 = qw2 - qx2 + qy2 - qz2
-    R23 = 2 * (qy * qz - qw * qx)
-
-    R31 = 2 * (qx * qz - qw * qy)
-    R32 = 2 * (qy * qz + qw * qx)
-    R33 = qw2 - qx2 - qy2 + qz2
-
-    return np.array([[R11, R12, R13],
-                     [R21, R22, R23],
-                     [R31, R32, R33]])
 
 
 def enu2nwu(enu):

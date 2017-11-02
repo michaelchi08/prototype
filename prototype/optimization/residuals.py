@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import dot
 
-from prototype.utils.utils import quat2rot
+from prototype.utils.quaternion.hamiltonian import quat2rot
 
 
 def reprojection_error(K, image_point, rotation, translation, world_point):
