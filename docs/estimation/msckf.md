@@ -15,6 +15,7 @@ $$
   \newcommand{\rothat}[2]{{}^{#1}_{#2}\mathbf{\hat R}}
   \newcommand{\bias}{\mathbf{b}}
   \newcommand{\noise}{\mathbf{n}}
+  \newcommand{\residual}{\mathbf{r}}
   \newcommand{\I}{\mathbf{I}}
   % Frames
   \newcommand{\global}{\text{G}}
@@ -38,7 +39,8 @@ $$
   \newcommand{\bodyEstGpos}{{}^{G}\hat{p}_{B}}
   \newcommand{\bodyTruCpos}{{}^{C}p_{B}}
   \newcommand{\bodyErrCpos}{{}^{C}\tilde{p}_{B}}
-  \newcommand{\bodyEstCpos}{{}^{C}\hat{p}_{B}} $$
+  \newcommand{\bodyEstCpos}{{}^{C}\hat{p}_{B}}
+$$
 
 
 
@@ -52,7 +54,7 @@ $\pos_{\global}^{{\global\imu}}$ with $\global$ and $\imu$ as start and end
 points, or for brevity as $\pos_{\global}^{\imu}$. Similarly a transformation
 between $\frame_{\global}$ to $\frame_\imu$ can be represented by a homogeneous
 transform matrix $\transform_{\imu\global}$, where its rotation matrix
-component can be written as $\rot_{\imu\global}$.
+component can be written as $\rot{\imu}{\global}$.
 
 
 
@@ -106,7 +108,8 @@ to the end of the state vector at time step $k$, and has the following form:
 For brevity we have denoted
 
 \begin{equation}
-  \hat \angvel = \angvel_{m} - \hat \bias_{g} - \rot_{\hat \quat} \angvel_{\global}
+  \hat \angvel =
+    \angvel_{m} - \hat \bias_{g} - \rot{}{}_{\hat \quat} \angvel_{\global}
 \end{equation}
 
 \begin{equation}
@@ -157,7 +160,8 @@ position, the residual $\eqref{eq:residual}$ can be approximated as
 \begin{equation} \label{eq:residual_single_linearize}
   r^{(j)}_{i} \simeq
     \mathbf{H}^{(j)}_{\mathbf{X}_{i}} \tilde{\state} +
-    \mathbf{H}^{(j)}_{f_{i}} ~^{G}\!\tilde{P}_{f_{j}} + \noise^{(j)}_{i}
+    \mathbf{H}^{(j)}_{f_{i}} \inG{\tilde{\mathbf{P}}}_{f_{j}} +
+    \noise^{(j)}_{i}
 \end{equation}
 
 where $\mathbf{H}^{(j)}_{\mathbf{X}_{i}}$ and $\mathbf{H}^{(j)}_{f_{i}}$
@@ -178,14 +182,67 @@ To obtain residuals over all camera poses, however, we stack the residuals
 over all measurements $M_{J}$, and so $\eqref{eq:residual_single_linearize}$
 can be rewritten as:
 
-\begin{equation} \label{eq:residual_stacked_linearize}
-  r^{(j)} \simeq
-    \mathbf{H}^{(j)}_{\mathbf{X}} \tilde{\state} +
-    \mathbf{H}^{(j)}_{f} ~^{G}\!\tilde{P}_{f_{j}} + \noise^{(j)}
+\begin{equation} \label{eq:residual_approx}
+  \residual^{(j)} \simeq
+    \mathbf{H}^{(j)}_{\state} \tilde{\state} +
+    \mathbf{H}^{(j)}_{f} \inG{\tilde{\mathbf{P}}_{f_{j}}} +
+    \mathbf{n}^{(j)}
 \end{equation}
 
 where $r^{(j)}$, $\mathbf{H}^{(j)}_{\mathbf{X}}$, $\mathbf{H}^{(j)}_{f}$ and
 $n^{(j)}$ are block vectors or matrices.
+
+The problem with $\eqref{eq:residual_approx}$ is that the state estimate,
+$\state$, was used to compute the feature position estimate, therefore the
+feature position error $\inG{\tilde{\mathbf{P}}_{f_{j}}}$ correlates with the
+state errors $\tilde{\state}$, and thus we cannot use
+$\eqref{eq:residual_approx}$ directly. To remedy this problem [Mourikis07] used
+the null space trick to remove the correlation, this was achieved by creating
+the left null space $\mathbf{A}^{T}$, a unitary matrix whose columns form the
+basis of the left null space of the matrix $\mathbf{H}^{(j)}_{f}$. Once we have
+the left null space $\mathbf{A}^{T}$ we can project $\mathbf{r}^{(j)}$ on the
+left null space of $\mathbf{H}^{(j)}_{f}$ to form a new residual $r^{(j)}_{o}$.
+
+\begin{equation}
+  \mathbf{A}^{T} = \text{Null}(\text{Transpose}(\mathbf{H}^{(j)}_{f}))
+\end{equation}
+
+\begin{align}
+  \mathbf{A}^{T}
+  \underbrace{(z^{(j)} - \hat{z}^{(j)})}_{\residual^{(j)}}
+  \simeq&
+    \mathbf{A}^{T} \mathbf{H}^{(j)}_{\state} \tilde{\state} +
+      \underbrace{\mathbf{A}^{T} \mathbf{H}^{(j)}_{f}}_{
+        \mathbf{A}^{T} \mathbf{H}^{(j)}_{f} = \mathbf{0}
+      }
+      \inG{\tilde{\mathbf{P}}_{f_{j}}} + \mathbf{A}^{T} \mathbf{n}^{(j)} \\
+  \residual^{(j)}_{o} = \mathbf{A}^{T} \residual^{(j)}
+  \simeq&
+    \mathbf{A}^{T} \mathbf{H}^{(j)}_{o} \tilde{\state} +
+    \mathbf{0} +
+    \mathbf{n}^{(j)}_{o} \\
+  \residual^{(j)}_{o} = \mathbf{A}^{T} \residual^{(j)}
+  \simeq&
+    \mathbf{A}^{T} \mathbf{H}^{(j)}_{o} \tilde{\state} +
+    \mathbf{n}^{(j)}_{o}
+\end{align}
+
+\begin{align}
+  \mathbf{H}^{(j)}_{\mathbf{X}_{i}} &= \begin{bmatrix}
+    \dfrac{\partial{z}}{\partial{\state_{\imu}}}
+    & \dfrac{\partial{z}}{\partial{\state_{\cam_{0}}}}
+    & \cdots
+    & \dfrac{\partial{z}}{\partial{\state_{\cam_{N}}}}
+  \end{bmatrix} \\
+  \mathbf{H}^{(j)}_{\mathbf{X}_{i}} &= \begin{bmatrix}
+    \underbrace{0_{2 \times 15}}_\text{w.r.t IMU state}
+    & \underbrace{0_{2 \times 6}}_\text{w.r.t 1st Camera state}
+    & \cdots &
+    & \mathbf{J}^{(j)}_{i}
+      \lfloor\! ~^{C_{i}}\!\hat{\state}_{f_{j}} \times \rfloor
+    & - \mathbf{J}^{(j)}_{i} C(~^{C_{i}}_{G}\!\hat{\bar{q}})
+  \end{bmatrix} \\[2em]
+\end{align}
 
 
 ## Measurement Model Jacobian Derivation
@@ -199,16 +256,16 @@ $n^{(j)}$ are block vectors or matrices.
   \end{bmatrix} \\
   \mathbf{H}^{(j)}_{\mathbf{X}_{i}} &= \begin{bmatrix}
     \underbrace{0_{2 \times 15}}_\text{w.r.t IMU state}
-    & \underbrace{0_{2 \times 6}}_\text{w.r.t Camera state}
+    & \underbrace{0_{2 \times 6}}_\text{w.r.t 1st Camera state}
     & \cdots &
     & \mathbf{J}^{(j)}_{i}
       \lfloor\! ~^{C_{i}}\!\hat{\state}_{f_{j}} \times \rfloor
     & - \mathbf{J}^{(j)}_{i} C(~^{C_{i}}_{G}\!\hat{\bar{q}})
   \end{bmatrix} \\[2em]
   % --- z
-  z &= h(g(C_{Ci:G}, P_{f}, P_{C})) \\
+  z &= h(g(\rot{\cam_{i}}{\global}, \inG{P_{f}}, \inG{P_{C})}) \\
   % --- g
-  g &= C_{Ci:G} (P_{f} - P_{C}) \\
+  g &= \rot{\cam_{i}}{\global} (\inG{P_{f}} - \inG{P_{C}}) \\
   % --- h
   h &= \begin{bmatrix}
     X \mathbin{/} Z \\
@@ -248,60 +305,29 @@ $n^{(j)}$ are block vectors or matrices.
     \dfrac{\partial{g}}{\partial{P_{f_{z}}}}
   \end{bmatrix} \\
   &= \begin{bmatrix}
-    C_{Ci:G} \begin{bmatrix} 1 \\ 0 \\ 0 \end{bmatrix},
-    & C_{Ci:G} \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix},
-    & C_{Ci:G} \begin{bmatrix} 0 \\ 0 \\ 1 \end{bmatrix}
+    \rot{\cam_{i}}{\global} \begin{bmatrix} 1 \\ 0 \\ 0 \end{bmatrix},
+    & \rot{\cam_{i}}{\global} \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix},
+    & \rot{\cam_{i}}{\global} \begin{bmatrix} 0 \\ 0 \\ 1 \end{bmatrix}
   \end{bmatrix} \\
   &= \begin{bmatrix}
     1 & 0 & 0 \\
     0 & 1 & 0 \\
     0 & 0 & 1
-  \end{bmatrix} C_{Ci:G}
+  \end{bmatrix} \rot{\cam_{i}}{\global}
+  = \rot{\cam_{i}}{\global} \\
+  % --- dg / d delta theta
+  \dfrac{\partial{g}}{\partial{\delta\theta}}
+  &= \rothat{\cam_{i}}{\global} (\inG{\hat{P}_{f}} - \inG{\hat{P}_{C}}) \\
+  &= \rot{\cam_{i}}{\global} (\I_{3} - \skew{\delta\theta}) (\inG{P_{f}}, \inG{P_{C}}) \\
+  &= (\I_{3} - \skew{\delta\theta}) \rot{\cam_{i}}{\global} (\inG{P_{f}}, \inG{P_{C}}) \\
+  &= (\I_{3} - \skew{\delta\theta}) \inC{P_{f}} \\
+  &= \inC{P_{f}} - \skew{\delta\theta} \inC{P_{f}} \\
+  &= \inC{P_{f}} + \skew{\inC{P_{f}}} \delta\theta \\
+  &= \skew{\inC{P_{f}}}
 \end{align}
 
-\begin{align}
-  \feaErrCpos &= \feaTruCpos - \feaEstCpos \\
-  &=
-  \left(
-    \rot{\cam}{\body}
-    \rot{\body}{\global}(t_{n})
-    (\feaTruGpos - \bodyTruGpos(t_{n})) + \bodyTruCpos
-  \right) -
-  \left(
-    \rot{\cam}{\body}
-    \rothat{\body}{\global}(t_{n})
-    (\feaTruGpos - \bodyEstGpos(t_{n})) + \bodyEstCpos
-  \right) \\
-  &=
-  \rot{\cam}{\body}
-    \left(
-      \rot{\body}{\global}(t_{n})
-      (\feaTruGpos - \bodyTruGpos(t_{n})) -
-      \rothat{\body}{\global}(\hat{t}_{n})
-      (\feaTruGpos - \bodyEstGpos(t_{n}))
-    \right) +
-    \bodyTruCpos - \bodyEstCpos \\
-  &=
-  \rot{\cam}{\body}
-    \left(
-      \rot{\body}{\global}(t_{n})
-      (\feaTruGpos - \bodyTruGpos(t_{n})) -
-      \rothat{\body}{\global}(\hat{t}_{n})
-      (\feaTruGpos - \bodyEstGpos(t_{n}))
-    \right) +
-  \bodyErrGpos
-\end{align}
 
-\begin{align}
-  \rot{\body}{\global} \simeq
-    & \rottilde{\body}{\global} +
-      \dfrac{\partial \rot{\body}{\global}}{\partial t_{n}} (\hat{t}_{n}) \tilde{t}_{n} \\
-    & \rothat{\body}{\global}(\I_{3} - \skew{\inG{\dtheta}} -
-      \skew{\inB{\angvel}(\hat{t}_{n})}
-      \rothat{\body}{\global} \tilde{t}_{n}
-      \label{eq:rot_approx} \\[1em]
-  \bodyTruGpos(t_{n}) \simeq
-    & \bodyTruGpos(\hat{t}_{n}) +
-      \inG{\vel}_{B}(\hat{t}_{n}) \hat{t}_{n}
-      \label{eq:fpos_approx} \\[2em]
-\end{align}
+[Mourikis07]: A.I. Mourikis, S.I. Roumeliotis: "A Multi-state Constraint Kalman
+Filter for Vision-Aided Inertial Navigation," Proceedings of the IEEE
+International Conference on Robotics and Automation (ICRA), Rome, Italy, April
+10-14 2007, pp. 3565-3572.

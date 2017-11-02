@@ -154,7 +154,7 @@ def euler2quat(euler, euler_seq):
         qy = c_psi * s_theta * c_phi + s_psi * c_theta * s_phi
         qz = s_psi * c_theta * c_phi - c_psi * s_theta * s_phi
 
-        return quatnormalize([qw, qx, qy, qz])
+        return np.array(quatnormalize([qw, qx, qy, qz]))
 
     else:
         err_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)

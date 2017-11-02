@@ -112,6 +112,16 @@ class FeatureTrack:
         """
         return self.descriptor[-1]
 
+    def tracked_length(self):
+        """ Return number of frames tracked
+
+        Returns:
+
+            Number of frames tracked (float)
+
+        """
+        return len(self.track)
+
     def __str__(self):
         s = ""
         s += "track_id: %d\n" % self.track_id
