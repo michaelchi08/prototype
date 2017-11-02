@@ -1,6 +1,6 @@
 from math import sqrt
 from math import atan2
-from math import mod
+from math import fmod
 from math import pi
 
 
@@ -65,7 +65,7 @@ def feature_inview_2d(f, x, theta, rmax, thmax):
 
     # Calculate range and bearing
     r = sqrt(dx**2 + dy**2)
-    th = mod(atan2(dy, dx) - theta, 2 * pi)
+    th = fmod(atan2(dy, dx) - theta, 2 * pi)
     if th > pi:
         th = th - 2 * pi
 

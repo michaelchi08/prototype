@@ -4,9 +4,13 @@ import sympy
 import numpy as np
 
 from prototype.utils.quaternion.jpl import quat2rot
+
 from prototype.estimation.msckf import skew
+from prototype.estimation.msckf import nullspace
 from prototype.estimation.msckf import Omega
 from prototype.estimation.msckf import C
+from prototype.estimation.msckf import zero
+from prototype.estimation.msckf import I
 from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
 from prototype.vision.common import focal_length
@@ -76,9 +80,42 @@ class MSCKFTest(unittest.TestCase):
 
         self.assertTrue(np.array_equal(X, X_expected))
 
+    def test_nullspace(self):
+        A = np.array([[1.0, 2.0, 3.0],
+                      [4.0, 5.0, 6.0],
+                      [7.0, 8.0, 9.0]])
+
+        # Find nullspace
+        x = nullspace(A)
+
+        # Check nullspace
+        y = np.dot(A, x)
+        res = np.abs(y).max()
+        self.assertTrue(abs(res) < 0.0000001)
+
     def test_Omega(self):
         X = Omega(np.array([1.0, 2.0, 3.0]))
         self.assertEqual(X.shape, (4, 4))
+
+    def test_C(self):
+        q = np.array([0.0, 0.0, 0.0, 1.0])
+        R = C(q)
+
+        self.assertTrue(np.array_equal(R, np.eye(3)))
+        self.assertEqual(str(type(R)),
+                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
+
+    def test_zero(self):
+        X = zero(3, 3)
+        self.assertEqual(X.shape, (3, 3))
+        self.assertEqual(str(type(X)),
+                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
+
+    def test_I(self):
+        X = I(3)
+        self.assertEqual(X.shape, (3, 3))
+        self.assertEqual(str(type(X)),
+                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
 
     def test_F(self):
         w_hat = np.array([0.0, 0.0, 0.0])
@@ -112,6 +149,12 @@ class MSCKFTest(unittest.TestCase):
         self.assertTrue(np.array_equal(G[6:9, 6:9], -C(q_hat).T))
         # -- Fourth row --
         self.assertTrue(np.array_equal(G[9:12, 9:12], np.ones((3, 3))))
+
+    def test_J(self):
+        pass
+
+    def test_H(self):
+        pass
 
     # def test_prediction_update(self):
     #     q_I_W = [0.0, 0.0, 0.0, 0.0]
@@ -164,6 +207,8 @@ class MSCKFTest(unittest.TestCase):
         print("residual:")
         print(residual)
 
+    def test_state_augmentation(self):
+        pass
 
     # def test_measurement_update(self):
     #     pass

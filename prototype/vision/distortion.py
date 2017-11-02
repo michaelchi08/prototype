@@ -11,7 +11,7 @@ def radtan(k_1, k_2, k_3, t_1, t_2):
 
     intrinsics = np.matrix([[f_x, 0.0], [0.0, f_y]])
     principle = np.matrix([[p_x], [p_y]])
-    principle + intrinsics * d_r * np.array([[u], [v]) + d_t
+    principle + intrinsics * d_r * np.array([[u], [v]]) + d_t
 
 
 def equidistance():

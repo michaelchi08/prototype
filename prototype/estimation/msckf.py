@@ -24,36 +24,45 @@ def skew(v):
                       [-v[1], v[0], 0.0]])
 
 
-def C(q):
-    """ Rotation matrix parameterized by a JPL quaternion (x, y, z, w)
+def nullspace(A, atol=1e-13, rtol=0):
+    """ Compute an approximate basis for the nullspace of A.
 
-    Args:
+    The algorithm used by this function is based on the singular value
+    decomposition of `A`.
 
-        q (np.array): Quaternion (x, y, z, w)
+    Parameters
+    ----------
+    A : ndarray
+        A should be at most 2-D.  A 1-D array with length k will be treated
+        as a 2-D with shape (1, k)
+    atol : float
+        The absolute tolerance for a zero singular value.  Singular values
+        smaller than `atol` are considered to be zero.
+    rtol : float
+        The relative tolerance.  Singular values less than rtol*smax are
+        considered to be zero, where smax is the largest singular value.
 
-    Returns:
+    If both `atol` and `rtol` are positive, the combined tolerance is the
+    maximum of the two; that is::
+        tol = max(atol, rtol * smax)
+    Singular values smaller than `tol` are considered to be zero.
 
-        Rotation matrix (np.matrix)
-
+    Return value
+    ------------
+    ns : ndarray
+        If `A` is an array with shape (m, k), then `ns` will be an array
+        with shape (k, n), where n is the estimated dimension of the
+        nullspace of `A`.  The columns of `ns` are a basis for the
+        nullspace; each element in numpy.dot(A, ns) will be approximately
+        zero.
     """
-    return np.matrix(quat2rot(q))
 
-
-def wgn(mu, sigma):
-    """ Gaussian White Noise
-
-    Args:
-
-        mu (float): Mean
-        sigma (float): Variance
-
-
-    Returns:
-
-        Gaussian white noise as a float scalar value
-
-    """
-    return np.random.normal(mu, sigma, 1)[0]
+    A = np.atleast_2d(A)
+    u, s, vh = np.linalg.svd(A)
+    tol = max(atol, rtol * s[0])
+    nnz = (s >= tol).sum()
+    ns = vh[nnz:].conj().T
+    return ns
 
 
 def Omega(w):
@@ -70,6 +79,21 @@ def Omega(w):
     """
     w = w.reshape((3, 1))
     return np.block([[-skew(w), w], [-w.T, 0.0]])
+
+
+def C(q):
+    """ Rotation matrix parameterized by a JPL quaternion (x, y, z, w)
+
+    Args:
+
+        q (np.array): Quaternion (x, y, z, w)
+
+    Returns:
+
+        Rotation matrix (np.matrix)
+
+    """
+    return np.matrix(quat2rot(q))
 
 
 def zero(m, n):
@@ -243,7 +267,7 @@ class MSCKF:
 
         return J
 
-    def H(self, cam_states, track, p_G_f, null_space_trick=True):
+    def H(self, cam_states, track, p_G_f):
         """ Form the Jacobian measurement matrix
 
         - $H^{(j)}_x$ of j-th feature track with respect to state $X$
@@ -285,10 +309,10 @@ class MSCKF:
             H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 4:12 + 6 * (pose_idx) + 6] = -dhdg * C_C_G
 
         # Perform null space tricks as per Mourikis 2007
-        if null_space_trick:
-            pass
+        A_j = nullspace(H_f_j.T)
+        H_o_j = A_j.T * H_x_j
 
-        return H_x_j
+        return H_x_j, H_o_j, A_j
 
     def prediction_update(self, a_m, w_m, dt):
         """ IMU state update """

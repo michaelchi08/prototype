@@ -3,7 +3,7 @@ from math import sin
 
 import numpy as np
 
-from prototype.utils.quaternion import quatnormalize
+from prototype.utils.quaternion.hamiltonian import quatnormalize
 
 
 def rotx(theta):
