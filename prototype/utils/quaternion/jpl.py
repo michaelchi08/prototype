@@ -2,6 +2,8 @@ from math import sqrt
 
 import numpy as np
 
+from prototype.utils.linalg import skew
+
 
 def quatnorm(q):
     """ Norm of JPL quaternion
@@ -131,3 +133,19 @@ def quat2rot(q):
     return np.array([[R11, R12, R13],
                      [R21, R22, R23],
                      [R31, R32, R33]])
+
+
+def Omega(w):
+    """ Omega function
+
+    Args:
+
+        w (np.array): Angular velocity
+
+    Returns:
+
+        Differential form of an angular velocity (np.array)
+
+    """
+    w = w.reshape((3, 1))
+    return np.block([[-skew(w), w], [-w.T, 0.0]])

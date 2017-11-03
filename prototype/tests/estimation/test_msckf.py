@@ -2,15 +2,12 @@ import unittest
 
 import sympy
 import numpy as np
+from numpy import dot
+from numpy import array_equal
 
-from prototype.utils.quaternion.jpl import quat2rot
+from prototype.utils.linalg import skew
+from prototype.utils.quaternion.jpl import quat2rot as C
 
-from prototype.estimation.msckf import skew
-from prototype.estimation.msckf import nullspace
-from prototype.estimation.msckf import Omega
-from prototype.estimation.msckf import C
-from prototype.estimation.msckf import zero
-from prototype.estimation.msckf import I
 from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
 from prototype.vision.common import focal_length
@@ -22,21 +19,20 @@ from prototype.vision.features import FeatureTrack
 
 class CameraStateTest(unittest.TestCase):
     def test_init(self):
-        p_G_C = np.array([1.0, 2.0, 3.0])
-        q_C_G = np.array([1.0, 0.0, 0.0, 0.0])
-        cam = CameraState(p_G_C, q_C_G)
+        p_G = np.array([1.0, 2.0, 3.0])
+        q_CG = np.array([1.0, 0.0, 0.0, 0.0])
+        cam = CameraState(p_G, q_CG)
 
-        self.assertTrue(np.array_equal(p_G_C, cam.p_G_C.ravel()))
-        self.assertTrue(np.array_equal(q_C_G, cam.q_C_G.ravel()))
+        self.assertTrue(array_equal(p_G, cam.p_G.ravel()))
+        self.assertTrue(array_equal(q_CG, cam.q_CG.ravel()))
 
 
 class MSCKFTest(unittest.TestCase):
     def setUp(self):
-        self.msckf = MSCKF(n_g=0.001 * np.ones(3).reshape((3, 1)),
-                           n_a=0.001 * np.ones(3).reshape((3, 1)),
-                           n_wg=0.001 * np.ones(3).reshape((3, 1)),
-                           n_wa=0.001 * np.ones(3).reshape((3, 1)))
-        pass
+        self.msckf = MSCKF(n_g=0.001 * np.ones(3),
+                           n_a=0.001 * np.ones(3),
+                           n_wg=0.001 * np.ones(3),
+                           n_wa=0.001 * np.ones(3))
 
     def create_test_case_1(self):
         # Pinhole Camera model
@@ -61,9 +57,9 @@ class MSCKFTest(unittest.TestCase):
 
         # Features
         landmark = np.array([1.0, 2.0, 10.0, 1.0])
-        noise = np.array([0.1, 0.1, 0.0])
-        R_C0_G = np.array(quat2rot(q_C0_G))
-        R_C1_G = np.array(quat2rot(q_C1_G))
+        noise = np.array([0.2, 0.2, 0.0])
+        R_C0_G = np.array(C(q_C0_G))
+        R_C1_G = np.array(C(q_C1_G))
         kp1 = cam_model.project(landmark, R_C0_G, p_G_C0) + noise
         kp2 = cam_model.project(landmark, R_C1_G, p_G_C1) + noise
         kp1 = Keypoint(kp1[:2], 21)
@@ -71,51 +67,6 @@ class MSCKFTest(unittest.TestCase):
         track = FeatureTrack(0, 1, kp1, kp2)
 
         return (cam_model, track, cam_states, landmark)
-
-    def test_skew(self):
-        X = skew(np.array([1.0, 2.0, 3.0]))
-        X_expected = np.array([[0.0, -3.0, 2.0],
-                               [3.0, 0.0, -1.0],
-                               [-2.0, 1.0, 0.0]])
-
-        self.assertTrue(np.array_equal(X, X_expected))
-
-    def test_nullspace(self):
-        A = np.array([[1.0, 2.0, 3.0],
-                      [4.0, 5.0, 6.0],
-                      [7.0, 8.0, 9.0]])
-
-        # Find nullspace
-        x = nullspace(A)
-
-        # Check nullspace
-        y = np.dot(A, x)
-        res = np.abs(y).max()
-        self.assertTrue(abs(res) < 0.0000001)
-
-    def test_Omega(self):
-        X = Omega(np.array([1.0, 2.0, 3.0]))
-        self.assertEqual(X.shape, (4, 4))
-
-    def test_C(self):
-        q = np.array([0.0, 0.0, 0.0, 1.0])
-        R = C(q)
-
-        self.assertTrue(np.array_equal(R, np.eye(3)))
-        self.assertEqual(str(type(R)),
-                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
-
-    def test_zero(self):
-        X = zero(3, 3)
-        self.assertEqual(X.shape, (3, 3))
-        self.assertEqual(str(type(X)),
-                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
-
-    def test_I(self):
-        X = I(3)
-        self.assertEqual(X.shape, (3, 3))
-        self.assertEqual(str(type(X)),
-                         "<class 'numpy.matrixlib.defmatrix.matrix'>")
 
     def test_F(self):
         w_hat = np.array([0.0, 0.0, 0.0])
@@ -126,29 +77,28 @@ class MSCKFTest(unittest.TestCase):
         F = self.msckf.F(w_hat, q_hat, a_hat, w_G)
 
         # -- First row --
-        self.assertTrue(np.array_equal(F[0:3, 0:3], -skew(w_hat)))
-        self.assertTrue(np.array_equal(F[0:3, 3:6], np.ones((3, 3))))
+        self.assertTrue(array_equal(F[0:3, 0:3], -skew(w_hat)))
+        self.assertTrue(array_equal(F[0:3, 3:6], np.ones((3, 3))))
         # -- Third Row --
-        self.assertTrue(np.array_equal(F[6:9, 0:3], -C(q_hat).T * skew(a_hat)))
-        self.assertTrue(np.array_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
-        self.assertTrue(np.array_equal(F[6:9, 9:12], -C(q_hat).T))
-        self.assertTrue(np.array_equal(F[6:9, 12:15], -skew(w_G)**2))
+        self.assertTrue(array_equal(F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
+        self.assertTrue(array_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
+        self.assertTrue(array_equal(F[6:9, 9:12], -C(q_hat).T))
+        self.assertTrue(array_equal(F[6:9, 12:15], -skew(w_G)**2))
         # -- Fifth Row --
-        self.assertTrue(np.array_equal(F[12:15, 6:9], np.ones((3, 3))))
+        self.assertTrue(array_equal(F[12:15, 6:9], np.ones((3, 3))))
 
     def test_G(self):
         q_hat = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
-
         G = self.msckf.G(q_hat)
 
         # -- First row --
-        self.assertTrue(np.array_equal(G[0:3, 0:3], np.ones((3, 3))))
+        self.assertTrue(array_equal(G[0:3, 0:3], np.ones((3, 3))))
         # -- Second row --
-        self.assertTrue(np.array_equal(G[3:6, 3:6], np.ones((3, 3))))
+        self.assertTrue(array_equal(G[3:6, 3:6], np.ones((3, 3))))
         # -- Third row --
-        self.assertTrue(np.array_equal(G[6:9, 6:9], -C(q_hat).T))
+        self.assertTrue(array_equal(G[6:9, 6:9], -C(q_hat).T))
         # -- Fourth row --
-        self.assertTrue(np.array_equal(G[9:12, 9:12], np.ones((3, 3))))
+        self.assertTrue(array_equal(G[9:12, 9:12], np.ones((3, 3))))
 
     def test_J(self):
         pass
@@ -156,12 +106,13 @@ class MSCKFTest(unittest.TestCase):
     def test_H(self):
         pass
 
-    # def test_prediction_update(self):
-    #     q_I_W = [0.0, 0.0, 0.0, 0.0]
-    #     w_W = np.array([[0.0], [0.0], [0.0]])
-    #     dt = 0.0
-    #     self.msckf.prediction_update(dt)
-    #     pass
+    def test_prediction_update(self):
+        a_m = np.array([[0.0], [0.0], [10.0]])
+        w_m = np.array([[0.0], [0.0], [0.0]])
+        dt = 0.1
+
+        for i in range(10):
+            self.msckf.prediction_update(a_m, w_m, dt)
 
     def test_estimate_feature(self):
         # Generate test case
@@ -174,13 +125,14 @@ class MSCKFTest(unittest.TestCase):
                                               track_cam_states)
         p_G_f, k, r = results
 
-        print()
-        print("landmark:")
-        print(landmark)
-        print()
-        print("p_G_f:")
-        print(p_G_f)
+        # Debug
+        debug = False
+        if debug:
+            print("\nk:", k)
+            print("landmark:\n", landmark)
+            print("p_G_f:\n", p_G_f)
 
+        # Assert
         self.assertTrue(k < 10)
         self.assertTrue(abs(p_G_f[0, 0] - landmark[0]) < 0.1)
         self.assertTrue(abs(p_G_f[1, 0] - landmark[1]) < 0.1)
@@ -198,14 +150,14 @@ class MSCKFTest(unittest.TestCase):
         p_G_f, k, r = results
 
         # Calculate track residual
+        debug = False
         residual = self.msckf.calculate_track_residual(cam_model,
                                                        track,
                                                        track_cam_states,
                                                        p_G_f,
-                                                       True)
-        print()
-        print("residual:")
-        print(residual)
+                                                       debug)
+        if debug:
+            print("residual:", residual)
 
     def test_state_augmentation(self):
         pass

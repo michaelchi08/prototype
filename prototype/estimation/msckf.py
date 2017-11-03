@@ -1,146 +1,77 @@
-import sympy
 import numpy as np
+from numpy import ones
+from numpy import zeros
+from numpy import eye as I
+from numpy import dot
 from numpy.linalg import inv
 
+from prototype.utils.linalg import skew
+from prototype.utils.linalg import nullspace
 from prototype.utils.quaternion.jpl import quatmul
-from prototype.utils.quaternion.jpl import quat2rot
+from prototype.utils.quaternion.jpl import quat2rot as C
+from prototype.utils.quaternion.jpl import Omega
 from prototype.vision.geometry import triangulate_point
-
-
-def skew(v):
-    """ Skew symmetric matrix
-
-    Args:
-
-        v (np.array): vector of size 3
-
-    Returns:
-
-        Skew symetric matrix (np.matrix)
-
-    """
-    return np.matrix([[0.0, -v[2], v[1]],
-                      [v[2], 0.0, -v[0]],
-                      [-v[1], v[0], 0.0]])
-
-
-def nullspace(A, atol=1e-13, rtol=0):
-    """ Compute an approximate basis for the nullspace of A.
-
-    The algorithm used by this function is based on the singular value
-    decomposition of `A`.
-
-    Parameters
-    ----------
-    A : ndarray
-        A should be at most 2-D.  A 1-D array with length k will be treated
-        as a 2-D with shape (1, k)
-    atol : float
-        The absolute tolerance for a zero singular value.  Singular values
-        smaller than `atol` are considered to be zero.
-    rtol : float
-        The relative tolerance.  Singular values less than rtol*smax are
-        considered to be zero, where smax is the largest singular value.
-
-    If both `atol` and `rtol` are positive, the combined tolerance is the
-    maximum of the two; that is::
-        tol = max(atol, rtol * smax)
-    Singular values smaller than `tol` are considered to be zero.
-
-    Return value
-    ------------
-    ns : ndarray
-        If `A` is an array with shape (m, k), then `ns` will be an array
-        with shape (k, n), where n is the estimated dimension of the
-        nullspace of `A`.  The columns of `ns` are a basis for the
-        nullspace; each element in numpy.dot(A, ns) will be approximately
-        zero.
-    """
-
-    A = np.atleast_2d(A)
-    u, s, vh = np.linalg.svd(A)
-    tol = max(atol, rtol * s[0])
-    nnz = (s >= tol).sum()
-    ns = vh[nnz:].conj().T
-    return ns
-
-
-def Omega(w):
-    """ Omega function
-
-    Args:
-
-        w (np.array): Angular velocity
-
-    Returns:
-
-        Differential form of an angular velocity (np.array)
-
-    """
-    w = w.reshape((3, 1))
-    return np.block([[-skew(w), w], [-w.T, 0.0]])
-
-
-def C(q):
-    """ Rotation matrix parameterized by a JPL quaternion (x, y, z, w)
-
-    Args:
-
-        q (np.array): Quaternion (x, y, z, w)
-
-    Returns:
-
-        Rotation matrix (np.matrix)
-
-    """
-    return np.matrix(quat2rot(q))
-
-
-def zero(m, n):
-    """ Zero matrix of size mxn
-
-    Args:
-
-        m (float): Number of rows
-        n (float): Number of cols
-
-    Returns:
-
-        mxn zero matrix (np.matrix)
-
-    """
-    return np.matrix(np.zeros((m, n)))
-
-
-def I(n):
-    """ Return identity matrix of size nxn
-
-    Args:
-
-        n (float): Size of identity square matrix
-
-    Returns:
-
-        Identity matrix of size nxn (np.matrix)
-
-    """
-    return np.matrix(np.eye(n))
 
 
 class CameraState:
     """ Camera state """
-
-    def __init__(self, p_G_C, q_C_G):
+    def __init__(self, p_G, q_CG):
         """ Constructor
 
         Args:
 
-            p_G_C (np.array): Position of camera in Global frame
-            q_C_G (np.array): Orientation of camera in Global frame
+            p_G (np.array): Position of camera in Global frame
+            q_CG (np.array): Orientation of camera in Global frame
 
         """
-        self.p_G_C = np.array(p_G_C).reshape((3, 1))
-        self.q_C_G = np.array(q_C_G).reshape((4, 1))
+        self.p_G = np.array(p_G).reshape((3, 1))
+        self.q_CG = np.array(q_CG).reshape((4, 1))
+
+
+class IMUState:
+    """ IMU state """
+    def __init__(self, q_IG, b_g, v_G, b_a, p_G):
+        """ Constructor
+
+        Args:
+
+            q_IG (np.array - 4x1): JPL Quaternion of IMU in Global frame
+            b_g (np.array - 3x1): Bias of gyroscope
+            v_G (np.array - 3x1): Velocity of IMU in Global frame
+            b_a (np.array - 3x1): Bias of accelerometer
+            p_G (np.array - 3x1): Position of IMU in Global frame
+
+        """
+        self.q_IG = np.array(q_IG).reshape((4, 1))
+        self.b_g = np.array(b_g).reshape((3, 1))
+        self.v_G = np.array(p_G).reshape((3, 1))
+        self.b_a = np.array(b_g).reshape((3, 1))
+        self.p_G = np.array(p_G).reshape((3, 1))
+
+        self.w_G = np.array([[0.0], [0.0], [0.0]])
+        self.G_g = np.array([[0.0], [0.0], [9.81]])
+
+    def update(self, a_m, w_m, dt):
+        """ IMU state update """
+        # Calculate new accel and gyro estimates
+        a = a_m - self.b_a * dt
+        w = w_m - self.b_g - dot(C(self.q_IG), self.w_G) * dt
+
+        # Propagate IMU states
+        q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w), self.q_IG)  # noqa
+        b_kp1_g = self.b_g + zeros((3, 1))
+        v_kp1_G = self.v_G + dot(C(self.q_IG), a) - 2 * dot(skew(self.w_G), self.v_G) - dot(skew(self.w_G)**2, self.p_G) + self.G_g  # noqa
+        b_kp1_a = self.b_a + zeros((3, 1))
+        p_kp1_G = self.v_G
+
+        # Update states
+        self.q_IG = q_kp1_IG
+        self.b_g = b_kp1_g
+        self.v_G = v_kp1_G
+        self.b_a = b_kp1_a
+        self.p_G = p_kp1_G
+
+        return (a, w)
 
 
 class MSCKF:
@@ -160,26 +91,35 @@ class MSCKF:
         n_wg = kwargs["n_wg"]  # Gyro Random Walk Noise
         n_wa = kwargs["n_wa"]  # Accel Random Walk Noise
 
-        # IMU error state vector
-        # X_imu = [q_I_G   # Orientation
-        #          b_g     # Gyroscope Bias
-        #          v_G_I   # Velocity
-        #          b_a     # Accelerometer Bias
-        #          p_G_I]  # Position
-        self.X_imu = zero(5, 1)
+        # IMU state vector
+        self.imu_state = IMUState(
+            kwargs.get("imu_q_IG", np.array([0.0, 0.0, 0.0, 1.0])),
+            kwargs.get("imu_b_g", np.array([0.0, 0.0, 0.0])),
+            kwargs.get("imu_v_G", np.array([0.0, 0.0, 0.0])),
+            kwargs.get("imu_b_a", np.array([0.0, 0.0, 0.0])),
+            kwargs.get("imu_p_G", np.array([0.0, 0.0, 0.0]))
+        )
 
-        # IMU system noise vector
+        # IMU noise vector
         self.n_imu = np.block([n_g.ravel(),
                                n_wg.ravel(),
                                n_a.ravel(),
                                n_wa.ravel()]).reshape((12, 1))
 
-        # IMU covariance matrix
+        # IMU noise covariance matrix
         self.Q_imu = I(12) * self.n_imu
 
+        # Covariance matrices
+        self.P_imu = I(15)
+        self.P_cam = I(6)
+        self.P_imu_cam = I(15)
+
+        # Camera states
+        self.cam_states = []
+
         # Camera extrinsics
-        self.cam_p_I_C = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
-        self.cam_q_C_I = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+        self.ext_p_IC = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
+        self.ext_q_CI = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """ Transition Jacobian F matrix
@@ -199,17 +139,17 @@ class MSCKF:
 
         """
         # F matrix
-        F = zero(15, 15)
+        F = zeros((15, 15))
         # -- First row --
         F[0:3, 0:3] = -skew(w_hat)
-        F[0:3, 3:6] = np.ones((3, 3))
+        F[0:3, 3:6] = ones((3, 3))
         # -- Third Row --
-        F[6:9, 0:3] = -C(q_hat).T * skew(a_hat)
+        F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
         F[6:9, 6:9] = -2.0 * skew(w_G)
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skew(w_G)**2
         # -- Fifth Row --
-        F[12:15, 6:9] = np.ones((3, 3))
+        F[12:15, 6:9] = ones((3, 3))
 
         return F
 
@@ -230,42 +170,47 @@ class MSCKF:
 
         """
         # G matrix
-        G = zero(15, 12)
+        G = zeros((15, 12))
         # -- First row --
-        G[0:3, 0:3] = np.ones((3, 3))
+        G[0:3, 0:3] = ones((3, 3))
         # -- Second row --
-        G[3:6, 3:6] = np.ones((3, 3))
+        G[3:6, 3:6] = ones((3, 3))
         # -- Third row --
         G[6:9, 6:9] = -C(q_hat).T
         # -- Fourth row --
-        G[9:12, 9:12] = np.ones((3, 3))
+        G[9:12, 9:12] = ones((3, 3))
 
         return G
 
-    def J(self, cam_q_C_I, cam_p_I_C, q_hat_I_G, N):
+    def J(self, cam_q_C_I, cam_p_I_C, q_hat_IG, N):
         """ Jacobian J matrix
 
         Args:
 
             cam_q_C_I (np.array): Rotation from IMU to camera frame
-                                 in quaternion (x, y, z, w)
+                                  in quaternion (x, y, z, w)
             cam_p_I_C (np.array): Position of camera in IMU frame
-            q_hat_I_G (np.array): Rotation from global to IMU frame
+            q_hat_IG (np.array): Rotation from global to IMU frame
 
         """
-        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+        q_hat_IG = self.imu_state.q_IG
         C_C_I = C(cam_q_C_I)
-        C_I_G = C(q_hat_I_G)
-
-        J = zero(6, 15 + 6 * N)
+        C_IG = C(q_hat_IG)
+        J = zeros(6, 15 + 6 * N)
 
         # -- First row --
         J[0:3, 0:3] = C_C_I
         # -- Second row --
-        J[3:6, 0:3] = skew(C_I_G.T * cam_p_I_C)
+        J[3:6, 0:3] = skew(dot(C_IG.T, cam_p_I_C))
         J[3:6, 9:12] = I(3)
 
         return J
+
+    def P(self):
+        P = np.block([[self.P_imu, self.P_imu_cam],
+                      [self.P_imu_cam.T, self.P_cam]])
+
+        return P
 
     def H(self, cam_states, track, p_G_f):
         """ Form the Jacobian measurement matrix
@@ -285,15 +230,15 @@ class MSCKF:
         """
         N = len(cam_states)
         M = track.tracked_length()
-        H_f_j = zero(2 * M, 3)
-        H_x_j = zero(2 * M, 12 + 6 * N)
+        H_f_j = zeros(2 * M, 3)
+        H_x_j = zeros(2 * M, 12 + 6 * N)
 
         # Form measurement jacobians
         pose_idx = N - M
         for i in range(M):
             # Feature position in camera frame
-            C_C_G = quat2rot(cam_states[pose_idx].q_C_G)
-            p_G_C = cam_states[pose_idx].p_G_C
+            C_C_G = C(cam_states[pose_idx].q_CG)
+            p_G_C = cam_states[pose_idx].p_G
             p_C_f = C_C_G * (p_G_f - p_G_C)
             X, Y, Z = p_C_f.ravel()
 
@@ -305,8 +250,8 @@ class MSCKF:
             H_f_j[(2 * i):(2 * i + 2), :] = dhdg * C_C_G
 
             # H_x_j measurement jacobian w.r.t state
-            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 1:12 + 6 * (pose_idx) + 3] = dhdg * skew(p_C_f)
-            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 4:12 + 6 * (pose_idx) + 6] = -dhdg * C_C_G
+            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 1:12 + 6 * (pose_idx) + 3] = dhdg * skew(p_C_f)  # noqa
+            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 4:12 + 6 * (pose_idx) + 6] = -dhdg * C_C_G       # noqa
 
         # Perform null space tricks as per Mourikis 2007
         A_j = nullspace(H_f_j.T)
@@ -316,36 +261,20 @@ class MSCKF:
 
     def prediction_update(self, a_m, w_m, dt):
         """ IMU state update """
-        w_G = np.array([0.0, 0.0, 1.0]).reshape((3, 1))
-        G_g = np.array([0.0, 0.0, 1.0]).reshape((3, 1))
-
-        # IMU error state estimates
-        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
-
-        # Calculate new accel and gyro estimates
-        a_hat = a_m - b_hat_a * dt
-        w_hat = w_m - b_hat_g - C(q_hat_I_G) * w_G * dt
-
-        # Update IMU states (reverse order)
-        p_hat_G_I = v_hat_G_I
-        b_hat_a = b_hat_a + zero(3, 1)
-        v_hat_G_I = v_hat_G_I + C(q_hat_I_G) * a_hat - 2 * skew(w_G) * v_hat_G_I - skew(w_G)**2 * G_p_I + G_g  # noqa
-        b_hat_g = b_hat_g + zero(3, 1)
-        q_hat_I_G = q_hat_I_G + 0.5 * Omega(w_hat) * q_hat_I_G
-        self.X_imu = np.array(q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I)
-        self.X_imu = self.X_imu.reshape((15, 1))
+        # Propagate IMU state
+        a_hat, w_hat = self.imu_state.update(a_m, w_m, dt)
 
         # Build the jacobians F and G
-        F = self.F(w_hat, q_hat_I_G, a_hat, w_G)
-        G = self.G(q_hat_I_G)
+        F = self.F(w_hat, self.imu_state.q_IG, a_hat, self.imu_state.w_G)
+        G = self.G(self.imu_state.q_IG)
 
         # State transition matrix
         Phi = I(15) + F * dt
 
         # Update covariance matrices
-        self.P_imu = Phi * self.P_imu + self.P_imu * Phi.T + G * self.Q_imu * G.T  # noqa
+        self.P_imu = dot(Phi, self.P_imu) + dot(self.P_imu, Phi.T) + dot(G, dot(self.Q_imu, G.T))  # noqa
         self.P_cam = self.P_cam
-        self.P_imu_cam = Phi * self.P_imu_cam
+        self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
     def estimate_feature(self, cam_model, track, track_cam_states, debug=False):
         """ Estimate feature 3D location by optimizing over inverse depth
@@ -365,24 +294,24 @@ class MSCKF:
 
             p_G_f (np.array - 3x1): Estimated feature position in global frame
             k (int): Optimized over k iterations
-            r (np.array - size 2Nx1): Residual vector over all camera states
+            r (np.array - size 2Nx1): Residual np.array over all camera states
 
         """
         # Calculate initial estimate of 3D position
         # -- Calculate rotation and translation of camera 0 and 1
-        C_C0_G = np.matrix(quat2rot(track_cam_states[0].q_C_G))
-        C_C1_G = np.matrix(quat2rot(track_cam_states[1].q_C_G))
-        p_G_C0 = track_cam_states[0].p_G_C.reshape((3, 1))
-        p_G_C1 = track_cam_states[1].p_G_C.reshape((3, 1))
+        C_C0G = C(track_cam_states[0].q_CG)
+        C_C1G = C(track_cam_states[1].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_G_C1 = track_cam_states[1].p_G
         # -- Set camera 0 as origin, work out rotation and translation of
         # -- camera 1 relative to to camera 0
-        C_C0_C1 = C_C0_G * C_C1_G.T
-        t_C0_C1C0 = C_C0_G * (p_G_C1 - p_G_C0)
+        C_C0C1 = dot(C_C0G, C_C1G.T)
+        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
         # -- Triangulate
         x1 = np.block([track.track[0].pt, 1.0])
         x2 = np.block([track.track[1].pt, 1.0])
-        P1 = cam_model.P(np.eye(3), np.ones(3).reshape((3, 1)))
-        P2 = cam_model.P(C_C0_C1, t_C0_C1C0.reshape((3, 1)))
+        P1 = cam_model.P(np.eye(3), ones((3, 1)))
+        P2 = cam_model.P(C_C0C1, t_C0_C1C0)
         X = triangulate_point(x1, x2, P1, P2)
 
         # Create inverse depth params (these are to be optimized)
@@ -395,22 +324,22 @@ class MSCKF:
 
         for k in range(10):
             N = len(track_cam_states)
-            r = zero(2 * N, 1)
-            J = zero(2 * N, 3)
+            r = zeros((2 * N, 1))
+            J = zeros((2 * N, 3))
 
             # Calculate residuals
             for i in range(N):
                 # Get camera current rotation and translation
-                C_Ci_G = np.matrix(quat2rot(track_cam_states[i].q_C_G))
-                p_G_Ci = track_cam_states[i].p_G_C.reshape((3, 1))
+                C_CiG = C(track_cam_states[i].q_CG)
+                p_G_Ci = track_cam_states[i].p_G
 
                 # Set camera 0 as origin, work out rotation and translation
                 # of camera i relative to to camera 0
-                C_Ci_C0 = C_Ci_G * C_C0_G.T
-                t_Ci_CiC0 = C_Ci_G * (p_G_C0 - p_G_Ci)
+                C_Ci_C0 = dot(C_CiG, C_C0G.T)
+                t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
 
                 # Project estimated feature location to image plane
-                h = (C_Ci_C0 * np.array([[alpha], [beta], [1]])) + (rho * t_Ci_CiC0)  # noqa
+                h = dot(C_Ci_C0, np.array([[alpha], [beta], [1]])) + dot(rho, t_Ci_CiC0)  # noqa
 
                 # Calculate reprojection error
                 # -- Camera intrinsics
@@ -418,46 +347,45 @@ class MSCKF:
                 fx, fy = cam_model.K[0, 0], cam_model.K[1, 1]
                 # -- Convert measurment to normalized pixel coordinates
                 z = track.track[i].pt
-                z = np.array([(z[0] - cx) / fx, (z[1] - cy) / fy])
+                z = np.array([[(z[0] - cx) / fx], [(z[1] - cy) / fy]])
                 # -- Convert feature location to normalized pixel coordinates
-                x = np.array([h[0, 0] / h[2, 0], h[1, 0] / h[2, 0]])
+                x = np.array([h[0] / h[2], h[1] / h[2]])
                 # -- Reprojcetion error
-                r[2 * i:(2 * (i + 1))] = np.array(z - x).reshape((2, 1))
+                r[2 * i:(2 * (i + 1))] = z - x
 
                 # Form the Jacobian
                 drdalpha = np.array([
-                    -C_Ci_G[0, 0] / h[2] + (h[0] / h[2]**2) * C_Ci_G[2, 0],
-                    -C_Ci_G[1, 0] / h[2] + (h[1] / h[2]**2) * C_Ci_G[2, 0]
+                    -C_CiG[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiG[2, 0],  # noqa
+                    -C_CiG[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiG[2, 0]   # noqa
                 ])
                 drdbeta = np.array([
-                    -C_Ci_G[0, 1] / h[2] + (h[0] / h[2]**2) * C_Ci_G[2, 1],
-                    -C_Ci_G[1, 1] / h[2] + (h[1] / h[2]**2) * C_Ci_G[2, 1]
+                    -C_CiG[0, 1] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiG[2, 1],  # noqa
+                    -C_CiG[1, 1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiG[2, 1]   # noqa
                 ])
                 drdrho = np.array([
-                    -t_Ci_CiC0[0] / h[2] + (h[0] / h[2]**2) * t_Ci_CiC0[2],
-                    -t_Ci_CiC0[1] / h[2] + (h[1] / h[2]**2) * t_Ci_CiC0[2]
+                    -t_Ci_CiC0[0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * t_Ci_CiC0[2],  # noqa
+                    -t_Ci_CiC0[1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * t_Ci_CiC0[2]   # noqa
                 ])
-                J[2 * i:(2 * (i + 1)), 0] = drdalpha.reshape((2, 1))
-                J[2 * i:(2 * (i + 1)), 1] = drdbeta.reshape((2, 1))
-                J[2 * i:(2 * (i + 1)), 2] = drdrho.reshape((2, 1))
+                J[2 * i:(2 * (i + 1)), 0] = drdalpha.ravel()
+                J[2 * i:(2 * (i + 1)), 1] = drdbeta.ravel()
+                J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
 
             # Update esitmated params using Gauss Newton
-            delta = np.linalg.inv(J.T * J) * J.T * r
-            theta_km1 = np.array([alpha, beta, rho]).reshape((3, 1))
-            theta_k = theta_km1 - delta
+            delta = dot(inv(dot(J.T, J)), dot(J.T, r))
+            theta_k = np.array([[alpha], [beta], [rho]]) - delta
             alpha = theta_k[0, 0]
             beta = theta_k[1, 0]
             rho = theta_k[2, 0]
 
             # Check how fast the residuals are converging to 0
-            r_Jnew = float(0.5 * r.T * r)
-            if r_Jnew < 0.0001:
+            r_Jnew = float(0.5 * dot(r.T, r))
+            if r_Jnew < 0.000001:
                 break
             r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
             r_Jprev = r_Jnew
 
             # Break loop if not making any progress
-            if r_J < 0.0001:
+            if r_J < 0.000001:
                 break
 
         # Debug
@@ -469,14 +397,14 @@ class MSCKF:
 
         # Convert estimated inverse depth params back to feature position in
         # global frame.  See (Eq.38, Mourikis2007 (A Multi-State Constraint
-        # Kalman Filter for # Vision-aided Inertial Navigation)
+        # Kalman Filter for Vision-aided Inertial Navigation)
         z = 1 / rho
         X = np.array([[alpha], [beta], [1.0]])
-        C_C0_G = np.matrix(quat2rot(track_cam_states[0].q_C_G))
-        p_G_C0 = track_cam_states[0].p_G_C
-        p_G_f = z * C_C0_G.T * X + p_G_C0
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_G_f = dot(z, dot(C_C0G.T, X)) + p_G_C0
 
-        return (p_G_f, k, np.array(r))
+        return (p_G_f, k, r)
 
     def calculate_track_residual(self,
                                  cam_model,
@@ -508,8 +436,8 @@ class MSCKF:
         # Calculate residual vector
         for i in range(len(track_cam_states)):
             # Transform feature position from global to camera frame at pose i
-            C_C_G = quat2rot(track_cam_states[i].q_C_G)
-            p_C_f = C_C_G * (p_G_f - track_cam_states[i].p_G_C)
+            C_C_G = C(track_cam_states[i].q_CG)
+            p_C_f = dot(C_C_G, (p_G_f - track_cam_states[i].p_G))
 
             # Calculate predicted measurement at pose i of feature track j
             z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0]],
@@ -533,44 +461,45 @@ class MSCKF:
 
         return np.array(r_j).reshape((2 * len(track_cam_states), 1))
 
-    def state_augmentation(self):
-        # IMU error state estimates
-        q_hat_I_G, b_hat_g, v_hat_G_I, b_hat_a, p_hat_G_I = self.X_imu
+    def augment_state(self):
+        """ Augment state
 
+        Augment state and covariance matrix with a copy of the current camera
+        pose estimate when a new image is recorded
+
+        """
         # Using current IMU pose estimate to calculate camera pose
-        # -- Camera rotation
-        q_C_G = quatmul(self.cam_q_C_I, q_hat_I_G)
-        # -- Camera translation
-        C_I_G = quat2rot(q_hat_I_G)
-        p_G_C = p_hat_G_I + C_I_G.T * self.cam_p_I_C
+        cam_q_CG = quatmul(self.ext_q_CI, self.imu_state.q_IG)
+        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC) # noqa
 
         # Camera pose Jacobian
-        N = 1
-        J = self.J(self.cam_q_C_I, self.cam_p_I_C, q_hat_I_G, N)
+        N = len(self.cam_states)
+        J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, N)
 
         # Build covariance matrix (without new camera state)
-        P = np.block([[self.P_imu, self.P_imu_cam],
-                      [self.P_imu_cam.T, self.P_cam]])
+        P = self.P()
 
         # Augment MSCKF covariance matrix (with new camera state)
         X = np.block([[I(15 + 6 * N)], [J]])
-        P = X * P * X.T
+        P = dot(X, dot(P, X.T))
+        self.P_imu = P[0:15, 0:15]
+        self.P_cam = P[15:, 15:]
+        self.P_imu_cam = P[0:15, 15:]
 
-        self.X_cam[N] = p_G_C
-        self.X_cam[N] = q_C_G
+        # Add new camera state to sliding window
+        self.cam_states.append(CameraState(cam_q_CG, cam_p_G))
 
     def measurement_update(self):
-        # # Build MSCKF covariance matrix
-        # # self.P = np.block([msckfState.imuCovar, msckfState.imuCamCovar,
-        #     #               msckfState.imuCamCovar', msckfState.camCovar])
+        # # Build covariance matrix
+        # P = self.P()
         #
         # # Calculate Kalman gain
-        # K = (self.P * T_H.T) * inv(T_H * self.P * T_H.T + R_n)
-        #
+        # K = dot(self.P(), T_H.T) * inv(dot(T_H, dot(self.P(), T_H.T)) + R_n)
+
         # # State correction
         # dX = K * r_n
         # msckfState = updateState(msckfState, dX)
-        #
+
         # # Covariance correction
         # tempMat = (eye(12 + 6 * size(msckfState.camStates, 2)) - K * T_H)
         # # tempMat = (eye(12 + 6*size(msckfState.camStates,2)) - K*H_o);

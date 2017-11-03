@@ -7,6 +7,7 @@ from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.utils.quaternion.jpl import quatconj
 from prototype.utils.quaternion.jpl import quatmul
 from prototype.utils.quaternion.jpl import quat2rot
+from prototype.utils.quaternion.jpl import Omega
 
 
 class JPLQuaternionTest(unittest.TestCase):
@@ -47,3 +48,7 @@ class JPLQuaternionTest(unittest.TestCase):
         q = np.array([0.0, 0.0, 0.0, 1.0])
         R = quat2rot(q)
         self.assertTrue(np.array_equal(R, np.eye(3)))
+
+    def test_Omega(self):
+        X = Omega(np.array([1.0, 2.0, 3.0]))
+        self.assertEqual(X.shape, (4, 4))
