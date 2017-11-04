@@ -1,13 +1,17 @@
 import unittest
 
-import sympy
+import cv2
+import matplotlib.pylab as plt
+
 import numpy as np
+from numpy import eye as I
 from numpy import dot
 from numpy import array_equal
 
+from prototype.data.kitti import RawSequence
+from prototype.utils.gps import latlon_diff
 from prototype.utils.linalg import skew
 from prototype.utils.quaternion.jpl import quat2rot as C
-
 from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
 from prototype.vision.common import focal_length
@@ -15,6 +19,9 @@ from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
+
+# GLOBAL VARIABLE
+RAW_DATASET = "/data/raw"
 
 
 class CameraStateTest(unittest.TestCase):
@@ -29,12 +36,6 @@ class CameraStateTest(unittest.TestCase):
 
 class MSCKFTest(unittest.TestCase):
     def setUp(self):
-        self.msckf = MSCKF(n_g=0.001 * np.ones(3),
-                           n_a=0.001 * np.ones(3),
-                           n_wg=0.001 * np.ones(3),
-                           n_wa=0.001 * np.ones(3))
-
-    def create_test_case_1(self):
         # Pinhole Camera model
         image_width = 640
         image_height = 480
@@ -42,8 +43,16 @@ class MSCKFTest(unittest.TestCase):
         fx, fy = focal_length(image_width, image_height, fov)
         cx, cy = (image_width / 2.0, image_height / 2.0)
         K = camera_intrinsics(fx, fy, cx, cy)
-        cam_model = PinholeCameraModel(image_width, image_height, K)
+        self.cam_model = PinholeCameraModel(image_width, image_height, K)
 
+        # MSCKF
+        self.msckf = MSCKF(n_g=0.001 * np.ones(3),
+                           n_a=0.001 * np.ones(3),
+                           n_wg=0.001 * np.ones(3),
+                           n_wa=0.001 * np.ones(3),
+                           cam_model=self.cam_model)
+
+    def create_test_case(self):
         # Camera states
         cam_states = []
         # -- Camera state 0
@@ -60,13 +69,13 @@ class MSCKFTest(unittest.TestCase):
         noise = np.array([0.2, 0.2, 0.0])
         R_C0_G = np.array(C(q_C0_G))
         R_C1_G = np.array(C(q_C1_G))
-        kp1 = cam_model.project(landmark, R_C0_G, p_G_C0) + noise
-        kp2 = cam_model.project(landmark, R_C1_G, p_G_C1) + noise
+        kp1 = self.cam_model.project(landmark, R_C0_G, p_G_C0) + noise
+        kp2 = self.cam_model.project(landmark, R_C1_G, p_G_C1) + noise
         kp1 = Keypoint(kp1[:2], 21)
         kp2 = Keypoint(kp2[:2], 21)
         track = FeatureTrack(0, 1, kp1, kp2)
 
-        return (cam_model, track, cam_states, landmark)
+        return (self.cam_model, track, cam_states, landmark)
 
     def test_F(self):
         w_hat = np.array([0.0, 0.0, 0.0])
@@ -101,7 +110,22 @@ class MSCKFTest(unittest.TestCase):
         self.assertTrue(array_equal(G[9:12, 9:12], np.ones((3, 3))))
 
     def test_J(self):
-        pass
+        # Setup
+        cam_q_CI = np.array([0.0, 0.0, 0.0, 1.0])
+        cam_p_IC = np.array([0.0, 0.0, 0.0])
+        q_hat_IG = np.array([0.0, 0.0, 0.0, 1.0])
+        N = 1
+        J = self.msckf.J(cam_q_CI, cam_p_IC, q_hat_IG, N)
+
+        # Assert
+        C_CI = C(cam_q_CI)
+        C_IG = C(q_hat_IG)
+        # -- First row --
+        self.assertTrue(array_equal(J[0:3, 0:3], C_CI))
+        # -- Second row --
+        self.assertTrue(array_equal(J[3:6, 0:3], skew(dot(C_IG.T, cam_p_IC))))
+        # -- Third row --
+        self.assertTrue(array_equal(J[3:6, 9:12], I(3)))
 
     def test_H(self):
         pass
@@ -116,7 +140,7 @@ class MSCKFTest(unittest.TestCase):
 
     def test_estimate_feature(self):
         # Generate test case
-        data = self.create_test_case_1()
+        data = self.create_test_case()
         (cam_model, track, track_cam_states, landmark) = data
 
         # Estimate feature
@@ -140,7 +164,7 @@ class MSCKFTest(unittest.TestCase):
 
     def test_calculate_track_residual(self):
         # Generate test case
-        data = self.create_test_case_1()
+        data = self.create_test_case()
         (cam_model, track, track_cam_states, landmark) = data
 
         # Estimate feature
@@ -162,5 +186,37 @@ class MSCKFTest(unittest.TestCase):
     def test_state_augmentation(self):
         pass
 
-    # def test_measurement_update(self):
-    #     pass
+    def test_measurement_update(self):
+        debug = True
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+
+        # Home point
+        lat_ref = data.oxts[0]['lat']
+        lon_ref = data.oxts[0]['lon']
+        N = len(data.oxts)
+
+        # Position data storage
+        x = []
+        y = []
+
+        # Loop through data
+        for i in range(N - 1):
+            # Calculate position relative to home point
+            lat = data.oxts[i]['lat']
+            lon = data.oxts[i]['lon']
+            dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
+
+            # Show image frame
+            if debug:
+                img = cv2.imread(data.image_00_files[i])
+                cv2.imshow("image", img)
+                cv2.waitKey(1)
+
+            # Store position
+            x.append(dist_E)
+            y.append(dist_N)
+
+        # Plot
+        if debug:
+            plt.plot(x, y)
+            plt.show()
