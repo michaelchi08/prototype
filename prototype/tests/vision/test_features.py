@@ -75,14 +75,14 @@ class LKFeatureTrackerTest(unittest.TestCase):
         self.assertEqual(self.tracker.track_id,
                          len(self.tracker.tracks))
         self.assertEqual(self.tracker.track_id,
-                         len(self.tracker.tracks_alive))
+                         len(self.tracker.tracks_tracking))
 
     def test_last_keypoints(self):
         img = cv2.imread(self.data.image_0_files[0])
         self.tracker.detect(img)
         keypoints = self.tracker.last_keypoints()
 
-        self.assertEqual(len(self.tracker.tracks_alive), keypoints.shape[0])
+        self.assertEqual(len(self.tracker.tracks_tracking), keypoints.shape[0])
         self.assertEqual(2, keypoints.shape[1])
 
     def test_track_features(self):
@@ -90,12 +90,12 @@ class LKFeatureTrackerTest(unittest.TestCase):
         img2 = cv2.imread(self.data.image_0_files[1])
 
         self.tracker.detect(img1)
-        tracks_alive_before = len(self.tracker.tracks_alive)
+        tracks_tracking_before = len(self.tracker.tracks_tracking)
 
         self.tracker.track_features(img1, img2)
-        tracks_alive_after = len(self.tracker.tracks_alive)
+        tracks_tracking_after = len(self.tracker.tracks_tracking)
 
-        self.assertTrue(tracks_alive_after < tracks_alive_before)
+        self.assertTrue(tracks_tracking_after < tracks_tracking_before)
 
     def test_draw_tracks(self):
         debug = False
@@ -122,7 +122,7 @@ class LKFeatureTrackerTest(unittest.TestCase):
             # Feature tracker update
             img = cv2.imread(self.data.image_0_files[index])
             self.tracker.update(img, debug)
-            tracks_tracked.append(len(self.tracker.tracks_alive))
+            tracks_tracked.append(len(self.tracker.tracks_tracking))
 
             # Display image
             if debug:
@@ -155,7 +155,7 @@ class FeatureTrackerTests(unittest.TestCase):
 
         self.assertTrue(self.tracker.img_ref is not None)
         self.assertTrue(self.tracker.fea_ref is not None)
-        self.assertTrue(len(self.tracker.tracks_alive) > 0)
+        self.assertTrue(len(self.tracker.tracks_tracking) > 0)
 
     def test_detect(self):
         img = cv2.imread(self.data.image_0_files[0])
@@ -190,32 +190,32 @@ class FeatureTrackerTests(unittest.TestCase):
         matches = self.tracker.match(self.tracker.fea_ref, f1)
         self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f1)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 0)
-        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
-        self.assertEqual(len(self.tracker.tracks_dead), 0)
+        self.assertTrue(len(self.tracker.tracks_tracking) > 0)
+        self.assertEqual(len(self.tracker.tracks_tracking), len(matches))
+        self.assertEqual(len(self.tracker.tracks_lost), 0)
 
         # Second match
         f2 = self.tracker.detect(img2)
         matches = self.tracker.match(self.tracker.fea_ref, f2)
         self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f2)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 0)
-        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
-        self.assertTrue(len(self.tracker.tracks_dead) > 0)
+        self.assertTrue(len(self.tracker.tracks_tracking) > 0)
+        self.assertEqual(len(self.tracker.tracks_tracking), len(matches))
+        self.assertTrue(len(self.tracker.tracks_lost) > 0)
 
         # Third match
         f3 = self.tracker.detect(img3)
         matches = self.tracker.match(self.tracker.fea_ref, f3)
         self.tracker.update_feature_tracks(matches, self.tracker.fea_ref, f3)
 
-        self.assertTrue(len(self.tracker.tracks_alive) > 0)
-        self.assertEqual(len(self.tracker.tracks_alive), len(matches))
-        self.assertTrue(len(self.tracker.tracks_dead) > 0)
+        self.assertTrue(len(self.tracker.tracks_tracking) > 0)
+        self.assertEqual(len(self.tracker.tracks_tracking), len(matches))
+        self.assertTrue(len(self.tracker.tracks_lost) > 0)
 
         # Plot feature tracks
         debug = False
         if debug:
-            for track_id in self.tracker.tracks_alive:
+            for track_id in self.tracker.tracks_tracking:
                 track_x = []
                 track_y = []
                 for feature in self.tracker.tracks_buffer[track_id].track:
@@ -265,7 +265,7 @@ class FeatureTrackerTests(unittest.TestCase):
         ax.cla()
         ax.set_xlim([0, 1000])
         ax.set_ylim([0, 300])
-        for track_id in self.tracker.tracks_alive:
+        for track_id in self.tracker.tracks_tracking:
             track_x = []
             track_y = []
 
@@ -306,7 +306,7 @@ class FeatureTrackerTests(unittest.TestCase):
             # self.plot_tracks(fig, ax)
 
             # Record tracker stats
-            tracked.append(len(self.tracker.tracks_alive))
+            tracked.append(len(self.tracker.tracks_tracking))
             storage.append(len(self.tracker.tracks_buffer))
 
             # Display image

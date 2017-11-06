@@ -19,6 +19,7 @@ from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
+from prototype.vision.features import FeatureTracker
 
 # GLOBAL VARIABLE
 RAW_DATASET = "/data/raw"
@@ -189,6 +190,7 @@ class MSCKFTest(unittest.TestCase):
     def test_measurement_update(self):
         debug = True
         data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        tracker = FeatureTracker()
 
         # Home point
         lat_ref = data.oxts[0]['lat']
@@ -196,27 +198,53 @@ class MSCKFTest(unittest.TestCase):
         N = len(data.oxts)
 
         # Position data storage
-        x = []
-        y = []
+        ground_truth_x = []
+        ground_truth_y = []
+        msckf_x = []
+        msckf_y = []
 
         # Loop through data
+        t_prev = data.timestamps[0]
         for i in range(N - 1):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
             dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
 
+            # Track features
+            img = cv2.imread(data.image_00_files[i])
+            tracker.update(img)
+            tracks = tracker.remove_lost_tracks()
+
+            # Accelerometer and gyroscope measurements
+            a_m = np.array([[data.oxts[i]["ax"]],
+                            [data.oxts[i]["ay"]],
+                            [data.oxts[i]["az"]]])
+            w_m = np.array([[data.oxts[i]["wx"]],
+                            [data.oxts[i]["wy"]],
+                            [data.oxts[i]["wz"]]])
+
+            # Calculate time difference
+            t_now = data.timestamps[i]
+            dt = (t_now - t_prev).total_seconds()
+            t_prev = t_now
+
+            # MSCKF prediction update
+            self.msckf.prediction_update(a_m, w_m, dt)
+
             # Show image frame
-            if debug:
-                img = cv2.imread(data.image_00_files[i])
-                cv2.imshow("image", img)
-                cv2.waitKey(1)
+            # if debug:
+            #     cv2.imshow("image", img)
+            #     cv2.waitKey(1)
 
             # Store position
-            x.append(dist_E)
-            y.append(dist_N)
+            ground_truth_x.append(dist_E)
+            ground_truth_y.append(dist_N)
+            msckf_x.append(self.msckf.imu_state.p_G[0])
+            msckf_y.append(self.msckf.imu_state.p_G[1])
 
         # Plot
         if debug:
-            plt.plot(x, y)
+            plt.plot(ground_truth_x, ground_truth_y, color="red")
+            plt.plot(msckf_x, msckf_y, color="green")
             plt.show()

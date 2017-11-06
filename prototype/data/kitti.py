@@ -4,7 +4,9 @@ from os.path import realpath
 import datetime as dt
 
 import numpy as np
+import matplotlib.pylab as plt
 
+from prototype.utils.gps import latlon_diff
 from prototype.utils.filesystem import walkdir
 
 
@@ -233,7 +235,7 @@ class RawSequence:
                 "roll": data[3], "pitch": data[4], "yaw": data[5],
                 "vn": data[6], "ve": data[7],
                 "vf": data[8], "vl": data[9], "vu": data[10],
-                "ax": data[11], "ay": data[12], "ay": data[13],
+                "ax": data[11], "ay": data[12], "az": data[13],
                 "af": data[14], "al": data[15], "au": data[16],
                 "wx": data[17], "wy": data[18], "wz": data[19],
                 "wf": data[20], "wl": data[21], "wu": data[22],
@@ -269,3 +271,97 @@ class RawSequence:
                 # get rid of \n (counts as 1) and extra 3 digits
                 t = dt.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
                 self.timestamps.append(t)
+
+    def plot_accelerometer(self):
+        accel_x = [data["ax"] for data in self.oxts]
+        accel_y = [data["ay"] for data in self.oxts]
+        accel_z = [data["az"] for data in self.oxts]
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(311)
+        ax2 = fig.add_subplot(312)
+        ax3 = fig.add_subplot(313)
+
+        ax1.plot(self.timestamps, accel_x)
+        ax2.plot(self.timestamps, accel_y)
+        ax3.plot(self.timestamps, accel_z)
+
+        plt.suptitle("Accelerometer")
+        ax1.set_xlabel("Date Time")
+        ax1.set_ylabel("ms^-2")
+        ax2.set_xlabel("Date Time")
+        ax2.set_ylabel("ms^-2")
+        ax2.set_xlabel("Date Time")
+        ax3.set_ylabel("ms^-2")
+        ax1.set_xlim([self.timestamps[0], self.timestamps[-1]])
+        ax2.set_xlim([self.timestamps[0], self.timestamps[-1]])
+        ax3.set_xlim([self.timestamps[0], self.timestamps[-1]])
+        fig.tight_layout()
+
+    def plot_gyroscope(self):
+        gyro_x = [data["wx"] for data in self.oxts]
+        gyro_y = [data["wy"] for data in self.oxts]
+        gyro_z = [data["wz"] for data in self.oxts]
+
+        fig = plt.figure()
+        plt.suptitle("Gyroscope")
+        ax1 = fig.add_subplot(311)
+        ax2 = fig.add_subplot(312)
+        ax3 = fig.add_subplot(313)
+
+        ax1.plot(self.timestamps, gyro_x)
+        ax1.set_xlabel("Date Time")
+        ax1.set_ylabel("rad s^-1")
+        ax1.set_xlim([self.timestamps[0], self.timestamps[-1]])
+
+        ax2.plot(self.timestamps, gyro_y)
+        ax2.set_xlabel("Date Time")
+        ax2.set_ylabel("rad s^-1")
+        ax2.set_xlim([self.timestamps[0], self.timestamps[-1]])
+
+        ax3.plot(self.timestamps, gyro_z)
+        ax3.set_xlabel("Date Time")
+        ax3.set_ylabel("rad s^-1")
+        ax3.set_xlim([self.timestamps[0], self.timestamps[-1]])
+
+        fig.tight_layout()
+
+    def plot_ground_truth(self):
+        # Home point
+        lat_ref = self.oxts[0]['lat']
+        lon_ref = self.oxts[0]['lon']
+        alt_ref = self.oxts[0]['alt']
+
+        # Calculate position relative to home point
+        ground_truth_x = [0.0]
+        ground_truth_y = [0.0]
+        ground_truth_z = [0.0]
+
+        for i in range(1, len(self.oxts)):
+            lat = self.oxts[i]['lat']
+            lon = self.oxts[i]['lon']
+            alt = self.oxts[i]['alt']
+
+            dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
+            height = alt - alt_ref
+
+            ground_truth_x.append(dist_E)
+            ground_truth_y.append(dist_N)
+            ground_truth_z.append(height)
+
+        # Plot
+        fig = plt.figure()
+        plt.suptitle("Ground Truth")
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
+
+        ax1.plot(ground_truth_x, ground_truth_y)
+        ax1.axis('equal')
+        ax1.set_xlabel("East (m)")
+        ax1.set_ylabel("North (m)")
+
+        ax2.plot(self.timestamps, ground_truth_z)
+        ax2.set_xlabel("Date Time")
+        ax2.set_ylabel("Height (m)")
+
+        fig.tight_layout()

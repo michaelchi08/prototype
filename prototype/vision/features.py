@@ -240,7 +240,7 @@ class LKFeatureTracker:
 
         self.track_id = 0
         self.tracks = {}
-        self.tracks_alive = []
+        self.tracks_tracking = []
 
         self.frame_prev = None
         self.kp_cur = None
@@ -261,7 +261,7 @@ class LKFeatureTracker:
         for kp in self.detector.detect(frame):
             track = FeatureTrack(self.track_id, self.frame_id, kp)
             self.tracks[self.track_id] = track
-            self.tracks_alive.append(self.track_id)
+            self.tracks_tracking.append(self.track_id)
             self.track_id += 1
 
     def last_keypoints(self):
@@ -274,7 +274,7 @@ class LKFeatureTracker:
 
         """
         keypoints = []
-        for track_id in self.tracks_alive:
+        for track_id in self.tracks_tracking:
             keypoints.append(self.tracks[track_id].last().pt)
 
         return np.array(keypoints, dtype=np.float32)
@@ -289,8 +289,8 @@ class LKFeatureTracker:
 
         """
         # Re-detect new feature points if too few
-        if len(self.tracks_alive) < self.min_nb_features:
-            self.tracks_alive = []  # reset alive feature tracks
+        if len(self.tracks_tracking) < self.min_nb_features:
+            self.tracks_tracking = []  # reset alive feature tracks
             self.detect(image_ref)
 
         # LK parameters
@@ -316,12 +316,12 @@ class LKFeatureTracker:
         still_alive = []
         for i in range(len(status)):
             if status[i] == 1:
-                track_id = self.tracks_alive[i]
+                track_id = self.tracks_tracking[i]
                 still_alive.append(track_id)
                 kp = Keypoint(self.kp_cur[i], 0)
                 self.tracks[track_id].update(self.frame_id, kp)
 
-        self.tracks_alive = still_alive
+        self.tracks_tracking = still_alive
 
     def draw_tracks(self, frame, debug=False):
         """ Draw tracks
@@ -382,8 +382,8 @@ class FeatureTracker:
         self.counter_track_id = 0
 
         # Feature tracks
-        self.tracks_alive = []
-        self.tracks_dead = []
+        self.tracks_tracking = []
+        self.tracks_lost = []
         self.tracks_buffer = {}
         self.max_buffer_size = 5000
 
@@ -402,7 +402,7 @@ class FeatureTracker:
         """
         self.img_ref = frame
         self.fea_ref = self.detect(frame)
-        self.tracks_alive = [None for f in self.fea_ref]
+        self.tracks_tracking = [None for f in self.fea_ref]
 
     def detect(self, frame):
         """ Detect features
@@ -436,7 +436,7 @@ class FeatureTracker:
         """
         # Stack previously unmatched features with tracked features
         if len(self.unmatched):
-            self.tracks_alive += [None for i in range(len(self.unmatched))]
+            self.tracks_tracking += [None for i in range(len(self.unmatched))]
             f0 += self.unmatched
 
         # Convert Features to cv2.KeyPoint and descriptors (np.array)
@@ -473,7 +473,7 @@ class FeatureTracker:
         for m in final_matches:
             f0_idx = m.trainIdx
             f1_idx = m.queryIdx
-            result.append((self.tracks_alive[f0_idx], f0_idx, f1_idx))
+            result.append((self.tracks_tracking[f0_idx], f0_idx, f1_idx))
             matched_indicies[m.queryIdx] = True
 
         # Update list of unmatched features
@@ -508,7 +508,7 @@ class FeatureTracker:
                 track = FeatureTrack(track_id, self.counter_frame_id,
                                      f0[f0_idx], f1[f1_idx])
                 self.tracks_buffer[track_id] = track
-                self.tracks_alive.append(track_id)
+                self.tracks_tracking.append(track_id)
                 self.counter_track_id += 1
 
             # Update existing feature track
@@ -522,26 +522,26 @@ class FeatureTracker:
             matched_features.append(f1[f1_idx])
 
         # Drop dead feature tracks and reference features
-        tracks_alive = []
+        tracks_tracking = []
         self.fea_ref.clear()
         # Reference features should correspond to current tracks
 
-        for track_id in self.tracks_alive:
+        for track_id in self.tracks_tracking:
             if track_id is not None and track_id in tracks_updated:
-                tracks_alive.append(track_id)
+                tracks_tracking.append(track_id)
                 track = self.tracks_buffer[track_id]
                 self.fea_ref.append(track.last())
 
             elif track_id is not None:
-                self.tracks_dead.append(track_id)
+                self.tracks_lost.append(track_id)
 
-        self.tracks_alive = list(tracks_alive)
+        self.tracks_tracking = list(tracks_tracking)
 
         # Clear feature tracks that are too old
         if len(self.tracks_buffer) > self.max_buffer_size:
             trim = len(self.tracks_buffer) - self.max_buffer_size
             for i in range(trim):
-                track_id = self.tracks_dead.pop(0)
+                track_id = self.tracks_lost.pop(0)
                 del self.tracks_buffer[track_id]
 
     def draw_matches(self, img_ref, img_cur, f0, f1, matches):
@@ -577,6 +577,20 @@ class FeatureTracker:
             cv2.line(img, p2, p1, (0, 255, 0), 1)
 
         return img
+
+    def remove_lost_tracks(self):
+        lost_tracks = []
+
+        # Remove tracks from self.tracks_buffer
+        for track_id in self.tracks_lost:
+            track = self.tracks_buffer[track_id]
+            lost_tracks.append(track)
+            del self.tracks_buffer[track_id]
+
+        # Reset tracks lost array
+        self.tracks_lost = []
+
+        return lost_tracks
 
     def update(self, img_cur, debug=False):
         """ Update tracker with current image

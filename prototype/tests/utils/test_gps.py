@@ -13,7 +13,6 @@ class GPSTest(unittest.TestCase):
         # UWaterloo 110 yards Canadian Football field from one end to another
         lat = 43.474357
         lon = -80.550415
-
         offset_N = 44.1938
         offset_E = 90.2336
 
