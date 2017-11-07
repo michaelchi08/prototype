@@ -17,7 +17,7 @@ from prototype.vision.geometry import triangulate_point
 
 class CameraState:
     """ Camera state """
-    def __init__(self, p_G, q_CG):
+    def __init__(self, q_CG, p_G):
         """ Constructor
 
         Args:
@@ -26,8 +26,8 @@ class CameraState:
             q_CG (np.array): Orientation of camera in Global frame
 
         """
-        self.p_G = np.array(p_G).reshape((3, 1))
         self.q_CG = np.array(q_CG).reshape((4, 1))
+        self.p_G = np.array(p_G).reshape((3, 1))
 
 
 class IMUState:
@@ -114,11 +114,11 @@ class MSCKF:
         # Covariance matrices
         self.P_imu = I(15)
         self.P_cam = I(6)
-        self.P_imu_cam = I(15)
+        self.P_imu_cam = zeros((15, 6))
 
         # Camera states
-        self.cam_states = [CameraState(np.array([0.0, 0.0, 0.0]),
-                                       np.array([0.0, 0.0, 0.0, 1.0]))]
+        self.cam_states = [CameraState(np.array([0.0, 0.0, 0.0, 1.0]),
+                                       np.array([0.0, 0.0, 0.0]))]
 
         # Camera intrinsics
         self.cam_model = kwargs["cam_model"]
@@ -233,17 +233,17 @@ class MSCKF:
             H_x_j jacobian matrix (np.matrix - 2*M x (12+6)N)
 
         """
-        N = len(track_cam_states)
-        M = track.tracked_length()
-        H_f_j = zeros(2 * M, 3)
-        H_x_j = zeros(2 * M, 12 + 6 * N)
+        N = len(self.cam_states)            # Number of camera states
+        M = track.tracked_length()          # Length of feature track
+        H_f_j = zeros((2 * M, 3))           # Measurement jacobian w.r.t feature
+        H_x_j = zeros((2 * M, 12 + 6 * N))  # Measurement jacobian w.r.t state
 
         # Form measurement jacobians
         pose_idx = N - M
         for i in range(M):
             # Feature position in camera frame
-            C_CG = C(track_cam_states[pose_idx].q_CG)
-            p_G_C = track_cam_states[pose_idx].p_G
+            C_CG = C(track_cam_states[i].q_CG)
+            p_G_C = track_cam_states[i].p_G
             p_C_f = dot(C_CG, (p_G_f - p_G_C))
             X, Y, Z = p_C_f.ravel()
 
@@ -251,12 +251,23 @@ class MSCKF:
             dhdg = (1.0 / Z) * np.array([[1.0, 0.0, -X / Z],
                                          [0.0, 1.0, -Y / Z]])
 
+            # Row start and end index
+            rs = 2 * i       # Row start index
+            re = 2 * i + 2   # Row end index
+
+            # Column start and end index
+            cs_dhdq = 12 + 6 * pose_idx + 1    # Col start for dh / dq
+            ce_dhdq = 12 + 6 * pose_idx + 4  # Col end for dh / dq
+
+            cs_dhdp = 12 + 6 * pose_idx + 4    # Col start for dh / dp
+            ce_dhdp = 12 + 6 * pose_idx + 7    # Col end for dh / dp
+
             # H_f_j measurement jacobian w.r.t feature
-            H_f_j[(2 * i):(2 * i + 2), :] = dhdg * C_CG
+            H_f_j[rs:re, :] = dot(dhdg, C_CG)
 
             # H_x_j measurement jacobian w.r.t state
-            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 1:12 + 6 * (pose_idx) + 3] = dot(dhdg, skew(p_C_f))  # noqa
-            H_x_j[(2 * i):(2 * i + 2), 12 + 6 * pose_idx + 4:12 + 6 * (pose_idx) + 6] = dot(-dhdg, C_CG)  # noqa
+            H_x_j[rs:re, cs_dhdq:ce_dhdq] = dot(dhdg, skew(p_C_f))
+            H_x_j[rs:re, cs_dhdp:ce_dhdp] = dot(-dhdg, C_CG)
 
         return H_f_j, H_x_j
 
@@ -287,7 +298,6 @@ class MSCKF:
             track (FeatureTrack): Feature track
             track_cam_states (list of CameraState): Camera states where feature
                                                     track was observed
-            K (np.array): Camera intrinsics
 
         Returns:
 
@@ -489,34 +499,48 @@ class MSCKF:
         cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC) # noqa
         self.cam_states.append(CameraState(cam_q_CG, cam_p_G))
 
+    def residualize_track(self, track):
+        # Pre-check
+        if (track.tracked_length() < 3):
+            return None
+
+        # Get last M camera states where feature track was tracked
+        M = track.tracked_length()
+        track_cam_states = self.cam_states[-M:]
+
+        # Estimate feature position in global frame
+        p_G_f, k, r = self.estimate_feature(self.cam_model,
+                                            track,
+                                            track_cam_states)
+
+        # Calculate j-th feature track residual
+        r_j = self.calculate_track_residual(self.cam_model,
+                                            track,
+                                            track_cam_states,
+                                            p_G_f)
+
+        # Form jacobian of measurement w.r.t both state and feature
+        H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
+        # # R_j = diag(repmat([noiseParams.u_var_prime,
+        # #                 noiseParams.v_var_prime],
+        # #                 [1, numel(r_j)/2]))
+
+        # # Perform null space trick as per Mourikis 2007 to decorrelate
+        # # feature position error away from state errors by removing the
+        # # measurement jacobian w.r.t. feature position via null space
+        # # projection
+        # A_j = nullspace(H_f_j.T)
+        # H_o_j = dot(A_j.T, H_x_j)
+        # r_o_j = dot(A_j.T, r_j)
+        # R_o_j = dot(A_j.T, dot(R_j, A_j))
+
     def measurement_update(self, tracks):
+        # Add a camera state to state vector
+        self.augment_state()
+
         # Residualize feature tracks
         for track in tracks:
-            track_cam_states = []
-
-            # Estimate feature position in global frame
-            p_G_f, k, r = self.estimate_feature(self.cam_model,
-                                                track,
-                                                track_cam_states)
-
-            # Calculate feature track residual
-            r_j = self.calculate_track_residual(self.cam_model,
-                                                track,
-                                                track_cam_states,
-                                                p_G_f)
-
-            # Form jacobian of measurement w.r.t both state and feature
-            H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
-            # R_j = diag(repmat([noiseParams.u_var_prime,
-            #                 noiseParams.v_var_prime],
-            #                 [1, numel(r_j)/2]))
-
-            # Perform null space trick as per Mourikis 2007 to decorrelate
-            # error in feature position with state errors
-            A_j = nullspace(H_f_j.T)
-            H_o_j = dot(A_j.T, H_x_j)
-            r_o_j = dot(A_j.T, r_j)
-            R_o_j = dot(A_j.T, dot(R_j, A_j))
+            self.residualize_track(track)
 
         # # Perform QR decomposition
         # Q, R = np.linalg.qr(H_o)
@@ -528,7 +552,7 @@ class MSCKF:
         # K = dot(self.P(), T_H.T) * inv(dot(T_H, dot(self.P(), T_H.T)) + R_n)
 
         # # State correction
-        # dX = K * r_n
+        # dX = dot(K, r_n)
         # msckfState = updateState(msckfState, dX)
 
         # # Covariance correction

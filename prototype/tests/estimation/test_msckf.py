@@ -33,7 +33,7 @@ class CameraStateTest(unittest.TestCase):
     def test_init(self):
         p_G = np.array([1.0, 2.0, 3.0])
         q_CG = np.array([1.0, 0.0, 0.0, 0.0])
-        cam = CameraState(p_G, q_CG)
+        cam = CameraState(q_CG, p_G)
 
         self.assertTrue(array_equal(p_G, cam.p_G.ravel()))
         self.assertTrue(array_equal(q_CG, cam.q_CG.ravel()))
@@ -63,11 +63,11 @@ class MSCKFTest(unittest.TestCase):
         # -- Camera state 0
         p_G_C0 = np.array([0.0, 0.0, 0.0])
         q_C0_G = np.array([0.0, 0.0, 0.0, 1.0])
-        cam_states.append(CameraState(p_G_C0, q_C0_G))
+        cam_states.append(CameraState(q_C0_G, p_G_C0))
         # -- Camera state 1
         p_G_C1 = np.array([1.0, 0.0, 0.0])
         q_C1_G = np.array([0.0, 0.0, 0.0, 1.0])
-        cam_states.append(CameraState(p_G_C1, q_C1_G))
+        cam_states.append(CameraState(q_C1_G, p_G_C1))
 
         # Features
         landmark = np.array([1.0, 2.0, 10.0, 1.0])
@@ -188,8 +188,8 @@ class MSCKFTest(unittest.TestCase):
         if debug:
             print("residual:", residual)
 
-    def test_state_augmentation(self):
-        pass
+    def test_augment_state(self):
+        self.msckf.augment_state()
 
     def test_measurement_update(self):
         # Setup
@@ -212,10 +212,9 @@ class MSCKFTest(unittest.TestCase):
         lat_ref = data.oxts[0]['lat']
         lon_ref = data.oxts[0]['lon']
         N = len(data.oxts)
-        data.plot_accelerometer()
-        plt.show()
 
-        # Position data storage
+        # Data storage
+        t = [data.timestamps[0]]
         ground_truth_x = []
         ground_truth_y = []
         msckf_x = [0.0]
@@ -228,8 +227,7 @@ class MSCKFTest(unittest.TestCase):
 
         # Loop through data
         t_prev = data.timestamps[0]
-        t = 0.0
-        for i in range(1, N):
+        for i in range(1, 10):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
@@ -238,7 +236,7 @@ class MSCKFTest(unittest.TestCase):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             tracker.update(img)
-            # tracks = tracker.remove_lost_tracks()
+            tracks = tracker.remove_lost_tracks()
 
             # Accelerometer and gyroscope measurements
             a_m = np.array([[data.oxts[i]["ax"]],
@@ -252,10 +250,10 @@ class MSCKFTest(unittest.TestCase):
             t_now = data.timestamps[i]
             dt = (t_now - t_prev).total_seconds()
             t_prev = t_now
-            t += dt
 
-            # MSCKF prediction update
+            # MSCKF prediction and measurement update
             msckf.prediction_update(a_m, -w_m, dt)
+            msckf.measurement_update(tracks)
 
             # Show image frame
             # if debug:
@@ -263,6 +261,7 @@ class MSCKFTest(unittest.TestCase):
             #     cv2.waitKey(0)
 
             # Store position
+            t.append(data.timestamps[i])
             ground_truth_x.append(dist_E)
             ground_truth_y.append(dist_N)
 
@@ -276,29 +275,29 @@ class MSCKFTest(unittest.TestCase):
             msckf_vx.append(msckf.imu_state.v_G[0])
             msckf_vy.append(msckf.imu_state.v_G[1])
 
-        # Plot
-        if debug:
-            plt.subplot(311)
-            plt.plot(ground_truth_x, ground_truth_y, color="red")
-            plt.plot(msckf_x, msckf_y, color="green")
-            plt.xlabel("East (m)")
-            plt.ylabel("North (m)")
-            plt.axis("equal")
-
-            plt.subplot(312)
-            plt.plot(data.timestamps,
-                     [data.oxts[i]["vf"] for i in range(len(data.oxts))],
-                     color="red")
-            plt.plot(data.timestamps, msckf_vx, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Forward Velocity (ms^-1)")
-
-            plt.subplot(313)
-            plt.plot(data.timestamps,
-                     [data.oxts[i]["vl"] for i in range(len(data.oxts))],
-                     color="red")
-            plt.plot(data.timestamps, msckf_vy, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Left Velocity (ms^-1)")
-
-            plt.show()
+        # # Plot
+        # if debug:
+        #     plt.subplot(311)
+        #     plt.plot(ground_truth_x, ground_truth_y, color="red")
+        #     plt.plot(msckf_x, msckf_y, color="green")
+        #     plt.xlabel("East (m)")
+        #     plt.ylabel("North (m)")
+        #     plt.axis("equal")
+        #
+        #     plt.subplot(312)
+        #     plt.plot(t,
+        #              [data.oxts[i]["vf"] for i in range(len(t))],
+        #              color="red")
+        #     plt.plot(t, msckf_vx, "green")
+        #     plt.xlabel("Date time")
+        #     plt.ylabel("Forward Velocity (ms^-1)")
+        #
+        #     plt.subplot(313)
+        #     plt.plot(t,
+        #              [data.oxts[i]["vl"] for i in range(len(t))],
+        #              color="red")
+        #     plt.plot(t, msckf_vy, "green")
+        #     plt.xlabel("Date time")
+        #     plt.ylabel("Left Velocity (ms^-1)")
+        #
+        #     plt.show()
