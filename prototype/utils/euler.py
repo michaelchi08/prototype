@@ -19,8 +19,8 @@ def rotx(theta):
 
     """
     return np.array([[1.0, 0.0, 0.0],
-                     [0.0, cos(theta), -sin(theta)],
-                     [0.0, sin(theta), cos(theta)]])
+                     [0.0, cos(theta), sin(theta)],
+                     [0.0, -sin(theta), cos(theta)]])
 
 
 def roty(theta):
@@ -35,9 +35,9 @@ def roty(theta):
         Rotation matrix (np.array)
 
     """
-    return np.array([[cos(theta), 0.0, sin(theta)],
+    return np.array([[cos(theta), 0.0, -sin(theta)],
                      [0.0, 1.0, 0.0],
-                     [-sin(theta), 0.0, cos(theta)]])
+                     [sin(theta), 0.0, cos(theta)]])
 
 
 def rotz(theta):
@@ -52,8 +52,8 @@ def rotz(theta):
         Rotation matrix (np.array)
 
     """
-    return np.array([[cos(theta), -sin(theta), 0.0],
-                     [sin(theta), cos(theta), 0.0],
+    return np.array([[cos(theta), sin(theta), 0.0],
+                     [-sin(theta), cos(theta), 0.0],
                      [0.0, 0.0, 1.0]])
 
 

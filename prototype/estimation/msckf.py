@@ -46,7 +46,7 @@ class IMUState:
         """
         self.q_IG = np.array(q_IG).reshape((4, 1))
         self.b_g = np.array(b_g).reshape((3, 1))
-        self.v_G = np.array(p_G).reshape((3, 1))
+        self.v_G = np.array(v_G).reshape((3, 1))
         self.b_a = np.array(b_g).reshape((3, 1))
         self.p_G = np.array(p_G).reshape((3, 1))
 
@@ -56,15 +56,15 @@ class IMUState:
     def update(self, a_m, w_m, dt):
         """ IMU state update """
         # Calculate new accel and gyro estimates
-        a = a_m - self.b_a * dt
-        w = w_m - self.b_g - dot(C(self.q_IG), self.w_G) * dt
+        a = a_m - self.b_a
+        w = w_m - self.b_g - dot(C(self.q_IG), self.w_G)
 
         # Propagate IMU states
-        q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w), self.q_IG)  # noqa
+        q_kp1_IG = self.q_IG + (0.5 * dot(Omega(w), self.q_IG)) * dt  # noqa
         b_kp1_g = self.b_g + zeros((3, 1))
-        v_kp1_G = self.v_G + dot(C(self.q_IG), a) - 2 * dot(skew(self.w_G), self.v_G) - dot(skew(self.w_G)**2, self.p_G) + self.G_g  # noqa
+        v_kp1_G = self.v_G + (dot(C(self.q_IG), a) - 2 * dot(skew(self.w_G), self.v_G) - dot(skew(self.w_G)**2, self.p_G) + self.G_g) * dt  # noqa
         b_kp1_a = self.b_a + zeros((3, 1))
-        p_kp1_G = self.v_G
+        p_kp1_G = self.p_G + self.v_G * dt
 
         # Update states
         self.q_IG = q_kp1_IG
@@ -125,7 +125,7 @@ class MSCKF:
 
         # Camera extrinsics
         self.ext_p_IC = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
-        self.ext_q_CI = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+        self.ext_q_CI = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """ Transition Jacobian F matrix

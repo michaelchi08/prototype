@@ -9,9 +9,13 @@ from numpy import dot
 from numpy import array_equal
 
 from prototype.data.kitti import RawSequence
+from prototype.utils.utils import deg2rad
+from prototype.utils.euler import rotz
+from prototype.utils.transform import T_rdf_flu
 from prototype.utils.gps import latlon_diff
 from prototype.utils.linalg import skew
 from prototype.utils.quaternion.jpl import quat2rot as C
+from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.estimation.msckf import CameraState
 from prototype.estimation.msckf import MSCKF
 from prototype.vision.common import focal_length
@@ -188,24 +192,44 @@ class MSCKFTest(unittest.TestCase):
         pass
 
     def test_measurement_update(self):
+        # Setup
         debug = True
-        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
         tracker = FeatureTracker()
+
+        # MSCKF
+        v0 = np.array([data.oxts[0]["vf"],
+                       data.oxts[0]["vl"],
+                       0.0])
+        msckf = MSCKF(n_g=0.001 * np.ones(3),
+                      n_a=0.001 * np.ones(3),
+                      n_wg=0.001 * np.ones(3),
+                      n_wa=0.001 * np.ones(3),
+                      imu_v_G=v0,
+                      cam_model=self.cam_model)
 
         # Home point
         lat_ref = data.oxts[0]['lat']
         lon_ref = data.oxts[0]['lon']
         N = len(data.oxts)
+        data.plot_accelerometer()
+        plt.show()
 
         # Position data storage
         ground_truth_x = []
         ground_truth_y = []
-        msckf_x = []
-        msckf_y = []
+        msckf_x = [0.0]
+        msckf_y = [0.0]
+        msckf_vx = [data.oxts[0]["vf"]]
+        msckf_vy = [data.oxts[0]["vl"]]
+
+        yaw0 = data.oxts[0]["yaw"]
+        print("Init yaw: ", yaw0)
 
         # Loop through data
         t_prev = data.timestamps[0]
-        for i in range(N - 1):
+        t = 0.0
+        for i in range(1, N):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
@@ -214,7 +238,7 @@ class MSCKFTest(unittest.TestCase):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             tracker.update(img)
-            tracks = tracker.remove_lost_tracks()
+            # tracks = tracker.remove_lost_tracks()
 
             # Accelerometer and gyroscope measurements
             a_m = np.array([[data.oxts[i]["ax"]],
@@ -228,23 +252,53 @@ class MSCKFTest(unittest.TestCase):
             t_now = data.timestamps[i]
             dt = (t_now - t_prev).total_seconds()
             t_prev = t_now
+            t += dt
 
             # MSCKF prediction update
-            self.msckf.prediction_update(a_m, w_m, dt)
+            msckf.prediction_update(a_m, -w_m, dt)
 
             # Show image frame
             # if debug:
             #     cv2.imshow("image", img)
-            #     cv2.waitKey(1)
+            #     cv2.waitKey(0)
 
             # Store position
             ground_truth_x.append(dist_E)
             ground_truth_y.append(dist_N)
-            msckf_x.append(self.msckf.imu_state.p_G[0])
-            msckf_y.append(self.msckf.imu_state.p_G[1])
+
+            p_G = np.dot(rotz(-yaw0), msckf.imu_state.p_G)
+            msckf_x.append(p_G[0])
+            msckf_y.append(p_G[1])
+            # msckf_x.append(msckf.imu_state.p_G[0])
+            # msckf_y.append(msckf.imu_state.p_G[1])
+
+            # Store velocity
+            msckf_vx.append(msckf.imu_state.v_G[0])
+            msckf_vy.append(msckf.imu_state.v_G[1])
 
         # Plot
         if debug:
+            plt.subplot(311)
             plt.plot(ground_truth_x, ground_truth_y, color="red")
             plt.plot(msckf_x, msckf_y, color="green")
+            plt.xlabel("East (m)")
+            plt.ylabel("North (m)")
+            plt.axis("equal")
+
+            plt.subplot(312)
+            plt.plot(data.timestamps,
+                     [data.oxts[i]["vf"] for i in range(len(data.oxts))],
+                     color="red")
+            plt.plot(data.timestamps, msckf_vx, "green")
+            plt.xlabel("Date time")
+            plt.ylabel("Forward Velocity (ms^-1)")
+
+            plt.subplot(313)
+            plt.plot(data.timestamps,
+                     [data.oxts[i]["vl"] for i in range(len(data.oxts))],
+                     color="red")
+            plt.plot(data.timestamps, msckf_vy, "green")
+            plt.xlabel("Date time")
+            plt.ylabel("Left Velocity (ms^-1)")
+
             plt.show()
