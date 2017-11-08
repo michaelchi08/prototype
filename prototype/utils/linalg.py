@@ -57,3 +57,22 @@ def nullspace(A, atol=1e-13, rtol=0):
     nnz = (s >= tol).sum()
     ns = vh[nnz:].conj().T
     return ns
+
+
+def enforce_psd(A):
+    """ Enforce Positive Semi-definite
+
+    Args:
+
+        A (np.array): Matrix to ensure positive semi-definite
+
+    """
+    (rows, cols) = A.shape
+    for i in rows:
+        for j in cols:
+            if i == j:
+                A[i, j] = abs(A[i, j])
+            else:
+                x = np.mean([A[i, j], A[j, i]])
+                A[i, j] = x
+                A[j, i] = x

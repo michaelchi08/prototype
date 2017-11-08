@@ -173,10 +173,9 @@ class MSCKFTest(unittest.TestCase):
         (cam_model, track, track_cam_states, landmark) = data
 
         # Estimate feature
-        results = self.msckf.estimate_feature(cam_model,
-                                              track,
-                                              track_cam_states)
-        p_G_f, k, r = results
+        p_G_f, k, r = self.msckf.estimate_feature(cam_model,
+                                                  track,
+                                                  track_cam_states)
 
         # Calculate track residual
         debug = False
@@ -223,11 +222,11 @@ class MSCKFTest(unittest.TestCase):
         msckf_vy = [data.oxts[0]["vl"]]
 
         yaw0 = data.oxts[0]["yaw"]
-        print("Init yaw: ", yaw0)
+        # print("Init yaw: ", yaw0)
 
         # Loop through data
         t_prev = data.timestamps[0]
-        for i in range(1, 10):
+        for i in range(1, 5):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']

@@ -149,3 +149,27 @@ def Omega(w):
     """
     w = w.reshape((3, 1))
     return np.block([[-skew(w), w], [-w.T, 0.0]])
+
+
+def quatlcomp(q):
+    """ Quaternion left compound
+
+    Source:
+
+        Page 4.
+
+        Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
+        for 3D attitude estimation." University of Minnesota, Dept. of Comp.
+        Sci. & Eng., Tech. Rep 2 (2005): 2005.
+
+    Args:
+
+        q (np.array - 4x1): Quaternion (x, y, z, w)
+
+    """
+    q1, q2, q3, q4 = q.ravel()
+    vector = np.array([[q1], [q2], [q3]])
+    scalar = q4
+
+    return np.block([[scalar * np.eye(3) - skew(vector), vector],
+                     [-vector.T, scalar]])
