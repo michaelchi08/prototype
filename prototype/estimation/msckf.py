@@ -287,7 +287,7 @@ class MSCKF:
         self.ext_q_CI = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
 
         # Feature track settings
-        self.min_track_length = 2
+        self.min_track_length = 3
 
         # Covariance matrices
         self.P_imu = I(15)
@@ -439,7 +439,10 @@ class MSCKF:
         H_x_j = zeros((2 * M, X_imu_size + X_cam_size * N))
 
         # Pose index, minus 1 because track is not observed in last cam state
-        pose_idx = N - M
+        pose_idx = N - M - 1
+        # print(track)
+        # print(pose_idx)
+        # exit(0)
 
         # Form measurement jacobians
         for i in range(M):
@@ -450,9 +453,6 @@ class MSCKF:
             X, Y, Z = p_C_f.ravel()
 
             # dh / dg
-            if Z == 0:
-                print(p_C_f)
-                print("ZERO!")
             dhdg = (1.0 / Z) * np.array([[1.0, 0.0, -X / Z],
                                          [0.0, 1.0, -Y / Z]])
 
@@ -549,6 +549,8 @@ class MSCKF:
         P1 = cam_model.P(np.eye(3), ones((3, 1)))
         P2 = cam_model.P(C_C0C1, t_C0_C1C0)
         X = triangulate_point(x1, x2, P1, P2)
+        if X is None:
+            return None, None, None
 
         # Create inverse depth params (these are to be optimized)
         alpha = X[0] / X[2]
@@ -607,7 +609,10 @@ class MSCKF:
                 J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
 
             # Update esitmated params using Gauss Newton
-            delta = dot(inv(dot(J.T, J)), dot(J.T, r))
+            H_approx = dot(J.T, J)
+            if np.linalg.cond(H_approx) > 1e4:
+                return None, None, None
+            delta = dot(inv(H_approx), dot(J.T, r))
             theta_k = np.array([[alpha], [beta], [rho]]) - delta
             alpha = theta_k[0, 0]
             beta = theta_k[1, 0]
@@ -623,6 +628,18 @@ class MSCKF:
             # Break loop if not making any progress
             if r_J < 0.000001:
                 break
+        # except:
+        #     import matplotlib.pylab as plt
+        #     x = []
+        #     y = []
+        #     for kp in track.track:
+        #         x.append(kp.pt[0])
+        #         y.append(kp.pt[1])
+        #     plt.plot(x, y)
+        #     plt.xlim([0, 1242])
+        #     plt.ylim([0, 375])
+        #     plt.show()
+        #     exit(0)
 
         # Debug
         if debug:
@@ -695,34 +712,33 @@ class MSCKF:
 
         # Get last M camera states where feature track was tracked
         M = track.tracked_length()
-        track_cam_states = self.cam_states[-M:]
-        print(self.cam_states)
-        print(track_cam_states)
+        track_cam_states = self.cam_states[-M - 1: -1]
 
         # Estimate j-th feature position in global frame
         p_G_f, k, r_j = self.estimate_feature(self.cam_model,
                                               track,
                                               track_cam_states)
+        if p_G_f is None:
+            return (None, None, None)
 
         # Form jacobian of measurement w.r.t both state and feature
-        # H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
+        H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
 
-        # # Form the covariance matrix of different feature observations
-        # sigma_img = repmat(np.array([self.n_u, self.n_v]),
-        #                    1, int(np.size(r_j) / 2))
-        # R_j = diag(sigma_img.ravel())
-        #
-        # # Perform null space trick to decorrelate feature position error away
-        # # from state errors by removing the measurement jacobian w.r.t. feature
-        # # position via null space projection [Section D: Measurement Model,
-        # # Mourikis2007]
-        # A_j = nullspace(H_f_j.T)
-        # H_o_j = dot(A_j.T, H_x_j)
-        # r_o_j = dot(A_j.T, r_j)
-        # R_o_j = dot(A_j.T, dot(R_j, A_j))
+        # Form the covariance matrix of different feature observations
+        sigma_img = repmat(np.array([self.n_u, self.n_v]),
+                           1, int(np.size(r_j) / 2))
+        R_j = diag(sigma_img.ravel())
 
-        return (None, None, None)
-        # return H_o_j, r_o_j, R_o_j
+        # Perform null space trick to decorrelate feature position error away
+        # from state errors by removing the measurement jacobian w.r.t. feature
+        # position via null space projection [Section D: Measurement Model,
+        # Mourikis2007]
+        A_j = nullspace(H_f_j.T)
+        H_o_j = dot(A_j.T, H_x_j)
+        r_o_j = dot(A_j.T, r_j)
+        R_o_j = dot(A_j.T, dot(R_j, A_j))
+
+        return H_o_j, r_o_j, R_o_j
 
     def stack_residuals(self, H_o, r_o, R_o, H_o_j, r_o_j, R_o_j):
         # Initialize H_o, r_o and R_o
@@ -768,11 +784,26 @@ class MSCKF:
         R_o = None
 
         # Residualize feature tracks
-        for track in tracks[:1]:
-            print(track)
+        for track in tracks:
             H_o_j, r_o_j, R_o_j = self.residualize_track(track)
-            self.stack_residuals(H_o, r_o, R_o, H_o_j, r_o_j, R_o_j)
-        print()
+
+            if H_o_j is None and r_o_j is None and R_o_j is None:
+                continue  # Bad track, skipping
+            else:
+                H_o, r_o, R_o = self.stack_residuals(H_o, r_o, R_o,
+                                                     H_o_j, r_o_j, R_o_j)
+
+        # import matplotlib.pylab as plt
+        # for track in tracks:
+        #     x = []
+        #     y = []
+        #     for kp in track.track:
+        #         x.append(kp.pt[0])
+        #         y.append(kp.pt[1])
+        #     plt.plot(x, y)
+        # plt.xlim([0, 1242])
+        # plt.ylim([0, 375])
+        # plt.show()
 
         # No residuals, do not continue
         if H_o is None and r_o is None and R_o is None:
@@ -821,29 +852,28 @@ class MSCKF:
             return
 
         # Calculate residuals
-        self.calculate_residuals(tracks)
-        # T_H, r_n, R_n = self.calculate_residuals(tracks)
-        # if T_H is None and r_n is None and R_n is None:
-        #     return
+        T_H, r_n, R_n = self.calculate_residuals(tracks)
+        if T_H is None and r_n is None and R_n is None:
+            return
 
-        # # Calculate Kalman gain
-        # K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
+        # Calculate Kalman gain
+        K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
 
-        # # State correction
-        # dX = dot(K, r_n)
-        # # -- Correct IMU state
-        # dX_imu = dX[0:X_imu_size]
-        # self.imu_state.correct(dX_imu)
-        # # -- Correct camera states
-        # for i in range(self.N()):
-        #     rs = X_imu_size + X_cam_size * i
-        #     re = X_imu_size + X_cam_size * i + X_cam_size
-        #     dX_cam = dX[rs:re]
-        #     self.cam_states[i].correct(dX_cam)
-        #
-        # # Covariance correction
-        # A = I(X_imu_size + X_cam_size * self.N()) - dot(K, T_H)
-        # P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
-        # self.P_imu = P_corrected[0:X_imu_size, 0:X_imu_size]
-        # self.P_cam = P_corrected[X_imu_size:, X_imu_size:]
-        # self.P_imu_cam = P_corrected[0:X_imu_size, X_imu_size:]
+        # State correction
+        dX = dot(K, r_n)
+        # -- Correct IMU state
+        dX_imu = dX[0:X_imu_size]
+        self.imu_state.correct(dX_imu)
+        # -- Correct camera states
+        for i in range(self.N()):
+            rs = X_imu_size + X_cam_size * i
+            re = X_imu_size + X_cam_size * i + X_cam_size
+            dX_cam = dX[rs:re]
+            self.cam_states[i].correct(dX_cam)
+
+        # Covariance correction
+        A = I(X_imu_size + X_cam_size * self.N()) - dot(K, T_H)
+        P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
+        self.P_imu = P_corrected[0:X_imu_size, 0:X_imu_size]
+        self.P_cam = P_corrected[X_imu_size:, X_imu_size:]
+        self.P_imu_cam = P_corrected[0:X_imu_size, X_imu_size:]

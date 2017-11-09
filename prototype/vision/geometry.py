@@ -5,7 +5,7 @@ def eight_point(x1, x2):
     """Computes the fundamental matrix from corresponding points
     x1 and x2 as a 3xN matrix (np.array) using the normalized 8 point algorithm.
     each row is constructed as:
-    
+
         [x' * x, x' * y, x', y' * x, y' * y, y', x, y, 1]
 
     Parameters
@@ -17,7 +17,7 @@ def eight_point(x1, x2):
 
     Returns
     -------
-    
+
         Fundamental matrix (np.array)
 
     """
@@ -63,7 +63,7 @@ def triangulate_point(x1, x2, P1, P2):
 
     Returns
     -------
-    
+
         Homogeneous 3D point (np.array)
 
     """
@@ -81,10 +81,12 @@ def triangulate_point(x1, x2, P1, P2):
     A[3:, 5] = -x2
 
     # Perform linear least squares using SVD and get result
-    U, S, V = np.linalg.svd(A)
-    X = V[-1, :4]
-
-    return (X / X[3])
+    try:
+        U, S, V = np.linalg.svd(A)
+        X = V[-1, :4]
+        return (X / X[3])
+    except:
+        return None
 
 
 def triangulate(x1, x2, P1, P2):
@@ -99,13 +101,13 @@ def triangulate(x1, x2, P1, P2):
     x2 : np.array
         Observations in the second camera as 2xN matrix
     P1 :
-        
+
     P2 :
-        
+
 
     Returns
     -------
-    
+
         Homogeneous 3D points as a 4xN matrix (np.array)
 
     """

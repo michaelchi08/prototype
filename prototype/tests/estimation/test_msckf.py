@@ -176,9 +176,8 @@ class MSCKFTest(unittest.TestCase):
         data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
         K = data.calib_cam2cam["K_00"].reshape((3, 3))
         cam_model = PinholeCameraModel(1242, 375, K)
-        tracker = FeatureTracker()
 
-        # MSCKF
+        # Initialize MSCKF
         v0 = np.array([data.oxts[0]["vf"],
                        data.oxts[0]["vl"],
                        0.0])
@@ -188,6 +187,11 @@ class MSCKFTest(unittest.TestCase):
                       n_wa=0.001 * np.ones(3),
                       imu_v_G=T_rdf_flu * v0,
                       cam_model=cam_model)
+
+        # Initialize feature tracker
+        img = cv2.imread(data.image_00_files[0])
+        tracker = FeatureTracker()
+        tracker.update(img)
 
         # Home point
         lat_ref = data.oxts[0]['lat']
@@ -208,7 +212,7 @@ class MSCKFTest(unittest.TestCase):
         # Loop through data
         t_prev = data.timestamps[0]
         # for i in range(1, len(data.oxts)):
-        for i in range(1, 5):
+        for i in range(1, 20):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
@@ -258,28 +262,28 @@ class MSCKFTest(unittest.TestCase):
             msckf_vy.append(-msckf.imu_state.v_G[0])
 
         # Plot
-        # if debug:
-        #     plt.subplot(311)
-        #     plt.plot(ground_truth_x, ground_truth_y, color="red")
-        #     plt.plot(msckf_x, msckf_y, color="green", marker="o")
-        #     plt.xlabel("East (m)")
-        #     plt.ylabel("North (m)")
-        #     plt.axis("equal")
-        #
-        #     plt.subplot(312)
-        #     plt.plot(t,
-        #              [data.oxts[i]["vf"] for i in range(len(t))],
-        #              color="red")
-        #     plt.plot(t, msckf_vx, "green")
-        #     plt.xlabel("Date time")
-        #     plt.ylabel("Forward Velocity (ms^-1)")
-        #
-        #     plt.subplot(313)
-        #     plt.plot(t,
-        #              [data.oxts[i]["vl"] for i in range(len(t))],
-        #              color="red")
-        #     plt.plot(t, msckf_vy, "green")
-        #     plt.xlabel("Date time")
-        #     plt.ylabel("Left Velocity (ms^-1)")
-        #
-        #     plt.show()
+        if debug:
+            plt.subplot(311)
+            plt.plot(ground_truth_x, ground_truth_y, color="red")
+            plt.plot(msckf_x, msckf_y, color="green")
+            plt.xlabel("East (m)")
+            plt.ylabel("North (m)")
+            plt.axis("equal")
+
+            plt.subplot(312)
+            plt.plot(t,
+                     [data.oxts[i]["vf"] for i in range(len(t))],
+                     color="red")
+            plt.plot(t, msckf_vx, "green")
+            plt.xlabel("Date time")
+            plt.ylabel("Forward Velocity (ms^-1)")
+
+            plt.subplot(313)
+            plt.plot(t,
+                     [data.oxts[i]["vl"] for i in range(len(t))],
+                     color="red")
+            plt.plot(t, msckf_vy, "green")
+            plt.xlabel("Date time")
+            plt.ylabel("Left Velocity (ms^-1)")
+
+            plt.show()

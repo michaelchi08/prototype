@@ -294,9 +294,6 @@ class LKFeatureTracker:
         frame : np.array
             Frame
 
-        Returns
-        -------
-
         """
         for kp in self.detector.detect(frame):
             track = FeatureTrack(self.track_id, self.frame_id, kp)
@@ -332,9 +329,6 @@ class LKFeatureTracker:
             Reference image
         image_cur : np.array
             Current image
-
-        Returns
-        -------
 
         """
         # Re-detect new feature points if too few
@@ -381,9 +375,6 @@ class LKFeatureTracker:
             Image frame
         debug : bool
             Debug mode (Default value = False)
-
-        Returns
-        -------
 
         """
         if debug is False:
@@ -462,7 +453,7 @@ class FeatureTracker:
 
     def __init__(self):
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=100, nlevels=2)
+        self.detector = ORBDetector(nfeatures=100, nlevels=3)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         # Counters
@@ -555,7 +546,7 @@ class FeatureTracker:
         dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
         src_pts = src_pts.reshape(-1, 1, 2)
         dst_pts = dst_pts.reshape(-1, 1, 2)
-        M, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.9999999)
+        M, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
         match_mask = mask.ravel().tolist()
 
         # Remove outliers
