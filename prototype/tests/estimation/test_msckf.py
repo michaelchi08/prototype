@@ -167,26 +167,6 @@ class MSCKFTest(unittest.TestCase):
         self.assertTrue(abs(p_G_f[1, 0] - landmark[1]) < 0.1)
         self.assertTrue(abs(p_G_f[2, 0] - landmark[2]) < 0.1)
 
-    def test_calculate_track_residual(self):
-        # Generate test case
-        data = self.create_test_case()
-        (cam_model, track, track_cam_states, landmark) = data
-
-        # Estimate feature
-        p_G_f, k, r = self.msckf.estimate_feature(cam_model,
-                                                  track,
-                                                  track_cam_states)
-
-        # Calculate track residual
-        debug = False
-        residual = self.msckf.calculate_track_residual(cam_model,
-                                                       track,
-                                                       track_cam_states,
-                                                       p_G_f,
-                                                       debug)
-        if debug:
-            print("residual:", residual)
-
     def test_augment_state(self):
         self.msckf.augment_state()
 
@@ -227,8 +207,8 @@ class MSCKFTest(unittest.TestCase):
 
         # Loop through data
         t_prev = data.timestamps[0]
-        for i in range(1, len(data.oxts)):
-        # for i in range(1, 20):
+        # for i in range(1, len(data.oxts)):
+        for i in range(1, 5):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
@@ -254,7 +234,7 @@ class MSCKFTest(unittest.TestCase):
             t_prev = t_now
 
             # MSCKF prediction and measurement update
-            msckf.prediction_update(a_m, w_m, dt)
+            msckf.prediction_update(a_m, -w_m, dt)
             msckf.measurement_update(tracks)
 
             # Show image frame
@@ -278,28 +258,28 @@ class MSCKFTest(unittest.TestCase):
             msckf_vy.append(-msckf.imu_state.v_G[0])
 
         # Plot
-        if debug:
-            plt.subplot(311)
-            plt.plot(ground_truth_x, ground_truth_y, color="red")
-            plt.plot(msckf_x, msckf_y, color="green", marker="o")
-            plt.xlabel("East (m)")
-            plt.ylabel("North (m)")
-            plt.axis("equal")
-
-            plt.subplot(312)
-            plt.plot(t,
-                     [data.oxts[i]["vf"] for i in range(len(t))],
-                     color="red")
-            plt.plot(t, msckf_vx, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Forward Velocity (ms^-1)")
-
-            plt.subplot(313)
-            plt.plot(t,
-                     [data.oxts[i]["vl"] for i in range(len(t))],
-                     color="red")
-            plt.plot(t, msckf_vy, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Left Velocity (ms^-1)")
-
-            plt.show()
+        # if debug:
+        #     plt.subplot(311)
+        #     plt.plot(ground_truth_x, ground_truth_y, color="red")
+        #     plt.plot(msckf_x, msckf_y, color="green", marker="o")
+        #     plt.xlabel("East (m)")
+        #     plt.ylabel("North (m)")
+        #     plt.axis("equal")
+        #
+        #     plt.subplot(312)
+        #     plt.plot(t,
+        #              [data.oxts[i]["vf"] for i in range(len(t))],
+        #              color="red")
+        #     plt.plot(t, msckf_vx, "green")
+        #     plt.xlabel("Date time")
+        #     plt.ylabel("Forward Velocity (ms^-1)")
+        #
+        #     plt.subplot(313)
+        #     plt.plot(t,
+        #              [data.oxts[i]["vl"] for i in range(len(t))],
+        #              color="red")
+        #     plt.plot(t, msckf_vy, "green")
+        #     plt.xlabel("Date time")
+        #     plt.ylabel("Left Velocity (ms^-1)")
+        #
+        #     plt.show()

@@ -64,7 +64,6 @@ class IMUState:
         self.w_G = np.array([[0.0], [0.0], [0.0]])
         self.G_g = np.array([[0.0], [9.81], [0.0]])
 
-    @property
     def size(self):
         """Size of state vector"""
         return 15  # Number of elements in state vector
@@ -173,7 +172,6 @@ class CameraState:
         self.p_G = np.array(p_G).reshape((3, 1))
         self.tracks = []
 
-    @property
     def size(self):
         """Size of state vector"""
         return 6  # Number of elements in state vector
@@ -289,7 +287,7 @@ class MSCKF:
         self.ext_q_CI = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
 
         # Feature track settings
-        self.min_track_length = 6
+        self.min_track_length = 2
 
         # Covariance matrices
         self.P_imu = I(15)
@@ -420,8 +418,8 @@ class MSCKF:
             Feature track of length M
         track_cam_states : list of CameraState
             N Camera states
-        p_G_f :
-
+        p_G_f : np.array
+            Feature position in global frame
 
         Returns
         -------
@@ -429,8 +427,8 @@ class MSCKF:
             Measurement jacobian matrix w.r.t state
 
         """
-        X_imu_size = self.imu_state.size      # Size of imu state
-        X_cam_size = self.cam_states[0].size  # Size of cam state
+        X_imu_size = self.imu_state.size()      # Size of imu state
+        X_cam_size = self.cam_states[0].size()  # Size of cam state
         N = len(self.cam_states)    # Number of camera states
         M = track.tracked_length()  # Length of feature track
 
@@ -441,7 +439,7 @@ class MSCKF:
         H_x_j = zeros((2 * M, X_imu_size + X_cam_size * N))
 
         # Pose index, minus 1 because track is not observed in last cam state
-        pose_idx = N - M - 1
+        pose_idx = N - M
 
         # Form measurement jacobians
         for i in range(M):
@@ -450,12 +448,11 @@ class MSCKF:
             p_G_C = track_cam_states[i].p_G
             p_C_f = dot(C_CG, (p_G_f - p_G_C))
             X, Y, Z = p_C_f.ravel()
-            print()
-            print(p_G_C)
-            print(p_C_f)
-            print()
 
             # dh / dg
+            if Z == 0:
+                print(p_C_f)
+                print("ZERO!")
             dhdg = (1.0 / Z) * np.array([[1.0, 0.0, -X / Z],
                                          [0.0, 1.0, -Y / Z]])
 
@@ -560,8 +557,8 @@ class MSCKF:
 
         # Gauss Newton optimization
         r_Jprev = float("inf")  # residual jacobian
-
-        for k in range(20):
+        max_iter = 20
+        for k in range(max_iter):
             N = len(track_cam_states)
             r = zeros((2 * N, 1))
             J = zeros((2 * N, 3))
@@ -645,68 +642,6 @@ class MSCKF:
 
         return (p_G_f, k, r)
 
-    def calculate_track_residual(self,
-                                 cam_model,
-                                 track,
-                                 track_cam_states,
-                                 p_G_f,
-                                 debug=False):
-        """Calculate the residual of a single feature track
-
-        Parameters
-        ----------
-        cam_model : Camera Model
-            Camera model used to project 3D point to image plane
-        track : FeatureTrack
-            A single feature track
-        track_cam_states : list of CameraState
-            N Camera states where feature track was observed
-        p_G_f : np.array - 3x1
-            Feature position in global frame
-        debug : bool, optional
-            Debug mode
-
-        Returns
-        -------
-        r_j : np.array - 2*Nx1
-            Residual vector
-
-        """
-        # Residual vector
-        r_j = []
-
-        # Camera intrinsics
-        cx, cy = cam_model.K[0, 2], cam_model.K[1, 2]
-        fx, fy = cam_model.K[0, 0], cam_model.K[1, 1]
-
-        # Calculate residual vector
-        for i in range(len(track_cam_states)):
-            # Transform feature position from global to camera frame at pose i
-            C_CG = C(track_cam_states[i].q_CG)
-            p_C_f = dot(C_CG, (p_G_f - track_cam_states[i].p_G))
-
-            # Calculate predicted measurement at pose i of feature track j
-            z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0] + 1e-2],
-                                  [p_C_f[1, 0] / p_C_f[2, 0] + 1e-2]])
-
-            # Convert measurment to normalized pixel coordinates
-            z = track.track[i].pt
-            z = np.array([[(z[0] - cx) / fx],
-                          [(z[1] - cy) / fy]])
-
-            # Residual
-            residual = z - z_hat_i_j
-            r_j.append(residual)
-
-            # Debug
-            if debug:
-                print()
-                print("p_C_f:\n", p_C_f)
-                print("z:\n", z)
-                print("z_hat:\n", z_hat_i_j)
-
-        return np.array(r_j).reshape((2 * len(track_cam_states), 1))
-
     def augment_state(self):
         """Augment state
 
@@ -714,8 +649,8 @@ class MSCKF:
         pose estimate when a new image is recorded
 
         """
-        X_imu_size = self.imu_state.size
-        X_cam_size = self.cam_states[0].size
+        X_imu_size = self.imu_state.size()
+        X_cam_size = self.cam_states[0].size()
 
         # Camera pose Jacobian
         J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, self.N())
@@ -732,7 +667,7 @@ class MSCKF:
 
         # Add new camera state to sliding window by using current IMU pose
         # estimate to calculate camera pose
-        cam_q_CG = quatmul(self.ext_q_CI, self.imu_state.q_IG)
+        cam_q_CG = dot(quatlcomp(self.ext_q_CI), self.imu_state.q_IG)
         cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC)  # noqa
         self.cam_states.append(CameraState(cam_q_CG, cam_p_G))
 
@@ -756,46 +691,59 @@ class MSCKF:
         """
         # Pre-check
         if (track.tracked_length() < self.min_track_length):
-            return None
+            return (None, None, None)
 
         # Get last M camera states where feature track was tracked
-        # try:
         M = track.tracked_length()
         track_cam_states = self.cam_states[-M:]
+        print(self.cam_states)
+        print(track_cam_states)
 
         # Estimate j-th feature position in global frame
-        p_G_f, k, r = self.estimate_feature(self.cam_model,
-                                            track,
-                                            track_cam_states)
-
-        # Calculate j-th feature track residual
-        r_j = self.calculate_track_residual(self.cam_model,
-                                            track,
-                                            track_cam_states,
-                                            p_G_f)
+        p_G_f, k, r_j = self.estimate_feature(self.cam_model,
+                                              track,
+                                              track_cam_states)
 
         # Form jacobian of measurement w.r.t both state and feature
-        H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
+        # H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
 
-        # Form the covariance matrix of different feature observations
-        sigma_img = repmat(np.array([self.n_u, self.n_v]),
-                            1, int(np.size(r_j) / 2))
-        R_j = diag(sigma_img.ravel())
+        # # Form the covariance matrix of different feature observations
+        # sigma_img = repmat(np.array([self.n_u, self.n_v]),
+        #                    1, int(np.size(r_j) / 2))
+        # R_j = diag(sigma_img.ravel())
+        #
+        # # Perform null space trick to decorrelate feature position error away
+        # # from state errors by removing the measurement jacobian w.r.t. feature
+        # # position via null space projection [Section D: Measurement Model,
+        # # Mourikis2007]
+        # A_j = nullspace(H_f_j.T)
+        # H_o_j = dot(A_j.T, H_x_j)
+        # r_o_j = dot(A_j.T, r_j)
+        # R_o_j = dot(A_j.T, dot(R_j, A_j))
 
-        # Perform null space trick to decorrelate feature position error away
-        # from state errors by removing the measurement jacobian w.r.t. feature
-        # position via null space projection [Section D: Measurement Model,
-        # Mourikis2007]
-        A_j = nullspace(H_f_j.T)
-        H_o_j = dot(A_j.T, H_x_j)
-        r_o_j = dot(A_j.T, r_j)
-        R_o_j = dot(A_j.T, dot(R_j, A_j))
+        return (None, None, None)
+        # return H_o_j, r_o_j, R_o_j
 
-        # except Exception:
-        #     exit(0)
-        #     return None
+    def stack_residuals(self, H_o, r_o, R_o, H_o_j, r_o_j, R_o_j):
+        # Initialize H_o, r_o and R_o
+        if H_o is None and r_o is None and R_o is None:
+            H_o = H_o_j
+            r_o = r_o_j
+            R_o = R_o_j
 
-        return H_o_j, r_o_j, R_o_j
+        # Stack H_o, r_o and R_o
+        else:
+            H_o = np.vstack((H_o, H_o_j))
+            r_o = np.vstack((r_o, r_o_j))
+
+            # R_o is a bit special, it is the covariance matrix
+            # so it has to be stacked diagonally
+            R_o = np.block([
+                [R_o, zeros((R_o.shape[0], R_o_j.shape[1]))],
+                [zeros((R_o_j.shape[0], R_o.shape[1])), R_o_j]
+            ])
+
+        return H_o, r_o, R_o
 
     def calculate_residuals(self, tracks):
         """Calculate residuals
@@ -820,28 +768,11 @@ class MSCKF:
         R_o = None
 
         # Residualize feature tracks
-        for track in tracks:
-            result = self.residualize_track(track)
-            if result:
-                H_o_j, r_o_j, R_o_j = result
-
-                # Initialize H_o, r_o and R_o
-                if H_o is None and r_o is None and R_o is None:
-                    H_o = H_o_j
-                    r_o = r_o_j
-                    R_o = R_o_j
-
-                # Stack H_o, r_o and R_o
-                else:
-                    H_o = np.vstack((H_o, H_o_j))
-                    r_o = np.vstack((r_o, r_o_j))
-
-                    # R_o is a bit special, it is the covariance matrix
-                    # so it has to be stacked diagonally
-                    R_o = np.block([
-                        [R_o, zeros((R_o.shape[0], R_o_j.shape[1]))],
-                        [zeros((R_o_j.shape[0], R_o.shape[1])), R_o_j]
-                    ])
+        for track in tracks[:1]:
+            print(track)
+            H_o_j, r_o_j, R_o_j = self.residualize_track(track)
+            self.stack_residuals(H_o, r_o, R_o, H_o_j, r_o_j, R_o_j)
+        print()
 
         # No residuals, do not continue
         if H_o is None and r_o is None and R_o is None:
@@ -879,20 +810,25 @@ class MSCKF:
             List of feature tracks
 
         """
-        X_imu_size = self.imu_state.size
-        X_cam_size = self.cam_states[0].size
+        X_imu_size = self.imu_state.size()
+        X_cam_size = self.cam_states[0].size()
 
         # Add a camera state to state vector
         self.augment_state()
 
+        # Continue with EKF update?
+        if len(tracks) == 0:
+            return
+
         # Calculate residuals
-        T_H, r_n, R_n = self.calculate_residuals(tracks)
+        self.calculate_residuals(tracks)
+        # T_H, r_n, R_n = self.calculate_residuals(tracks)
         # if T_H is None and r_n is None and R_n is None:
         #     return
 
         # # Calculate Kalman gain
         # K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
-        #
+
         # # State correction
         # dX = dot(K, r_n)
         # # -- Correct IMU state

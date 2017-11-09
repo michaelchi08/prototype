@@ -462,12 +462,12 @@ class FeatureTracker:
 
     def __init__(self):
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=40, nlevels=1,  edgeThreshold=100)
+        self.detector = ORBDetector(nfeatures=100, nlevels=2)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         # Counters
-        self.counter_frame_id = 0
-        self.counter_track_id = 0
+        self.counter_frame_id = -1
+        self.counter_track_id = -1
 
         # Feature tracks
         self.tracks_tracking = []
@@ -604,12 +604,12 @@ class FeatureTracker:
 
             # Create new feature track
             if track_id is None:
+                self.counter_track_id += 1
                 track_id = self.counter_track_id
                 track = FeatureTrack(track_id, self.counter_frame_id,
                                      f0[f0_idx], f1[f1_idx])
                 self.tracks_buffer[track_id] = track
                 self.tracks_tracking.append(track_id)
-                self.counter_track_id += 1
 
             # Update existing feature track
             else:

@@ -17,7 +17,7 @@ from prototype.vision.features import LKFeatureTracker
 from prototype.vision.features import FeatureTracker
 
 # GLOBAL VARIABLES
-VO_DATA_PATH = "/data/dataset"
+VO_DATA_PATH = "/data/vo"
 
 
 class KeypointTest(unittest.TestCase):
@@ -160,7 +160,9 @@ class FeatureTrackerTests(unittest.TestCase):
     def test_detect(self):
         img = cv2.imread(self.data.image_0_files[0])
         features = self.tracker.detect(img)
+
         self.assertTrue(len(features) > 10)
+        self.assertEqual(self.tracker.counter_frame_id, 0)
 
     def test_match(self):
         img0 = cv2.imread(self.data.image_0_files[0])
@@ -277,7 +279,7 @@ class FeatureTrackerTests(unittest.TestCase):
                 fig.canvas.draw()
 
     def test_update(self):
-        debug = False
+        debug = True
 
         # Stats
         tracked = []
@@ -293,10 +295,10 @@ class FeatureTrackerTests(unittest.TestCase):
 
         # Loop through images
         index = 0
-        nb_images = len(self.data.image_0_files[:200])
+        nb_images = len(self.data.image_0_files[:20])
         time_start = time.time()
 
-        while index <= nb_images:
+        while index < nb_images:
             # Index out of bounds guard
             index = 0 if index < 0 else index
 
