@@ -5,7 +5,7 @@ import numpy as np
 
 
 class Keypoint:
-    """ Keypoint """
+    """Keypoint"""
 
     def __init__(self, pt, size):
         self.pt = np.array(pt)
@@ -19,7 +19,7 @@ class Keypoint:
 
 
 class Keyframe:
-    """ Keyframe """
+    """Keyframe"""
 
     def __init__(self, image, features):
         """ Constructor
@@ -34,12 +34,25 @@ class Keyframe:
         self.features = features
 
     def update(self, image, features):
+        """
+
+        Parameters
+        ----------
+        image :
+
+        features :
+
+
+        Returns
+        -------
+
+        """
         self.image = image
         self.features = features
 
 
 class Feature:
-    """ Feature """
+    """Feature"""
     def __init__(self, pt, size, des):
         """ Constructor
 
@@ -59,7 +72,7 @@ class Feature:
 
 
 class FeatureTrack:
-    """ Feature Track """
+    """Feature Track"""
 
     def __init__(self, track_id, frame_id, data0, data1=None):
         """ Constructor
@@ -81,42 +94,59 @@ class FeatureTrack:
             self.track = [data0]
 
     def update(self, frame_id, data):
-        """ Update feature track
+        """Update feature track
 
-        Args:
+        Parameters
+        ----------
+        frame_id : int
+            Frame id
+        data : Keypoint or Feature
+            data
 
-            frame_id (int): Frame id
-            data (Keypoint or Feature): data
+        Returns
+        -------
 
         """
         self.frame_end = frame_id
         self.track.append(data)
 
     def last(self):
-        """ Return last data point
+        """Return last data point
 
-        Returns:
+        Parameters
+        ----------
 
+        Returns
+        -------
+        type
             Last keypoint (Keypoint)
 
         """
         return self.track[-1]
 
     def last_descriptor(self):
-        """ Return last descriptor
+        """Return last descriptor
 
-        Returns:
+        Parameters
+        ----------
 
+        Returns
+        -------
+        type
             Last descriptor (Descriptor)
 
         """
         return self.descriptor[-1]
 
     def tracked_length(self):
-        """ Return number of frames tracked
+        """Return number of frames tracked
 
-        Returns:
+        Parameters
+        ----------
 
+        Returns
+        -------
+        type
             Number of frames tracked (float)
 
         """
@@ -132,7 +162,7 @@ class FeatureTrack:
 
 
 class FASTDetector:
-    """ Fast Detector """
+    """Fast Detector"""
 
     def __init__(self, **kwargs):
         """ Constructor
@@ -149,14 +179,17 @@ class FASTDetector:
         )
 
     def detect(self, frame, debug=False):
-        """ Detect
+        """Detect
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+        debug : bool
+            Debug mode (Default value = False)
 
-            frame (np.array): Image frame
-            debug (bool): Debug mode
-
-        Returns:
+        Returns
+        -------
 
             List of Keypoints
 
@@ -174,7 +207,7 @@ class FASTDetector:
 
 
 class ORBDetector:
-    """ ORB Detector """
+    """ORB Detector"""
 
     def __init__(self, **kwargs):
         """ Constructor """
@@ -191,18 +224,20 @@ class ORBDetector:
         )
 
     def detect(self, frame, debug=False):
-        """ Detect
+        """Detect
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+        debug : bool
+            Debug mode (Default value = False)
 
-            frame (np.array): Image frame
-            debug (bool): Debug mode
-
-        Returns:
+        Returns
+        -------
 
             features
-
-        List of Features
+            List of Features
 
         """
         # Detect and compute descriptors
@@ -225,7 +260,7 @@ class ORBDetector:
 
 
 class LKFeatureTracker:
-    """ Lucas-Kanade Feature Tracker """
+    """Lucas-Kanade Feature Tracker"""
 
     def __init__(self, detector):
         """ Constructor
@@ -248,14 +283,19 @@ class LKFeatureTracker:
         self.min_nb_features = 100
 
     def detect(self, frame):
-        """ Detect features
+        """Detect features
 
         Detects and initializes feature tracks
 
-        Args:
+        Parameters
+        ----------
+        frame_id : int
+            Frame id
+        frame : np.array
+            Frame
 
-            frame_id (int): Frame id
-            frame (np.array): Frame
+        Returns
+        -------
 
         """
         for kp in self.detector.detect(frame):
@@ -265,9 +305,13 @@ class LKFeatureTracker:
             self.track_id += 1
 
     def last_keypoints(self):
-        """ Returns previously tracked features
+        """Returns previously tracked features
 
-        Returns:
+        Parameters
+        ----------
+
+        Returns
+        -------
 
             Keypoints as a numpy array of shape (N, 2), where N is the number of
             keypoints
@@ -280,12 +324,17 @@ class LKFeatureTracker:
         return np.array(keypoints, dtype=np.float32)
 
     def track_features(self, image_ref, image_cur):
-        """ Track Features
+        """Track Features
 
-        Args:
+        Parameters
+        ----------
+        image_ref : np.array
+            Reference image
+        image_cur : np.array
+            Current image
 
-            image_ref (np.array): Reference image
-            image_cur (np.array): Current image
+        Returns
+        -------
 
         """
         # Re-detect new feature points if too few
@@ -324,12 +373,17 @@ class LKFeatureTracker:
         self.tracks_tracking = still_alive
 
     def draw_tracks(self, frame, debug=False):
-        """ Draw tracks
+        """Draw tracks
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+        debug : bool
+            Debug mode (Default value = False)
 
-            frame (np.array): Image frame
-            debug (bool): Debug mode
+        Returns
+        -------
 
         """
         if debug is False:
@@ -348,12 +402,17 @@ class LKFeatureTracker:
         cv2.imshow("Feature Tracks", img)
 
     def update(self, frame, debug=False):
-        """ Update
+        """Update
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+        debug : bool
+            Debug mode (Default value = False)
 
-            frame (np.array): Image frame
-            debug (bool): Debug mode
+        Returns
+        -------
 
         """
         if self.frame_id > 0:  # Update
@@ -369,7 +428,7 @@ class LKFeatureTracker:
 
 
 class FeatureTracker:
-    """ Feature Tracker """
+    """Feature Tracker"""
 
     def __init__(self):
         """ Constructor """
@@ -393,11 +452,15 @@ class FeatureTracker:
         self.unmatched = []
 
     def initialize(self, frame):
-        """ Initialize feature tracker
+        """Initialize feature tracker
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Frame
 
-            frame (np.array): Frame
+        Returns
+        -------
 
         """
         self.img_ref = frame
@@ -405,13 +468,17 @@ class FeatureTracker:
         self.tracks_tracking = [None for f in self.fea_ref]
 
     def detect(self, frame):
-        """ Detect features
+        """Detect features
 
         Detects and initializes feature tracks
 
-        Args:
+        Parameters
+        ----------
+        frame : np.array
+            Frame
 
-            frame (np.array): Frame
+        Returns
+        -------
 
         """
         features = self.detector.detect(frame)
@@ -419,17 +486,20 @@ class FeatureTracker:
         return features
 
     def match(self, f0, f1):
-        """ Match features to feature tracks
+        """Match features to feature tracks
 
         The idea is that with the current features, we want to match it against
         the current list of FeatureTrack.
 
-        Args:
+        Parameters
+        ----------
+        f0 : List of Feature
+            Reference features
+        f1 : List of Feature
+            Current features
 
-            f0 (List of Feature): Reference features
-            f1 (List of Feature): Current features
-
-        Returns:
+        Returns
+        -------
 
             (feature track id, f0 index, f1 index)
 
@@ -486,13 +556,19 @@ class FeatureTracker:
         return result
 
     def update_feature_tracks(self, matches, f0, f1):
-        """ Update feature tracks
+        """Update feature tracks
 
-        Args:
+        Parameters
+        ----------
+        matches : Tuple of float
+            (feature track id, feature index)
+        f0 : List of Features
+            Reference features
+        f1 : List of Features
+            Current features
 
-            matches (Tuple of float): (feature track id, feature index)
-            f0 (List of Features): Reference features
-            f1 (List of Features): Current features
+        Returns
+        -------
 
         """
         tracks_updated = {}
@@ -545,15 +621,23 @@ class FeatureTracker:
                 del self.tracks_buffer[track_id]
 
     def draw_matches(self, img_ref, img_cur, f0, f1, matches):
-        """ Draw matches
+        """Draw matches
 
-        Args:
+        Parameters
+        ----------
+        img_ref : np.array
+            Reference image
+        img_cur : np.array
+            Current image
+        f0 : List of Features
+            Reference features
+        f1 : List of Features
+            Current features
+        matches : Tuple of float
+            (feature track id, f0 index, f1 index)
 
-            img_ref (np.array): Reference image
-            img_cur (np.array): Current image
-            f0 (List of Features): Reference features
-            f1 (List of Features): Current features
-            matches (Tuple of float): (feature track id, f0 index, f1 index)
+        Returns
+        -------
 
         """
         # Vertically stack images with latest frame on top
@@ -579,6 +663,7 @@ class FeatureTracker:
         return img
 
     def remove_lost_tracks(self):
+        """ """
         lost_tracks = []
 
         # Remove tracks from self.tracks_buffer
@@ -593,12 +678,17 @@ class FeatureTracker:
         return lost_tracks
 
     def update(self, img_cur, debug=False):
-        """ Update tracker with current image
+        """Update tracker with current image
 
-        Args:
+        Parameters
+        ----------
+        img_cur : np.array
+            Current image
+        debug : bool
+            Debug mode (Default value = False)
 
-            img_cur (np.array): Current image
-            debug (bool): Debug mode
+        Returns
+        -------
 
         """
         # Initialize tracker

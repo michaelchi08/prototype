@@ -2,6 +2,25 @@ import numpy as np
 
 
 def radtan(k_1, k_2, k_3, t_1, t_2):
+    """
+
+    Parameters
+    ----------
+    k_1 :
+        
+    k_2 :
+        
+    k_3 :
+        
+    t_1 :
+        
+    t_2 :
+        
+
+    Returns
+    -------
+
+    """
     u  = x / z
     v  = y / z
     r = u**2 + v**2
@@ -15,4 +34,5 @@ def radtan(k_1, k_2, k_3, t_1, t_2):
 
 
 def equidistance():
+    """ """
     pass

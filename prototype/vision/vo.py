@@ -3,6 +3,21 @@ import numpy as np
 
 
 def feature_tracking(image_ref, image_cur, px_ref):
+    """
+
+    Parameters
+    ----------
+    image_ref :
+        
+    image_cur :
+        
+    px_ref :
+        
+
+    Returns
+    -------
+
+    """
     # Setup
     win_size = (21, 21)
     max_level = 3
@@ -27,6 +42,7 @@ def feature_tracking(image_ref, image_cur, px_ref):
 
 
 class BasicVO:
+    """ """
     def __init__(self, fx, cx, cy):
         self.last_frame = None
         self.R = None
@@ -39,6 +55,17 @@ class BasicVO:
                                                        nonmaxSuppression=True)
 
     def calc_pose(self, frame):
+        """
+
+        Parameters
+        ----------
+        frame :
+            
+
+        Returns
+        -------
+
+        """
         px_ref, px_cur = feature_tracking(self.last_frame, frame, self.px_ref)
         E, mask = cv2.findEssentialMat(px_cur,
                                        px_ref,
@@ -55,6 +82,23 @@ class BasicVO:
         return R, t, px_ref, px_cur
 
     def process(self, frame_id, frame, scale, min_nb_features=1500):
+        """
+
+        Parameters
+        ----------
+        frame_id :
+            
+        frame :
+            
+        scale :
+            
+        min_nb_features :
+             (Default value = 1500)
+
+        Returns
+        -------
+
+        """
         R, t, self.px_ref, self.px_cur = self.calc_pose(frame)
 
         # Update position and orientation of camera
@@ -70,6 +114,21 @@ class BasicVO:
         self.px_ref = self.px_cur
 
     def update(self, frame_id, frame, scale):
+        """
+
+        Parameters
+        ----------
+        frame_id :
+            
+        frame :
+            
+        scale :
+            
+
+        Returns
+        -------
+
+        """
         # Update
         if frame_id > 1:
             self.process(frame_id, frame, scale)

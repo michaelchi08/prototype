@@ -9,6 +9,7 @@ from prototype.utils.utils import euler2rot
 
 
 class PositionController(object):
+    """ """
     def __init__(self):
         self.x_controller = PID(0.5, 0.0, 0.035)
         self.y_controller = PID(0.5, 0.0, 0.035)
@@ -18,6 +19,23 @@ class PositionController(object):
         self.outputs = np.array([0.0, 0.0, 0.0, 0.0])
 
     def update(self, setpoints, actual, yaw, dt):
+        """
+
+        Parameters
+        ----------
+        setpoints :
+            
+        actual :
+            
+        yaw :
+            
+        dt :
+            
+
+        Returns
+        -------
+
+        """
         # Check rate
         self.dt += dt
         if self.dt < 0.01:

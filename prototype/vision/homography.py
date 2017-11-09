@@ -2,13 +2,18 @@ import numpy as np
 
 
 def homography(fp, tp):
-    """ Find homography H, such that from points `fp` is mapped to to points tp
+    """Find homography H, such that from points `fp` is mapped to to points tp
     using the linear DLT method, points are conditioned automatically.
 
-    Args:
+    Parameters
+    ----------
+    fp : np.array
+        From points
+    tp : np.array
+        To points
 
-        fp (np.array): From points
-        tp (np.array): To points
+    Returns
+    -------
 
     """
     # Check number of points
@@ -55,13 +60,18 @@ def homography(fp, tp):
 
 
 def affine_transformation(fp, tp):
-    """ Find Homography H, affine transformation, such that `tp` is affine
+    """Find Homography H, affine transformation, such that `tp` is affine
     transform of `fp`.
 
-    Args:
+    Parameters
+    ----------
+    fp : np.array
+        From points
+    tp : np.array
+        To points
 
-        fp (np.array): From points
-        tp (np.array): To points
+    Returns
+    -------
 
     """
     # Check number of points
@@ -103,9 +113,23 @@ def affine_transformation(fp, tp):
 
 
 def warp_images(img1, img2, tp):
-    """ Put `img1` in `img2` with an affine transformation such that the corners
+    """Put `img1` in `img2` with an affine transformation such that the corners
     are as close to `tp` as possible, where `tp` are homogeneous and
-    counter-clockwise from top left hand corner """
+    counter-clockwise from top left hand corner
+
+    Parameters
+    ----------
+    img1 :
+        
+    img2 :
+        
+    tp :
+        
+
+    Returns
+    -------
+
+    """
     # Points to warp from
     m, n = img1.shape[:2]
     fp = array([[0, m, m, 0],

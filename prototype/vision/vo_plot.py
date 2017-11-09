@@ -13,6 +13,17 @@ LANDMARK_DATA_FILE = "features.dat"
 
 
 def load_feature_data(dataset_path):
+    """
+
+    Parameters
+    ----------
+    dataset_path :
+        
+
+    Returns
+    -------
+
+    """
     # setup
     csv_file = open(dataset_path + "/" + LANDMARK_DATA_FILE, 'r')
     csv_reader = csv.reader(csv_file)
@@ -30,6 +41,17 @@ def load_feature_data(dataset_path):
 
 
 def load_single_observed_data(fp):
+    """
+
+    Parameters
+    ----------
+    fp :
+        
+
+    Returns
+    -------
+
+    """
     # setup
     csv_file = open(fp, 'r')
     csv_reader = csv.reader(csv_file)
@@ -70,6 +92,17 @@ def load_single_observed_data(fp):
 
 
 def load_observed_data(dataset_path):
+    """
+
+    Parameters
+    ----------
+    dataset_path :
+        
+
+    Returns
+    -------
+
+    """
     # setup
     index_file = open(dataset_path + "/index.dat", 'r')
     observations = [line.strip() for line in index_file]
@@ -94,12 +127,36 @@ def load_observed_data(dataset_path):
 
 
 def plot_camera(ax):
+    """
+
+    Parameters
+    ----------
+    ax :
+        
+
+    Returns
+    -------
+
+    """
     p = Rectangle((0, 0), 0.1, 0.1, ec="black", fill=False)
     ax.add_patch(p)
     art3d.pathpatch_2d_to_3d(p, z=0, zdir="y")
 
 
 def plot_3d(feature_data, observed_data):
+    """
+
+    Parameters
+    ----------
+    feature_data :
+        
+    observed_data :
+        
+
+    Returns
+    -------
+
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 

@@ -12,7 +12,7 @@ from prototype.utils.quaternion.hamiltonian import quatangle
 
 
 def linearity_index_inverse_depth():
-    """ Linearity index of Inverse Depth Parameterization """
+    """Linearity index of Inverse Depth Parameterization"""
     D, rho, rho_0, d_1, sigma_rho = sympy.symbols("D,rho,rho_0,d_1,sigma_rho")
     alpha = sympy.symbols("alpha")
     u = (rho * sympy.sin(alpha)) / (rho_0 * d_1 * (rho_0 - rho) + rho * sympy.cos(alpha))  # NOQA
@@ -39,7 +39,7 @@ def linearity_index_inverse_depth():
 
 
 def linearity_index_xyz_parameterization():
-    """ Linearity index of XYZ Parameterization """
+    """Linearity index of XYZ Parameterization"""
     d, d1, alpha, sigma_d = sympy.symbols("d,d1,alpha,sigma_d")
     alpha = sympy.symbols("alpha")
     u = (d * sympy.sin(alpha)) / (d1 + d * sympy.cos(alpha))
@@ -72,14 +72,16 @@ def linearity_index_xyz_parameterization():
 
 
 def R(q):
-    """ Rotation matrix parameterized by a quaternion (w, x, y, z)
+    """Rotation matrix parameterized by a quaternion (w, x, y, z)
 
-    Args:
+    Parameters
+    ----------
+    q : np.array
+        Quaternion (w, x, y, z)
 
-        q (np.array): Quaternion (w, x, y, z)
-
-    Returns:
-
+    Returns
+    -------
+    
         Rotation matrix (np.matrix)
 
     """
@@ -87,15 +89,18 @@ def R(q):
 
 
 def camera_motion_model(X, dt):
-    """ State update equation for the camera
+    """State update equation for the camera
 
-    Args:
+    Parameters
+    ----------
+    X :
+        camera state vector
+    dt :
+        Time difference (s)
 
-        X: camera state vector
-        dt: Time difference (s)
-
-    Returns:
-
+    Returns
+    -------
+    
         Updated camera state vector
 
     """
@@ -120,18 +125,24 @@ def camera_motion_model(X, dt):
 
 
 def h_C(y, r_W_C, q_WC, K, image_size):
-    """ Observation of a point from a camera location
+    """Observation of a point from a camera location
 
-    Args:
+    Parameters
+    ----------
+    y : np.array
+        3D scene point vector
+    r_W_C : np.array
+        Camera position (x, y, z)
+    q_WC : np.array
+        Camera orientation quaternion (w, x, y, z)
+    K : np.array
+        Camera intrinsics matrix
+    image_size : List of float
+        Image size (image_width, image_height)
 
-        y (np.array): 3D scene point vector
-        r_W_C (np.array): Camera position (x, y, z)
-        q_WC (np.array): Camera orientation quaternion (w, x, y, z)
-        K (np.array): Camera intrinsics matrix
-        image_size (List of float): Image size (image_width, image_height)
-
-    Returns:
-
+    Returns
+    -------
+    
         (u, v) pixel coordinates
 
     """
@@ -170,23 +181,29 @@ def h_C(y, r_W_C, q_WC, K, image_size):
 
 
 def feature_init(r_W_C, q_WC, pixel, d_min=1.0):
-    """ Feature initialization
+    """Feature initialization
 
-    Args:
+    Parameters
+    ----------
+    r_W_C : np.array
+        Camera position (x, y, z)
+    q_WC : np.array
+        Camera orientation quaternion (w, x, y, z)
+    pixel : np.array
+        Pixel coordinates
+    d_min : float
+        Predefined minimum depth (Default value = 1.0)
 
-        r_W_C (np.array): Camera position (x, y, z)
-        q_WC (np.array): Camera orientation quaternion (w, x, y, z)
-        pixel (np.array): Pixel coordinates
-        d_min (float): Predefined minimum depth
-
-    Returns:
-
-        3D state vector (x, y, z, theta, psi, rho)
-
-        x, y, z: Camera optical center where the 3D point was first observed
-        theta: Azimuth
-        psi: Elevation
-        rho: Inverse depth (1 / depth)
+    Returns
+    -------
+    x, y, z
+        Camera optical center where the 3D point was first observed
+    theta
+        Azimuth
+    psi
+        Elevation
+    rho
+        Inverse depth (1 / depth)
 
     """
     # initial min inverse depth (rho_0)

@@ -5,13 +5,19 @@ from numpy.linalg import inv
 
 
 class KF(object):
-    """ Kalman Filter
-
+    """Kalman Filter
+    
     This class implements a generic Kalman Filter, the notation used in the code
     is baesd on:
-
+    
         Thrun, S., Burgard, W., & Fox, D. (2006). Probabilistic robotics.
         Cambridge, Mass: The MIT Press.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
 
     """
     def __init__(self, **kwargs):
@@ -45,14 +51,21 @@ class KF(object):
         self.Q = np.matrix(self.Q)
 
     def prediction_update(self, A, B, u, dt):
-        """ Prediction update
+        """Prediction update
 
-        Args:
+        Parameters
+        ----------
+        A : np.array
+            Transition matrix
+        B : np.array
+            Input matrix
+        u : np.array
+            Input
+        dt : float
+            Time difference
 
-            A (np.array): Transition matrix
-            B (np.array): Input matrix
-            u (np.array): Input
-            dt (float): Time difference
+        Returns
+        -------
 
         """
         A = np.matrix(A)
@@ -61,12 +74,17 @@ class KF(object):
         self.S_p = A * self.S * A.T + self.R
 
     def measurement_update(self, C, y):
-        """ Measurement update
+        """Measurement update
 
-        Args:
+        Parameters
+        ----------
+        C : np.array
+            Measurement matrix
+        y : np.array
+            Measurement
 
-            C (np.array): Measurement matrix
-            y (np.array): Measurement
+        Returns
+        -------
 
         """
         C = np.matrix(C)
@@ -75,7 +93,17 @@ class KF(object):
         self.S = (eye(len(self.mu)) - self.K * C) * self.S_p
 
     def estimate(self, u, y):
-        """ Estimate
+        """Estimate
+
+        Parameters
+        ----------
+        u :
+            
+        y :
+            
+
+        Returns
+        -------
 
         """
         self.prediction_update(u)

@@ -6,16 +6,23 @@ from prototype.vision.common import projection_matrix
 
 class PinholeCameraModel(object):
     def __init__(self, image_width, image_height, K, hz=None):
-        """ Constructor
+    """Constructor
 
-        Args:
+    Parameters
+    ----------
+    image_width : int
+        Image width
+    image_height : int
+        Image height
+    K : np.array - size 3x3
+        Camera intrinsics
+    hz : int
+        Frame rate
 
-            image_width (int): Image width
-            image_height (int): Image height
-            K (np.array - size 3x3): Camera intrinsics
-            hz (int): Frame rate
+    Returns
+    -------
 
-        """
+    """
         self.image_width = image_width
         self.image_height = image_height
         self.hz = hz
@@ -27,12 +34,14 @@ class PinholeCameraModel(object):
     def update(self, dt):
         """Update camera
 
-        Args:
+        Parameters
+        ----------
+        dt : float
+            Time difference
 
-            dt (float): Time difference
-
-        Returns:
-
+        Returns
+        -------
+        
             Boolean to denote whether model has been updated
 
         """
@@ -46,19 +55,36 @@ class PinholeCameraModel(object):
         return False
 
     def P(self, R, t):
+        """
+
+        Parameters
+        ----------
+        R :
+            
+        t :
+            
+
+        Returns
+        -------
+
+        """
         return np.dot(self.K, np.block([R, np.dot(-R, t)]))
 
     def project(self, X, R, t):
-        """ Project 3D point to image plane
+        """Project 3D point to image plane
 
-        Args:
+        Parameters
+        ----------
+        X : np.array - size 4xN
+            3D features in Homogeneous coordinates
+        R : np.array - size 3x3
+            Rotation matrix
+        t : np.array - size 3x1
+            Translation vector
 
-            X (np.array - size 4xN): 3D features in Homogeneous coordinates
-            R (np.array - size 3x3): Rotation matrix
-            t (np.array - size 3x1): Translation vector
-
-        Returns:
-
+        Returns
+        -------
+        
             Projected 3D feature onto 2D image plane
 
         """
@@ -74,17 +100,22 @@ class PinholeCameraModel(object):
         return x
 
     def check_features(self, dt, features, rpy, t):
-        """ Check whether features are observable by camera
+        """Check whether features are observable by camera
 
-        Args:
+        Parameters
+        ----------
+        dt : float
+            Time difference
+        features : np.array
+            Landmarks
+        rpy : np.array or list - size 3
+            Roll, pitch and yaw
+        t : np.array - size 3
+            Translation vector
 
-            dt (float): Time difference
-            features (np.array): Landmarks
-            rpy (np.array or list - size 3): Roll, pitch and yaw
-            t (np.array - size 3): Translation vector
-
-        Returns:
-
+        Returns
+        -------
+        
             Observed 3D features
 
         """

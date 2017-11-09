@@ -2,19 +2,22 @@ import numpy as np
 
 
 def eight_point(x1, x2):
-    """ Computes the fundamental matrix from corresponding points
+    """Computes the fundamental matrix from corresponding points
     x1 and x2 as a 3xN matrix (np.array) using the normalized 8 point algorithm.
     each row is constructed as:
-
+    
         [x' * x, x' * y, x', y' * x, y' * y, y', x, y, 1]
 
-    Args:
+    Parameters
+    ----------
+    x1 : np.array
+        Homogenouse pixel location from first camera
+    x2 : np.array
+        Homogenouse pixel location from second camera
 
-        x1 (np.array): Homogenouse pixel location from first camera
-        x2 (np.array): Homogenouse pixel location from second camera
-
-    Returns:
-
+    Returns
+    -------
+    
         Fundamental matrix (np.array)
 
     """
@@ -43,19 +46,24 @@ def eight_point(x1, x2):
 
 
 def triangulate_point(x1, x2, P1, P2):
-    """ Triangulate a single 3D point using a pair of homogenous pixel
+    """Triangulate a single 3D point using a pair of homogenous pixel
     observations x1, x2 and two camera views encapsulated by two camera matrices
     P1, P2 via the linear least squares method
 
-    Args:
+    Parameters
+    ----------
+    x1 : np.array
+        Homogenouse pixel location from first camera
+    x2 : np.array
+        Homogenouse pixel location from second camera
+    P1 : np.array
+        Camera 1 matrix (P = K [R | t])
+    P2 : np.array
+        Camera 2 matrix (P = K [R | t])
 
-        x1 (np.array): Homogenouse pixel location from first camera
-        x2 (np.array): Homogenouse pixel location from second camera
-        P1 (np.array): Camera 1 matrix (P = K [R | t])
-        P2 (np.array): Camera 2 matrix (P = K [R | t])
-
-    Returns:
-
+    Returns
+    -------
+    
         Homogeneous 3D point (np.array)
 
     """
@@ -80,17 +88,24 @@ def triangulate_point(x1, x2, P1, P2):
 
 
 def triangulate(x1, x2, P1, P2):
-    """ Triangulate a set of 3D points from two sets of feature vectors x1, x2
+    """Triangulate a set of 3D points from two sets of feature vectors x1, x2
     and two camera views encapsulated by two camera matrices P1, P2 via the
     linear least squares method
 
-    Args:
+    Parameters
+    ----------
+    x1 : np.array
+        Observations in the first camera as 2xN matrix
+    x2 : np.array
+        Observations in the second camera as 2xN matrix
+    P1 :
+        
+    P2 :
+        
 
-        x1 (np.array): Observations in the first camera as 2xN matrix
-        x2 (np.array): Observations in the second camera as 2xN matrix
-
-    Returns:
-
+    Returns
+    -------
+    
         Homogeneous 3D points as a 4xN matrix (np.array)
 
     """

@@ -7,14 +7,16 @@ from prototype.utils.quaternion.hamiltonian import quatnormalize
 
 
 def rotx(theta):
-    """ Rotation matrix around x-axis (counter-clockwise, right-handed)
+    """Rotation matrix around x-axis (counter-clockwise, right-handed)
 
-    Args:
+    Parameters
+    ----------
+    theta : float
+        Rotation around x-axis in radians
 
-        theta (float): Rotation around x-axis in radians
-
-    Returns:
-
+    Returns
+    -------
+    
         Rotation matrix (np.array)
 
     """
@@ -24,14 +26,16 @@ def rotx(theta):
 
 
 def roty(theta):
-    """ Rotation matrix around y-axis (counter-clockwise, right-handed)
+    """Rotation matrix around y-axis (counter-clockwise, right-handed)
 
-    Args:
+    Parameters
+    ----------
+    theta : float
+        Rotation around y-axis in radians
 
-        theta (float): Rotation around y-axis in radians
-
-    Returns:
-
+    Returns
+    -------
+    
         Rotation matrix (np.array)
 
     """
@@ -41,14 +45,16 @@ def roty(theta):
 
 
 def rotz(theta):
-    """ Rotation matrix around z-axis (counter-clockwise, right-handed)
+    """Rotation matrix around z-axis (counter-clockwise, right-handed)
 
-    Args:
+    Parameters
+    ----------
+    theta : float
+        Rotation around z-axis in radians
 
-        theta (float): Rotation around z-axis in radians
-
-    Returns:
-
+    Returns
+    -------
+    
         Rotation matrix (np.array)
 
     """
@@ -58,24 +64,27 @@ def rotz(theta):
 
 
 def euler2rot(euler, euler_seq):
-    """ Convert euler to rotation matrix R
+    """Convert euler to rotation matrix R
     This function assumes we are performing a body fixed intrinsic rotation.
-
+    
     Source:
-
+    
         Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
         Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
         Princeton University Press, 1999. Print.
-
+    
         Page 86.
 
-    Args:
+    Parameters
+    ----------
+    euler : np.array
+        Euler angle (roll, pitch, yaw)
+    euler_seq : float
+        Euler rotation sequence
 
-        euler (np.array): Euler angle (roll, pitch, yaw)
-        euler_seq (float): Euler rotation sequence
-
-    Returns:
-
+    Returns
+    -------
+    
         Rotation matrix (np.array)
 
     """
@@ -119,24 +128,27 @@ def euler2rot(euler, euler_seq):
 
 
 def euler2quat(euler, euler_seq):
-    """ Convert euler to quaternion
+    """Convert euler to quaternion
     This function assumes we are performing an intrinsic rotation.
-
+    
     Source:
-
+    
         Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
         Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
         Princeton University Press, 1999. Print.
-
+    
         Page 167.
 
-    Args:
+    Parameters
+    ----------
+    euler : np.array
+        Euler angle (roll, pitch, yaw)
+    euler_seq : float
+        Euler rotation sequence
 
-        euler (np.array): Euler angle (roll, pitch, yaw)
-        euler_seq (float): Euler rotation sequence
-
-    Returns:
-
+    Returns
+    -------
+    
         Quaternion (np.array)
 
     """

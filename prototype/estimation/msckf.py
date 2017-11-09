@@ -20,19 +20,40 @@ from prototype.vision.geometry import triangulate_point
 
 
 class IMUState:
-    """ IMU state """
+    """IMU state
+
+    Parameters
+    ----------
+    q_IG : np.array - 4x1
+        JPL Quaternion of IMU in Global frame
+    b_g : np.array - 3x1
+        Bias of gyroscope
+    v_G : np.array - 3x1
+        Velocity of IMU in Global frame
+    b_a : np.array - 3x1
+        Bias of accelerometer
+    p_G : np.array - 3x1
+        Position of IMU in Global frame
+
+    Attributes
+    ----------
+    q_IG : np.array - 4x1
+        JPL Quaternion of IMU in Global frame
+    b_g : np.array - 3x1
+        Bias of gyroscope
+    v_G : np.array - 3x1
+        Velocity of IMU in Global frame
+    b_a : np.array - 3x1
+        Bias of accelerometer
+    p_G : np.array - 3x1
+        Position of IMU in Global frame
+    w_G : np.array - 3x1
+        Gravitational angular velocity
+    G_g : np.array - 3x1
+        Gravitational acceleration
+
+    """
     def __init__(self, q_IG, b_g, v_G, b_a, p_G):
-        """ Constructor
-
-        Args:
-
-            q_IG (np.array - 4x1): JPL Quaternion of IMU in Global frame
-            b_g (np.array - 3x1): Bias of gyroscope
-            v_G (np.array - 3x1): Velocity of IMU in Global frame
-            b_a (np.array - 3x1): Bias of accelerometer
-            p_G (np.array - 3x1): Position of IMU in Global frame
-
-        """
         self.q_IG = np.array(q_IG).reshape((4, 1))
         self.b_g = np.array(b_g).reshape((3, 1))
         self.v_G = np.array(v_G).reshape((3, 1))
@@ -44,10 +65,29 @@ class IMUState:
 
     @property
     def size(self):
+        """Size of state vector"""
         return 15  # Number of elements in state vector
 
     def update(self, a_m, w_m, dt):
-        """ IMU state update """
+        """IMU state update
+
+        Parameters
+        ----------
+        a_m : np.array
+            Accelerometer measurement
+        w_m : np.array
+            Gyroscope measurement
+        dt : float
+            Time difference (s)
+
+        Returns
+        -------
+        a: np.array
+            Corrected accelerometer measurement
+        w: np.array
+            Corrected gyroscope measurement
+
+        """
         # Calculate new accel and gyro estimates
         a = a_m - self.b_a
         w = w_m - self.b_g - dot(C(self.q_IG), self.w_G)
@@ -69,17 +109,17 @@ class IMUState:
         return (a, w)
 
     def correct(self, dX):
-        """ Correct IMU State
+        """Correct the IMU State
 
-        Args:
-
-            dX (np.array - 6x1): IMU state correction, where
-
-                dtheta_IG = dX[0:3]
-                db_g = dX[3:6]
-                dv_G = dX[6:9]
-                db_a = dX[9:12]
-                dp_G = dX[12:15]
+        Parameters
+        ----------
+        dX : np.array - 6x1
+            IMU state correction, where
+            dtheta_IG = dX[0:3]
+            db_g = dX[3:6]
+            dv_G = dX[6:9]
+            db_a = dX[9:12]
+            dp_G = dX[12:15]
 
         """
         # Split dX into its own components
@@ -107,36 +147,55 @@ class IMUState:
 
 
 class CameraState:
-    """ Camera state """
+    """Camera state
+
+    Parameters
+    ----------
+    p_G : np.array
+        Position of camera in Global frame
+    q_CG : np.array
+        Orientation of camera in Global frame
+
+    Attributes
+    ----------
+    p_G : np.array
+        Position of camera in Global frame
+    q_CG : np.array
+        Orientation of camera in Global frame
+    tracks : :obj`list` of :obj`FeatureTrack`
+        Feature tracks
+
+    """
     def __init__(self, q_CG, p_G):
-        """ Constructor
-
-        Args:
-
-            p_G (np.array): Position of camera in Global frame
-            q_CG (np.array): Orientation of camera in Global frame
-
-        """
         self.q_CG = np.array(q_CG).reshape((4, 1))
         self.p_G = np.array(p_G).reshape((3, 1))
         self.tracks = []
 
     @property
     def size(self):
+        """Size of state vector"""
         return 6  # Number of elements in state vector
 
     def add_feature_track(self, track):
+        """ Add feature track
+
+        Parameters
+        ----------
+        track : FeatureTrack
+            Feature Track
+
+        """
         self.tracks.append(track)
 
     def correct(self, dX):
-        """ Correct camera state
+        """Correct the camera state
 
-        Args:
-
-            dX (np.array - 6x1): Camera state correction, where
-
-                dtheta_IG = dX[0:3]
-                dp_G = dX[3:6]
+        Parameters
+        ----------
+        dX : np.array - 6x1
+            Camera state correction, where
+            dtheta_IG = dX[0:3]
+            dp_G = dX[3:6]
 
         """
         # Split dX into its own components
@@ -158,7 +217,7 @@ class CameraState:
 
 
 class MSCKF:
-    """ Multi-State Constraint Kalman Filter
+    """Multi-State Constraint Kalman Filter
 
     This class implements the MSCKF based on:
 
@@ -170,6 +229,25 @@ class MSCKF:
         A.I. Mourikis, S.I. Roumeliotis: "A Multi-state Kalman Filter for
         Vision-Aided Inertial Navigation," Technical Report, September 2006
         [http://www.ee.ucr.edu/~mourikis/tech_reports/TR_MSCKF.pdf]
+
+    Attributes
+    ----------
+    imu_state : IMUState
+        IMU State
+    n_imu : np.array
+        IMU noise
+    cam_model : CameraModel
+        Camera model
+    ext_p_IC : np.array
+        Camera extrinsics - position
+    ext_q_CI : np.array
+        Camera extrinsics - rotation
+    P_imu : np.array
+        IMU covariance matrix
+    P_cam : np.array
+        Camera covariance matrix
+    P_imu_cam : np.array
+        IMU camera covariance matrix
 
     """
     def __init__(self, **kwargs):
@@ -216,20 +294,25 @@ class MSCKF:
         self.P_imu_cam = zeros((15, 6))
 
     def F(self, w_hat, q_hat, a_hat, w_G):
-        """ Transition Jacobian F matrix
+        """Transition Jacobian F matrix
 
-        Aka predicition or transition matrix in an EKF
+        Predicition or transition matrix in an EKF
 
-        Args:
+        Parameters
+        ----------
+        w_hat : np.array
+            Estimated angular velocity
+        q_hat : np.array
+            Estimated quaternion (x, y, z, w)
+        a_hat : np.array
+            Estimated acceleration
+        w_G : np.array
+            Earth's angular velocity (i.e. Earth's rotation)
 
-            w_hat (np.array): Estimated angular velocity
-            q_hat (np.array): Estimated quaternion (x, y, z, w)
-            a_hat (np.array): Estimated acceleration
-            w_G (np.array): Earth's angular velocity (i.e. Earth's rotation)
-
-        Returns:
-
-            Numpy matrix of size 15x15
+        Returns
+        -------
+        F : np.array - 15x15
+            Transition jacobian matrix F
 
         """
         # F matrix
@@ -248,19 +331,21 @@ class MSCKF:
         return F
 
     def G(self, q_hat):
-        """ Input Jacobian G matrix
+        """Input Jacobian G matrix
 
         A matrix that maps the input vector (IMU gaussian noise) to the state
         vector (IMU error state vector), it tells us how the inputs affect the
         state vector.
 
-        Args:
+        Parameters
+        ----------
+        q_hat : np.array
+            Estimated quaternion (x, y, z, w)
 
-            q_hat (np.array): Estimated quaternion (x, y, z, w)
-
-        Returns:
-
-            Numpy matrix of size 15x12
+        Returns
+        -------
+        G : np.array - 15x12
+            Input jacobian matrix G
 
         """
         # G matrix
@@ -277,14 +362,24 @@ class MSCKF:
         return G
 
     def J(self, cam_q_CI, cam_p_IC, q_hat_IG, N):
-        """ Jacobian J matrix
+        """Jacobian J matrix
 
-        Args:
+        Parameters
+        ----------
+        cam_q_CI : np.array
+            Rotation from IMU to camera frame
+            in quaternion (x, y, z, w)
+        cam_p_IC : np.array
+            Position of camera in IMU frame
+        q_hat_IG : np.array
+            Rotation from global to IMU frame
+        N : float
+            Number of camera states
 
-            cam_q_CI (np.array): Rotation from IMU to camera frame
-                                 in quaternion (x, y, z, w)
-            cam_p_IC (np.array): Position of camera in IMU frame
-            q_hat_IG (np.array): Rotation from global to IMU frame
+        Returns
+        -------
+        J: np.array
+            Jacobian matrix J
 
         """
         C_CI = C(cam_q_CI)
@@ -300,25 +395,31 @@ class MSCKF:
         return J
 
     def P(self):
+        """Covariance matrix"""
         P = np.block([[self.P_imu, self.P_imu_cam],
                       [self.P_imu_cam.T, self.P_cam]])
 
         return P
 
     def H(self, track, track_cam_states, p_G_f):
-        """ Form the Jacobian measurement matrix
+        """Form the Jacobian measurement matrix
 
         - $H^{(j)}_x$ of j-th feature track with respect to state $X$
         - $H^{(j)}_f$ of j-th feature track with respect to feature position
 
-        Args:
+        Parameters
+        ----------
+        track : FeatureTrack
+            Feature track of length M
+        track_cam_states : list of CameraState
+            N Camera states
+        p_G_f :
 
-            track (FeatureTrack): Feature track of length M
-            track_cam_states (list of CameraState): N Camera states
 
-        Returns:
-
-            H_x_j jacobian matrix (np.matrix - 2*M x (12+6)N)
+        Returns
+        -------
+        H_x_j: np.matrix - 2*M x (12+6)N
+            Measurement jacobian matrix w.r.t state
 
         """
         X_imu_size = self.imu_state.size      # Size of imu state
@@ -371,13 +472,16 @@ class MSCKF:
         return H_f_j, H_x_j
 
     def prediction_update(self, a_m, w_m, dt):
-        """ IMU state update
+        """IMU state update
 
-        Args:
-
-            a_m (np.array): Accelerometer measurement
-            w_m (np.array): Gyroscope measurement
-            dt (float): Time difference (s)
+        Parameters
+        ----------
+        a_m : np.array
+            Accelerometer measurement
+        w_m : np.array
+            Gyroscope measurement
+        dt : float
+            Time difference (s)
 
         """
         # Propagate IMU state
@@ -396,23 +500,29 @@ class MSCKF:
         self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
     def estimate_feature(self, cam_model, track, track_cam_states, debug=False):
-        """ Estimate feature 3D location by optimizing over inverse depth
-        paramterization using Gauss Newton Optimization
+        """Estimate feature 3D location by optimizing over inverse depth
+        parameterization using Gauss Newton Optimization
 
-        Args:
+        Parameters
+        ----------
+        cam_model : CameraModel
+            Camera model
+        track : FeatureTrack
+            Feature track
+        track_cam_states : list of CameraState
+            Camera states where feature
+            track was observed
+        debug :
+             (Default value = False)
 
-            cam_model (CameraModel): Camera model
-            track (FeatureTrack): Feature track
-            track_cam_states (list of CameraState): Camera states where feature
-                                                    track was observed
-
-        Returns:
-
-            (p_G_f, k, r)
-
-            p_G_f (np.array - 3x1): Estimated feature position in global frame
-            k (int): Optimized over k iterations
-            r (np.array - size 2Nx1): Residual np.array over all camera states
+        Returns
+        -------
+        p_G_f : np.array - 3x1
+            Estimated feature position in global frame
+        k : int
+            Optimized over k iterations
+        r : np.array - size 2Nx1
+            Residual np.array over all camera states
 
         """
         # Calculate initial estimate of 3D position
@@ -530,18 +640,25 @@ class MSCKF:
                                  track_cam_states,
                                  p_G_f,
                                  debug=False):
-        """ Calculate the residual of a single feature track
+        """Calculate the residual of a single feature track
 
-        Args:
+        Parameters
+        ----------
+        cam_model : Camera Model
+            Camera model used to project 3D point to image plane
+        track : FeatureTrack
+            A single feature track
+        track_cam_states : list of CameraState
+            N Camera states where feature track was observed
+        p_G_f : np.array - 3x1
+            Feature position in global frame
+        debug : bool, optional
+            Debug mode
 
-            p_G_f (np.array - 3x1): Feature position in global frame
-            track (FeatureTrack): A single feature track
-            track_cam_states (list of CameraState): N Camera states where
-                                                    feature track was observed
-
-        Returns:
-
-            Residual vector (np.array - 2*Nx1)
+        Returns
+        -------
+        r_j : np.array - 2*Nx1
+            Residual vector
 
         """
         # Residual vector
@@ -580,7 +697,7 @@ class MSCKF:
         return np.array(r_j).reshape((2 * len(track_cam_states), 1))
 
     def augment_state(self):
-        """ Augment state
+        """Augment state
 
         Augment state and covariance matrix with a copy of the current camera
         pose estimate when a new image is recorded
@@ -610,11 +727,21 @@ class MSCKF:
         self.cam_states.append(CameraState(cam_q_CG, cam_p_G))
 
     def residualize_track(self, track):
-        """ Residualize feature track
+        """Residualize feature track
 
-        Args:
+        Parameters
+        ----------
+        track : FeatureTrack
+            Feature track to residualize
 
-            track (FeatureTrack): Feature track to residualize
+        Returns
+        -------
+        H_o_j: (np.array)
+            Measurement jacobian w.r.t state projected to null space
+        r_o_j: (np.array)
+            Residual vector projected to null space
+        R_o_j: (np.array)
+            Covariance matrix projected to null space
 
         """
         # Pre-check
@@ -656,6 +783,23 @@ class MSCKF:
         return H_o_j, r_o_j, R_o_j
 
     def calculate_residuals(self, tracks):
+        """Calculate residuals
+
+        Parameters
+        ----------
+        tracks : :obj`list` of :obj`FeatureTracks`
+            List of feature tracks
+
+        Returns
+        -------
+        T_H: np.array
+            QR decomposition
+        r_n: np.array
+            Residual vector r
+        R_n: np.array
+            Covariance matrix R
+
+        """
         H_o = None
         r_o = None
         R_o = None
@@ -703,14 +847,23 @@ class MSCKF:
 
         return T_H, r_n, R_n
 
-    def prune_states(self):
-        # Find all camera states with no tracked landmarks
-        prune_indicies = []
-        for i in range(len(self.cam_states)):
-            if len(self.cam_states[i].tracks) == 0:
-                prune_indicies.append(i)
+    # def prune_cam_states(self):
+    #     """Prune camera states"""
+    #     # Find all camera states with no tracked landmarks
+    #     prune_indicies = []
+    #     for i in range(len(self.cam_states)):
+    #         if len(self.cam_states[i].tracks) == 0:
+    #             prune_indicies.append(i)
 
     def measurement_update(self, tracks):
+        """Measurement update
+
+        Parameters
+        ----------
+        tracks : :obj`list` of :obj`FeatureTracks`
+            List of feature tracks
+
+        """
         X_imu_size = self.imu_state.size
         X_cam_size = self.cam_states[0].size
 

@@ -6,6 +6,7 @@ from prototype.utils.utils import deg2rad
 
 
 class AttitudeController(object):
+    """ """
     def __init__(self):
         self.roll_controller = PID(200.0, 0.5, 10.0)
         self.pitch_controller = PID(200.0, 0.5, 10.0)
@@ -15,6 +16,21 @@ class AttitudeController(object):
         self.outputs = np.array([0.0, 0.0, 0.0, 0.0])
 
     def update(self, setpoints, actual, dt):
+        """
+
+        Parameters
+        ----------
+        setpoints :
+            
+        actual :
+            
+        dt :
+            
+
+        Returns
+        -------
+
+        """
         self.dt += dt
         if self.dt < 0.001:
             return self.outputs

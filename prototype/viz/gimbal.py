@@ -10,6 +10,23 @@ from prototype.utils.utils import deg2rad
 
 
 def dh_transform_matrix(theta, alpha, a, d):
+    """
+
+    Parameters
+    ----------
+    theta :
+        
+    alpha :
+        
+    a :
+        
+    d :
+        
+
+    Returns
+    -------
+
+    """
     c = cos
     s = sin
 
@@ -22,6 +39,27 @@ def dh_transform_matrix(theta, alpha, a, d):
 
 
 def plot_3d_cylinder(ax, radius, height, origin, orientation, color):
+    """
+
+    Parameters
+    ----------
+    ax :
+        
+    radius :
+        
+    height :
+        
+    origin :
+        
+    orientation :
+        
+    color :
+        
+
+    Returns
+    -------
+
+    """
     # Axis and radius
     p0 = np.array([0.0, 0.0, 0.0])  # Point at one end
     p1 = np.array([height, 0.0, 0.0])  # Point at other end
@@ -79,6 +117,23 @@ def plot_3d_cylinder(ax, radius, height, origin, orientation, color):
 
 
 def plot_3d_cube(ax, width, origin, orientation):
+    """
+
+    Parameters
+    ----------
+    ax :
+        
+    width :
+        
+    origin :
+        
+    orientation :
+        
+
+    Returns
+    -------
+
+    """
     # Cube points
     points = np.array([[-1, -1, -1],
                        [1, -1, -1],
@@ -119,6 +174,7 @@ def plot_3d_cube(ax, width, origin, orientation):
 
 
 class GimbalPlot:
+    """ """
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
         self.attitude = np.array([deg2rad(10.0), deg2rad(10.0), 0.0])
@@ -138,6 +194,17 @@ class GimbalPlot:
         self.camera_attitude = np.array([0.0, 0.0, 0.0])
 
     def draw_roll_gimbal(self, ax):
+        """
+
+        Parameters
+        ----------
+        ax :
+            
+
+        Returns
+        -------
+
+        """
         # Draw origin to roll motor
         ax.plot([self.origin[0], self.roll_motor_base[0]],
                 [self.origin[1], self.roll_motor_base[1]],
@@ -173,6 +240,17 @@ class GimbalPlot:
                 color="blue")
 
     def draw_pitch_gimbal(self, ax):
+        """
+
+        Parameters
+        ----------
+        ax :
+            
+
+        Returns
+        -------
+
+        """
         plot_3d_cylinder(ax,
                          0.04,
                          0.08,
@@ -181,9 +259,31 @@ class GimbalPlot:
                          "green")
 
     def draw_camera(self, ax):
+        """
+
+        Parameters
+        ----------
+        ax :
+            
+
+        Returns
+        -------
+
+        """
         plot_3d_cube(ax, 0.1, self.camera_origin, self.camera_attitude)
 
     def plot(self, ax):
+        """
+
+        Parameters
+        ----------
+        ax :
+            
+
+        Returns
+        -------
+
+        """
         # End effector to camera frame
         euler = [0.0, 0.0, 0.0]
         R_c = euler2rot([deg2rad(i) for i in euler], 123).reshape(3, 3)

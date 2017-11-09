@@ -9,18 +9,23 @@ EARTH_RADIUS_M = 6378137.0
 
 
 def latlon_offset(lat_ref, lon_ref, offset_N, offset_E):
-    """ Calculate new latitude and longitude coordinates with an offset in
+    """Calculate new latitude and longitude coordinates with an offset in
     North and East directions
 
-    Args:
+    Parameters
+    ----------
+    lat_ref : float
+        Latitude of origin (decimal format)
+    lon_ref : float
+        Longitude of origin (decimal format)
+    offset_N : float
+        Offset in North direction (meters)
+    offset_E : float
+        Offset in East direction (meters)
 
-        lat_ref (float): Latitude of origin (decimal format)
-        lon_ref (float): Longitude of origin (decimal format)
-        offset_N (float): Offset in North direction (meters)
-        offset_E (float): Offset in East direction (meters)
-
-    Returns:
-
+    Returns
+    -------
+    
         (lat, lon)
 
     """
@@ -30,14 +35,25 @@ def latlon_offset(lat_ref, lon_ref, offset_N, offset_E):
 
 
 def latlon_diff(lat_ref, lon_ref, lat, lon):
-    """ Calculate difference in North and East from two GPS coordinates
+    """Calculate difference in North and East from two GPS coordinates
 
-    Args:
+    Parameters
+    ----------
+    lat_ref : float
+        Latitude of origin (decimal format)
+    lon_ref : float
+        Longitude of origin (decimal format)
+    offset_N : float
+        Offset in North direction (meters)
+    offset_E : float
+        Offset in East direction (meters)
+    lat :
+        
+    lon :
+        
 
-        lat_ref (float): Latitude of origin (decimal format)
-        lon_ref (float): Longitude of origin (decimal format)
-        offset_N (float): Offset in North direction (meters)
-        offset_E (float): Offset in East direction (meters)
+    Returns
+    -------
 
     """
     d_lon = lon - lon_ref
@@ -50,17 +66,22 @@ def latlon_diff(lat_ref, lon_ref, lat, lon):
 
 
 def latlon_dist(lat_ref, lon_ref, lat, lon):
-    """ Calculate Euclidean distance between two GPS coordinates
+    """Calculate Euclidean distance between two GPS coordinates
 
-    Args:
+    Parameters
+    ----------
+    lat_ref : float
+        Latitude of origin (decimal format)
+    lon_ref : float
+        Longitude of origin (decimal format)
+    lat : float
+        Latitude of target (decimal format)
+    lon : float
+        Longitude of target (decimal format)
 
-        lat_ref (float): Latitude of origin (decimal format)
-        lon_ref (float): Longitude of origin (decimal format)
-        lat (float): Latitude of target (decimal format)
-        lon (float): Longitude of target (decimal format)
-
-    Returns:
-
+    Returns
+    -------
+    
         Euclidean distance between two GPS coordinates (float)
 
     """

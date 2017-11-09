@@ -8,14 +8,16 @@ import numpy as np
 
 
 def quatnorm(q):
-    """ Norm of quaternion
+    """Norm of quaternion
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (w, x, y, z)
-
-    Return:
-
+    Returns
+    -------
+    type
         Norm of quaternion (float)
 
     """
@@ -24,14 +26,16 @@ def quatnorm(q):
 
 
 def quatnormalize(q):
-    """ Normalize quaternion
+    """Normalize quaternion
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (w, x, y, z)
-
-    Return:
-
+    Returns
+    -------
+    type
         Normalized quaternion (np.array - 4x1)
 
     """
@@ -45,14 +49,16 @@ def quatnormalize(q):
 
 
 def quatconj(q):
-    """ Conjugate / inverse of a quaternion
+    """Conjugate / inverse of a quaternion
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (w, x, y, z)
-
-    Return:
-
+    Returns
+    -------
+    type
         Quaternion conjugate (np.array - 4x1)
 
     """
@@ -61,15 +67,18 @@ def quatconj(q):
 
 
 def quatmul(p, q):
-    """ Multiply Hamiltonian quaternion
+    """Multiply Hamiltonian quaternion
 
-    Args:
+    Parameters
+    ----------
+    p : np.array
+        1st Quaternion (w, x, y, z)
+    q : np.array
+        2nd Quaternion (w, x, y, z)
 
-        p (np.array): 1st Quaternion (w, x, y, z)
-        q (np.array): 2nd Quaternion (w, x, y, z)
-
-    Returns:
-
+    Returns
+    -------
+    
         Product of quaternion multiplication (np.array - 4x1)
 
     """
@@ -82,7 +91,17 @@ def quatmul(p, q):
 
 
 def quatangle(angle):
-    """ Quaternion from angle """
+    """Quaternion from angle
+
+    Parameters
+    ----------
+    angle :
+        
+
+    Returns
+    -------
+
+    """
     roll, pitch, yaw = angle
 
     cy = cos(yaw / 2.0)
@@ -102,14 +121,16 @@ def quatangle(angle):
 
 
 def quat2rot(q):
-    """ Quaternion to rotation matrix
+    """Quaternion to rotation matrix
 
-    Args:
+    Parameters
+    ----------
+    q : np.array or list of size 4
+        Quaternion (w, x, y, z)
 
-        q (np.array or list of size 4): Quaternion (w, x, y, z)
-
-    Returns:
-
+    Returns
+    -------
+    
         3 x 3 rotation matrix
 
     """
@@ -139,6 +160,19 @@ def quat2rot(q):
 
 
 def quat2euler(q, euler_seq):
+    """
+
+    Parameters
+    ----------
+    q :
+        
+    euler_seq :
+        
+
+    Returns
+    -------
+
+    """
     qw, qx, qy, qz = q
     qw2 = pow(qw, 2)
     qx2 = pow(qx, 2)

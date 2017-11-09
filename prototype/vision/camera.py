@@ -5,11 +5,17 @@ import cv2
 
 class Camera(object):
     def __init__(self, index=0):
-        """ Constructor
-
+    """Constructor
+    
             index (int): Camera index
 
-        """
+    Parameters
+    ----------
+
+    Returns
+    -------
+
+    """
         self.frame = None
         self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -22,10 +28,14 @@ class Camera(object):
         self.out = cv2.VideoWriter('output.avi', fourcc, 120.0, (640, 480))
 
     def update(self):
-        """ Update camera
+        """Update camera
 
-        Returns:
+        Parameters
+        ----------
 
+        Returns
+        -------
+        
             Camera frame (np.array)
 
         """
@@ -36,15 +46,12 @@ class Camera(object):
         return self.frame
 
     def display(self):
-        """ Display image frame """
+        """Display image frame"""
         cv2.imshow("Camera", self.frame)
         cv2.waitKey(1)
 
     def loop(self):
-        """ Loop camera
-
-
-        """
+        """Loop camera"""
         frame_index = 0
         time_start = time.time()
 

@@ -8,7 +8,21 @@ from sympy import pprint
 
 
 def two_wheel_2d_model(x, u, dt):
-    """ Two wheel 2D motion model """
+    """Two wheel 2D motion model
+
+    Parameters
+    ----------
+    x :
+        
+    u :
+        
+    dt :
+        
+
+    Returns
+    -------
+
+    """
     gdot = np.array([[u[0, 0] * cos(x[2, 0]) * dt],
                      [u[0, 0] * sin(x[2, 0]) * dt],
                      [u[1, 0] * dt]])
@@ -17,7 +31,21 @@ def two_wheel_2d_model(x, u, dt):
 
 
 def two_wheel_2d_linearized_model(x, u, dt):
-    """ Two wheel 2D linearized motion model """
+    """Two wheel 2D linearized motion model
+
+    Parameters
+    ----------
+    x :
+        
+    u :
+        
+    dt :
+        
+
+    Returns
+    -------
+
+    """
     G1 = 1.0
     G2 = 0.0
     G3 = -u[0, 0] * sin(x[2, 0]) * dt
@@ -36,17 +64,51 @@ def two_wheel_2d_linearized_model(x, u, dt):
 
 
 def two_wheel_2d_measurement_model(x):
-    """ Two wheel measurement model """
+    """Two wheel measurement model
+
+    Parameters
+    ----------
+    x :
+        
+
+    Returns
+    -------
+
+    """
     return np.dot(np.eye(3), x)
 
 
 def two_wheel_2d_measurement_linearized_model(x):
-    """ Two wheel measurement model linearized """
+    """Two wheel measurement model linearized
+
+    Parameters
+    ----------
+    x :
+        
+
+    Returns
+    -------
+
+    """
     return np.eye(3)
 
 
 def two_wheel_3d_model(x, u, dt):
-    """ Two wheel 3D motion model """
+    """Two wheel 3D motion model
+
+    Parameters
+    ----------
+    x :
+        
+    u :
+        
+    dt :
+        
+
+    Returns
+    -------
+
+    """
     g1 = x[0, 0] + u[0] * cos(x[3, 0]) * dt
     g2 = x[1, 0] + u[0] * sin(x[3, 0]) * dt
     g3 = x[2, 0] + u[1] * dt
@@ -56,6 +118,7 @@ def two_wheel_3d_model(x, u, dt):
 
 
 def two_wheel_2d_deriv():
+    """ """
     x1, x2, x3, x4, x5 = sympy.symbols("x1,x2,x3,x4,x5")
     dt = sympy.symbols("dt")
 
@@ -71,6 +134,7 @@ def two_wheel_2d_deriv():
 
 
 def two_wheel_3d_deriv():
+    """ """
     x1, x2, x3, x4, x5, x6, x7 = sympy.symbols("x1,x2,x3,x4,x5,x6,x7")
     dt = sympy.symbols("dt")
 
@@ -96,6 +160,7 @@ def two_wheel_3d_deriv():
 
 
 def two_wheel_3d_deriv2():
+    """ """
     functions = sympy.symbols("f1,f2,f3,f4,f5,f6,f7,f8,f9")
     variables = sympy.symbols("x1,x2,x3,x4,x5,x6,x7,x8,x9")
 

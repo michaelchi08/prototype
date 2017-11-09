@@ -5,15 +5,18 @@ from math import pi
 
 
 def range2d(p1, p2):
-    """ Calculate range in 2D
+    """Calculate range in 2D
 
-    Args:
+    Parameters
+    ----------
+    p1 : np.array of size 2
+        Point 1
+    p2 : np.array of size 2
+        Point 2
 
-        p1 (np.array of size 2): Point 1
-        p2 (np.array of size 2): Point 2
-
-    Returns:
-
+    Returns
+    -------
+    
         Range between p1 and p2
 
     """
@@ -23,16 +26,20 @@ def range2d(p1, p2):
 
 
 def bearing2d(f, x, theta):
-    """ Calculate bearing between feature and robot
+    """Calculate bearing between feature and robot
 
-    Args:
+    Parameters
+    ----------
+    f : np.array of size 2
+        Feature position
+    x : np.array of size 2
+        Robot position
+    theta : float
+        Robot's current heading in radians
 
-        f (np.array of size 2): Feature position
-        x (np.array of size 2): Robot position
-        theta (float): Robot's current heading in radians
-
-    Returns:
-
+    Returns
+    -------
+    
         Bearing between feature and robot position
 
     """
@@ -43,19 +50,24 @@ def bearing2d(f, x, theta):
 
 
 def feature_inview_2d(f, x, theta, rmax, thmax):
-    """ Checks to see wheter features is in view of robot
+    """Checks to see wheter features is in view of robot
 
-    Args:
+    Parameters
+    ----------
+    f : np.array of size 2
+        Feature position
+    x : np.array of size 2
+        Robot position
+    theta : float
+        Robot's current heading in radians
+    rmax : float
+        Max sensor range
+    thmax : float
+        Max sensor bearing
 
-
-        f (np.array of size 2): Feature position
-        x (np.array of size 2): Robot position
-        theta (float): Robot's current heading in radians
-        rmax (float): Max sensor range
-        thmax (float): Max sensor bearing
-
-    Returns:
-
+    Returns
+    -------
+    
         Boolean to denote whether feature is in view of robot
 
     """

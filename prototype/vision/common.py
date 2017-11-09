@@ -8,8 +8,18 @@ from prototype.utils.utils import deg2rad
 
 
 def normalize(points):
-    """ Normalize a collection of `points` in homogeneous coordinates so that
-    the last row equals 1. """
+    """Normalize a collection of `points` in homogeneous coordinates so that
+    the last row equals 1.
+
+    Parameters
+    ----------
+    points :
+        
+
+    Returns
+    -------
+
+    """
     for row in points:
         row /= points[-1]
 
@@ -17,17 +27,40 @@ def normalize(points):
 
 
 def convert2homogeneous(points):
-    """ Convert a set of points (dim * n array) to homogeneous coordinates
+    """Convert a set of points (dim * n array) to homogeneous coordinates
     where `points` is a numpy array matrix. Returns points in homogeneous
-    coordinates. """
+    coordinates.
+
+    Parameters
+    ----------
+    points :
+        
+
+    Returns
+    -------
+
+    """
     return np.vstack((points, np.ones((1, points.shape[1]))))
 
 
 def focal_length(image_width, image_height, fov):
-    """ Calculate focal length in the x and y axis from:
+    """Calculate focal length in the x and y axis from:
     - image width
     - image height
     - field of view
+
+    Parameters
+    ----------
+    image_width :
+        
+    image_height :
+        
+    fov :
+        
+
+    Returns
+    -------
+
     """
     fx = (image_width / 2.0) / tan(deg2rad(fov) / 2.0)
     fy = (image_height / 2.0) / tan(deg2rad(fov) / 2.0)
@@ -35,16 +68,20 @@ def focal_length(image_width, image_height, fov):
 
 
 def projection_matrix(K, R, t):
-    """ Construct projection matrix
+    """Construct projection matrix
 
-    Args:
+    Parameters
+    ----------
+    K : np.array 3x3 matrix
+        Camera intrinsics matrix
+    R : np.array 3x3 matrix
+        Camera rotation matrix
+    t : np.array 3x1 vector
+        Camera translation vector
 
-        K (np.array 3x3 matrix): Camera intrinsics matrix
-        R (np.array 3x3 matrix): Camera rotation matrix
-        t (np.array 3x1 vector): Camera translation vector
-
-    Returns:
-
+    Returns
+    -------
+    
         Projection Matrix (3 x 4 matrix)
 
     """
@@ -56,17 +93,21 @@ def projection_matrix(K, R, t):
 
 
 def factor_projection_matrix(P):
-    """ Extract camera intrinsics, rotation matrix and translation vector
+    """Extract camera intrinsics, rotation matrix and translation vector
 
-    Args:
+    Parameters
+    ----------
+    P : np.array of size 3 x 4
+        Projection Matrix
 
-        P (np.array of size 3 x 4): Projection Matrix
-
-    Returns:
-
-        K (np.array 3x3 matrix): Camera intrinsics matrix
-        R (np.array 3x3 matrix): Camera rotation matrix
-        t (np.array 3x1 vector): Camera translation vector
+    Returns
+    -------
+    K : np.array 3x3 matrix
+        Camera intrinsics matrix
+    R : np.array 3x3 matrix
+        Camera rotation matrix
+    t : np.array 3x1 vector
+        Camera translation vector
 
     """
     K, R = scipy.linalg.rq(P[:, :3])
@@ -86,11 +127,15 @@ def factor_projection_matrix(P):
 
 
 def camera_center(P):
-    """ Extract camera center from projection matrix P
+    """Extract camera center from projection matrix P
 
-    Args:
+    Parameters
+    ----------
+    P : np.array of size 3 x 4
+        Projection Matrix
 
-        P (np.array of size 3 x 4): Projection Matrix
+    Returns
+    -------
 
     """
     K, R, t = factor_projection_matrix(P)
@@ -98,17 +143,22 @@ def camera_center(P):
 
 
 def camera_intrinsics(fx, fy, cx, cy):
-    """ Construct camera intrinsics matrix K
+    """Construct camera intrinsics matrix K
 
-    Args:
+    Parameters
+    ----------
+    fx : float
+        Focal length in x-axis
+    fy : float
+        Focal length in y-axis
+    cx : float
+        Principle point in x-axis
+    cy : float
+        Principle point in y-axis
 
-        fx (float): Focal length in x-axis
-        fy (float): Focal length in y-axis
-        cx (float): Principle point in x-axis
-        cy (float): Principle point in y-axis
-
-    Returns:
-
+    Returns
+    -------
+    
         Camera intrinsics matrix as a 3x3 matrix
 
     """
@@ -119,22 +169,26 @@ def camera_intrinsics(fx, fy, cx, cy):
 
 
 def rand3dfeatures(nb_features, feature_bounds):
-    """ Generate random 3D features
+    """Generate random 3D features
 
-    Args:
+    Parameters
+    ----------
+    bounds : dict
+        3D feature bounds, for example
+        bounds = {
+        "x": {"min": -1.0, "max": 1.0},
+        "y": {"min": -1.0, "max": 1.0},
+        "z": {"min": -1.0, "max": 1.0}
+        }
+    nb_features : int
+        number of 3D features to generate
+    feature_bounds :
+        
 
-        bounds (dict): 3D feature bounds, for example
-                       bounds = {
-                         "x": {"min": -1.0, "max": 1.0},
-                         "y": {"min": -1.0, "max": 1.0},
-                         "z": {"min": -1.0, "max": 1.0}
-                       }
-
-        nb_features (int): number of 3D features to generate
-
-    Returns:
-
-        features (list): list of 3D features
+    Returns
+    -------
+    features : list
+        list of 3D features
 
     """
     features = []

@@ -12,7 +12,7 @@ from prototype.vision.camera_model import PinholeCameraModel
 
 
 class DatasetGenerator(object):
-    """ Dataset Generator """
+    """Dataset Generator"""
 
     def __init__(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
@@ -30,16 +30,20 @@ class DatasetGenerator(object):
         self.observed_features = []
 
     def generate_features(self):
-        """ Setup features """
+        """Setup features"""
         features = rand3dfeatures(self.nb_features, self.feature_bounds)
         return features
 
     def output_robot_state(self, save_dir):
-        """ Output robot state
+        """Output robot state
 
-        Args:
+        Parameters
+        ----------
+        save_dir : str
+            Path to save output
 
-            save_dir (str): Path to save output
+        Returns
+        -------
 
         """
         # Setup state file
@@ -61,11 +65,15 @@ class DatasetGenerator(object):
         state_file.close()
 
     def output_observed(self, save_dir):
-        """ Output observed features
+        """Output observed features
 
-        Args:
+        Parameters
+        ----------
+        save_dir : str
+            Path to save output
 
-            save_dir (str): Path to save output
+        Returns
+        -------
 
         """
         # Setup
@@ -107,26 +115,33 @@ class DatasetGenerator(object):
         index_file.close()
 
     def output_features(self, save_dir):
-        """ Output features
+        """Output features
 
-        Args:
+        Parameters
+        ----------
+        save_dir : str
+            Path to save output
 
-            save_dir (str): Path to save output
+        Returns
+        -------
 
         """
         mat2csv(os.path.join(save_dir, "features.dat"), self.features)
 
     def calculate_circle_angular_velocity(self, r, v):
-        """ Calculate target circle angular velocity given a desired circle
+        """Calculate target circle angular velocity given a desired circle
         radius r and velocity v
 
-        Args:
+        Parameters
+        ----------
+        r : float
+            Desired circle radius
+        v : float
+            Desired trajectory velocity
 
-            r (float): Desired circle radius
-            v (float): Desired trajectory velocity
-
-        Returns:
-
+        Returns
+        -------
+        
             Target angular velocity to complete a circle of radius r and
             velocity v
 
@@ -136,7 +151,7 @@ class DatasetGenerator(object):
         return (2 * pi) / time
 
     def simulate_test_data(self):
-        """ Simulate test data """
+        """Simulate test data"""
         # Initialize states
         dt = 0.01
         time = 0.0
@@ -165,11 +180,15 @@ class DatasetGenerator(object):
             time += dt
 
     def generate_test_data(self, save_dir):
-        """ Generate test data
+        """Generate test data
 
-        Args:
+        Parameters
+        ----------
+        save_dir : str
+            Path to save output
 
-            save_dir (str): Path to save output
+        Returns
+        -------
 
         """
         # mkdir calibration directory

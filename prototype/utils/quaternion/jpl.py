@@ -6,14 +6,16 @@ from prototype.utils.linalg import skew
 
 
 def quatnorm(q):
-    """ Norm of JPL quaternion
+    """Norm of JPL quaternion
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (x, y, z, w)
-
-    Return:
-
+    Returns
+    -------
+    type
         Norm of quaternion (float)
 
     """
@@ -22,14 +24,16 @@ def quatnorm(q):
 
 
 def quatnormalize(q):
-    """ Normalize JPL quaternion
+    """Normalize JPL quaternion
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (x, y, z, w)
-
-    Return:
-
+    Returns
+    -------
+    type
         Normalized quaternion (np.array - 4x1)
 
     """
@@ -43,22 +47,24 @@ def quatnormalize(q):
 
 
 def quatconj(q):
-    """ Conjugate / inverse JPL quaternion
-
+    """Conjugate / inverse JPL quaternion
+    
     Source:
-
+    
         Page 4.
-
+    
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): Quaternion (x, y, z, w)
-
-    Return:
-
+    Returns
+    -------
+    type
         Quaternion conjugate (np.array - 4x1)
 
     """
@@ -67,23 +73,26 @@ def quatconj(q):
 
 
 def quatmul(p, q):
-    """ Muliply JPL quaternions
-
+    """Muliply JPL quaternions
+    
     Source:
-
+    
         Page 3.
-
+    
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
 
-    Args:
+    Parameters
+    ----------
+    p :
+        np
+    q :
+        np
 
-        p (np.array - 4x1): 1st Quaternion (x, y, z, w)
-        q (np.array - 4x1): 2nd Quaternion (x, y, z, w)
-
-    Return:
-
+    Returns
+    -------
+    type
         Product of quaternion multiplication (np.array - 4x1)
 
     """
@@ -97,22 +106,24 @@ def quatmul(p, q):
 
 
 def quat2rot(q):
-    """ JPL Quaternion to rotation matrix
-
+    """JPL Quaternion to rotation matrix
+    
     Source:
-
+    
         Page 9.
-
+    
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
 
-    Args:
+    Parameters
+    ----------
+    q :
+        np
 
-        q (np.array - 4x1): 1st Quaternion (x, y, z, w)
-
-    Return:
-
+    Returns
+    -------
+    type
         Product of quaternion multiplication
 
     """
@@ -136,14 +147,16 @@ def quat2rot(q):
 
 
 def Omega(w):
-    """ Omega function
+    """Omega function
 
-    Args:
+    Parameters
+    ----------
+    w : np.array
+        Angular velocity
 
-        w (np.array): Angular velocity
-
-    Returns:
-
+    Returns
+    -------
+    
         Differential form of an angular velocity (np.array)
 
     """
@@ -152,19 +165,23 @@ def Omega(w):
 
 
 def quatlcomp(q):
-    """ Quaternion left compound
-
+    """Quaternion left compound
+    
     Source:
-
+    
         Page 4.
-
+    
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
 
-    Args:
+    Parameters
+    ----------
+    q : np.array - 4x1
+        Quaternion (x, y, z, w)
 
-        q (np.array - 4x1): Quaternion (x, y, z, w)
+    Returns
+    -------
 
     """
     q1, q2, q3, q4 = q.ravel()

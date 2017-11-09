@@ -3,13 +3,19 @@ from numpy import eye
 
 
 class EKF(object):
-    """ Extended Kalman Filter
-
+    """Extended Kalman Filter
+    
     This class implements a generic EKF filter, the notation used in the code is
     baesd on:
-
+    
         Thrun, S., Burgard, W., & Fox, D. (2006). Probabilistic robotics.
         Cambridge, Mass: The MIT Press.
+
+    Parameters
+    ----------
+
+    Returns
+    -------
 
     """
     def __init__(self, **kwargs):
@@ -44,27 +50,40 @@ class EKF(object):
         self.Q = np.matrix(self.Q)
 
     def prediction_update(self, g, G, dt):
-        """ Prediction update
+        """Prediction update
 
-        Args:
+        Parameters
+        ----------
+        g : np.array
+            Process model
+        G : np.array
+            Derivative of process model
+        dt : float
+            Time difference
 
-            g (np.array): Process model
-            G (np.array): Derivative of process model
-            dt (float): Time difference
+        Returns
+        -------
 
         """
         self.mu_p = g
         self.S_p = G * self.S * G.T + self.R
 
     def measurement_update(self, y, h, H):
-        """ Measurement update
+        """Measurement update
 
-        Args:
+        Parameters
+        ----------
+        y : np.array
+            Measurement
+        h : np.array
+            Measurement model
+        H : np.array
+            Derivative of measurement model
+        dt : float
+            Time difference
 
-            y (np.array): Measurement
-            h (np.array): Measurement model
-            H (np.array): Derivative of measurement model
-            dt (float): Time difference
+        Returns
+        -------
 
         """
         K = self.S_p * H.T * (H * self.S_p * H.T + self.Q).I

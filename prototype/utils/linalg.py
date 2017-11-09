@@ -2,14 +2,16 @@ import numpy as np
 
 
 def skew(v):
-    """ Skew symmetric matrix
+    """Skew symmetric matrix
 
-    Args:
+    Parameters
+    ----------
+    v : np.array
+        vector of size 3
 
-        v (np.array): vector of size 3
-
-    Returns:
-
+    Returns
+    -------
+    
         Skew symetric matrix (np.matrix)
 
     """
@@ -19,38 +21,24 @@ def skew(v):
 
 
 def nullspace(A, atol=1e-13, rtol=0):
-    """ Compute an approximate basis for the nullspace of A.
-
+    """Compute an approximate basis for the nullspace of A.
+    
     The algorithm used by this function is based on the singular value
     decomposition of `A`.
 
     Parameters
     ----------
-    A : ndarray
-        A should be at most 2-D.  A 1-D array with length k will be treated
-        as a 2-D with shape (1, k)
+    A :
+        
+    atol :
+         (Default value = 1e-13)
+    rtol :
+         (Default value = 0)
 
-    atol : float
-        The absolute tolerance for a zero singular value.  Singular values
-        smaller than `atol` are considered to be zero.
+    Returns
+    -------
 
-    rtol : float
-        The relative tolerance.  Singular values less than rtol*smax are
-        considered to be zero, where smax is the largest singular value.
-
-    If both `atol` and `rtol` are positive, the combined tolerance is the
-    maximum of the two; that is::
-        tol = max(atol, rtol * smax)
-    Singular values smaller than `tol` are considered to be zero.
-
-    Return value
-    ------------
-    ns : ndarray
-        If `A` is an array with shape (m, k), then `ns` will be an array
-        with shape (k, n), where n is the estimated dimension of the
-        nullspace of `A`.  The columns of `ns` are a basis for the
-        nullspace; each element in numpy.dot(A, ns) will be approximately
-        zero.
+    
     """
 
     A = np.atleast_2d(A)
@@ -62,11 +50,15 @@ def nullspace(A, atol=1e-13, rtol=0):
 
 
 def enforce_psd(A):
-    """ Enforce Positive Semi-definite
+    """Enforce Positive Semi-definite
 
-    Args:
+    Parameters
+    ----------
+    A : np.array
+        Matrix to ensure positive semi-definite
 
-        A (np.array): Matrix to ensure positive semi-definite
+    Returns
+    -------
 
     """
     (rows, cols) = A.shape

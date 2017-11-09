@@ -6,7 +6,23 @@ import numpy as np
 
 
 def ackerman_model(x, u, L, dt):
-    """ Ackerman model """
+    """Ackerman model
+
+    Parameters
+    ----------
+    x :
+        
+    u :
+        
+    L :
+        
+    dt :
+        
+
+    Returns
+    -------
+
+    """
     g1 = x[0] + u[0] * cos(x[2]) * dt
     g2 = x[1] + u[0] * sin(x[2]) * dt
     g3 = x[2] + ((u[0] * tan(x[2])) / L) * dt

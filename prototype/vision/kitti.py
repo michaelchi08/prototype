@@ -8,12 +8,36 @@ from prototype.vision.vo import BasicVO
 
 
 def parse_data_dir(path):
+    """
+
+    Parameters
+    ----------
+    path :
+        
+
+    Returns
+    -------
+
+    """
     img_files = walkdir(path, ".png")
     nb_imgs = len(img_files)
     return (img_files, nb_imgs)
 
 
 def parse_ground_truth(data_path, sequence):
+    """
+
+    Parameters
+    ----------
+    data_path :
+        
+    sequence :
+        
+
+    Returns
+    -------
+
+    """
     # Build ground truth file path
     ground_truth_dir = os.path.realpath(data_path + "../poses")
     ground_truth_fname = os.path.join(ground_truth_dir, sequence + ".txt")
@@ -37,6 +61,19 @@ def parse_ground_truth(data_path, sequence):
 
 
 def get_scale(ground_truth, frame_id):
+    """
+
+    Parameters
+    ----------
+    ground_truth :
+        
+    frame_id :
+        
+
+    Returns
+    -------
+
+    """
     # Obtain prev pose
     pose_prev = ground_truth[frame_id - 1]
     x_prev, y_prev, z_prev = pose_prev
@@ -55,6 +92,23 @@ def get_scale(ground_truth, frame_id):
 
 
 def benchmark_mono_vo(data_path, sequence, vo, **kwargs):
+    """
+
+    Parameters
+    ----------
+    data_path :
+        
+    sequence :
+        
+    vo :
+        
+    **kwargs :
+        
+
+    Returns
+    -------
+
+    """
     map_size = kwargs.get("map_size", (600, 600))
     visualize = kwargs.get("visualize", False)
 

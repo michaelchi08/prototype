@@ -10,6 +10,19 @@ import matplotlib.pylab as plt
 
 
 def plot_error_ellipse(mean, cov):
+    """
+
+    Parameters
+    ----------
+    mean :
+        
+    cov :
+        
+
+    Returns
+    -------
+
+    """
     # Get eigenvalues and eigenvectors
     [eigenval, eigenvec] = eig(cov)
 

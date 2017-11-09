@@ -6,7 +6,7 @@ from prototype.utils.euler import rotx
 
 
 class TVec3:
-    """ Transform Vec3 """
+    """Transform Vec3"""
     def __init__(self, frame_to, frame_from, x):
         """ Constructor
 
@@ -21,29 +21,30 @@ class TVec3:
         self.x = x.reshape((3, 1))
 
     def data(self):
+        """ """
         return self.x
 
 
 class TPos(TVec3):
-    """ Transform Position """
+    """Transform Position"""
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class TVel(TVec3):
-    """ Transform Velocity """
+    """Transform Velocity"""
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class TAngVel(TVec3):
-    """ Transform Position """
+    """Transform Position"""
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class Transform:
-    """ Transform """
+    """Transform"""
     def __init__(self, frame_to, frame_from, **kwargs):
         """ Constructor
 
@@ -69,10 +70,14 @@ class Transform:
         self.t = self.t.reshape((3, 1))
 
     def data(self):
-        """ Obtain transform as a 4x4 homogeneous transform matrix
+        """Obtain transform as a 4x4 homogeneous transform matrix
 
-        Returns:
+        Parameters
+        ----------
 
+        Returns
+        -------
+        
             Homogenous transform matrix (np.array - 4x4)
 
         """

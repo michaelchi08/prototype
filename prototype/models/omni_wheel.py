@@ -7,7 +7,7 @@ from numpy.linalg import inv
 
 
 class OmniWheelModel(object):
-    """ Omni Wheel Motion Model """
+    """Omni Wheel Motion Model"""
 
     def __init__(self):
         self.x = np.array([0.0, 0.0, 0.0])  # State vector (x, y, theta)
@@ -15,7 +15,19 @@ class OmniWheelModel(object):
         self.radius = 0.25  # Radius of wheel
 
     def omni_wheel_model(self, u, dt):
-        """ Omni wheel model """
+        """Omni wheel model
+
+        Parameters
+        ----------
+        u :
+            
+        dt :
+            
+
+        Returns
+        -------
+
+        """
         # Wheel constraints
         J_1 = np.matrix([[0, 1, self.length],
                         [-cos(pi / 6), -sin(pi / 6), self.length],

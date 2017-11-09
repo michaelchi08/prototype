@@ -2,15 +2,18 @@ import os
 
 
 def walkdir(path, ext=None):
-    """ Walk directory
+    """Walk directory
 
-    Args:
+    Parameters
+    ----------
+    path : str
+        Path to walk
+    ext : str
+        Filter file extensions (Default value = None)
 
-        path (str): Path to walk
-        ext (str)[optional]: Filter file extensions
-
-    Returns:
-
+    Returns
+    -------
+    
         List of files
 
     """

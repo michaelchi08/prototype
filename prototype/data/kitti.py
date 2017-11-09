@@ -11,7 +11,17 @@ from prototype.utils.filesystem import walkdir
 
 
 def load_calib_file(filepath):
-    """ Load calibration file and parse into a python dictionary """
+    """Load calibration file and parse into a python dictionary
+
+    Parameters
+    ----------
+    filepath :
+        
+
+    Returns
+    -------
+
+    """
     data = {}
 
     with open(filepath, 'r') as f:
@@ -28,6 +38,7 @@ def load_calib_file(filepath):
 
 
 class VOSequence:
+    """ """
     def __init__(self, dataset_path, sequence):
         # Dataset path and information
         self.dataset_path = dataset_path
@@ -58,11 +69,15 @@ class VOSequence:
         self._load_ground_truth(self.dataset_path, self.sequence)
 
     def _load_time(self, sequence_data_path):
-        """ Load time data
+        """Load time data
 
-        Args:
+        Parameters
+        ----------
+        sequence_data_path : str
+            Path to where VO sequence data is
 
-            sequence_data_path (str): Path to where VO sequence data is
+        Returns
+        -------
 
         """
         time_file = open(join(sequence_data_path, "times.txt"), "r")
@@ -70,11 +85,15 @@ class VOSequence:
         time_file.close()
 
     def _load_calibration(self, sequence_data_path):
-        """ Load camera calibration data
+        """Load camera calibration data
 
-        Args:
+        Parameters
+        ----------
+        sequence_data_path : str
+            Path to where VO sequence data is
 
-            sequence_data_path (str): Path to where VO sequence data is
+        Returns
+        -------
 
         """
         calib_file = open(join(sequence_data_path, "calib.txt"), "r")
@@ -100,14 +119,18 @@ class VOSequence:
         calib_file.close()
 
     def _load_image_file_names(self, sequence_data_path):
-        """ Load image files names
-
+        """Load image files names
+        
         Note: this function only obtains the image file names, it does not load
         images to memory
 
-        Args:
+        Parameters
+        ----------
+        sequence_data_path : str
+            Path to where VO sequence data is
 
-            sequence_data_path (str): Path to where VO sequence data is
+        Returns
+        -------
 
         """
         image_0_path = join(sequence_data_path, "image_0")
@@ -124,11 +147,17 @@ class VOSequence:
         )
 
     def _load_ground_truth(self, dataset_path, sequence):
-        """ Load ground truth
+        """Load ground truth
 
-        Args:
+        Parameters
+        ----------
+        sequence : str
+            VO sequence data
+        dataset_path :
+            
 
-            sequence (str): VO sequence data
+        Returns
+        -------
 
         """
         # Build ground truth file path
@@ -153,6 +182,7 @@ class VOSequence:
 
 
 class RawSequence:
+    """ """
     def __init__(self, base_dir, date, drive):
         # Dataset path and information
         self.base_dir = base_dir
@@ -184,14 +214,18 @@ class RawSequence:
         self._load_timestamps()
 
     def _load_image_file_names(self):
-        """ Load image files names
-
+        """Load image files names
+        
         Note: this function only obtains the image file names, it does not load
         images to memory
 
-        Args:
+        Parameters
+        ----------
+        sequence_data_path : str
+            Path to where VO sequence data is
 
-            sequence_data_path (str): Path to where VO sequence data is
+        Returns
+        -------
 
         """
         data_path = join(self.base_dir, self.date, self.drive_dir)
@@ -213,7 +247,7 @@ class RawSequence:
                                  int("".join(filter(str.isdigit, f))))
 
     def _load_oxts_data(self):
-        """ Load Oxts data """
+        """Load Oxts data"""
         path = join(self.base_dir, self.date, self.drive_dir, "oxts", "data")
         oxts_files = walkdir(path, ".txt")
         oxts_files.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
@@ -247,7 +281,7 @@ class RawSequence:
             self.oxts.append(data)
 
     def _load_calibration_files(self):
-        """ Load calibration files """
+        """Load calibration files"""
         self.calib_cam2cam = load_calib_file(join(self.base_dir, self.date,
                                                   "calib_cam_to_cam.txt"))
         self.calib_imu2velo = load_calib_file(join(self.base_dir, self.date,
@@ -256,7 +290,7 @@ class RawSequence:
                                                    "calib_velo_to_cam.txt"))
 
     def _load_timestamps(self):
-        """ Load timestamps from file """
+        """Load timestamps from file"""
         timestamp_file = join(self.base_dir,
                               self.date,
                               self.drive_dir,
@@ -273,6 +307,7 @@ class RawSequence:
                 self.timestamps.append(t)
 
     def plot_accelerometer(self):
+        """ """
         accel_x = [data["ax"] for data in self.oxts]
         accel_y = [data["ay"] for data in self.oxts]
         accel_z = [data["az"] for data in self.oxts]
@@ -299,6 +334,7 @@ class RawSequence:
         fig.tight_layout()
 
     def plot_gyroscope(self):
+        """ """
         gyro_x = [data["wx"] for data in self.oxts]
         gyro_y = [data["wy"] for data in self.oxts]
         gyro_z = [data["wz"] for data in self.oxts]
@@ -327,6 +363,7 @@ class RawSequence:
         fig.tight_layout()
 
     def plot_ground_truth(self):
+        """ """
         # Home point
         lat_ref = self.oxts[0]['lat']
         lon_ref = self.oxts[0]['lon']

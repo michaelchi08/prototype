@@ -3,6 +3,19 @@ import shutil
 
 
 def download(url, output_dir):
+    """
+
+    Parameters
+    ----------
+    url :
+        
+    output_dir :
+        
+
+    Returns
+    -------
+
+    """
     # pre-check
     if os.path.isdir(output_dir) is False:
         raise RuntimeError("Invalid output dir [%s]" % output_dir)
@@ -22,6 +35,17 @@ def download(url, output_dir):
 
 
 def download_kitti_vo_dataset(output_dir):
+    """
+
+    Parameters
+    ----------
+    output_dir :
+        
+
+    Returns
+    -------
+
+    """
     base_url = "http://kitti.is.tue.mpg.de/kitti"
     files = ["data_odometry_calib.zip",
              "data_odometry_gray.zip",

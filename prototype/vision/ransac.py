@@ -3,7 +3,7 @@ from numpy.matlib import repmat
 
 
 class RANSAC:
-    """ RANSAC """
+    """RANSAC"""
 
     def __init__(self):
         self.max_iter = 100
@@ -11,11 +11,15 @@ class RANSAC:
         self.inlier_ratio = 0.2
 
     def sample(self, data):
-        """ Random sample 2 points to form a random consensus
+        """Random sample 2 points to form a random consensus
 
-        Args:
+        Parameters
+        ----------
+        data : np.array
+            Data
 
-            data (np.array): Data
+        Returns
+        -------
 
         """
         sample = []
@@ -27,16 +31,21 @@ class RANSAC:
         return np.array(sample)
 
     def compute_distance(self, sample, data):
-        """ Compute distance between line formed by sample and between data
+        """Compute distance between line formed by sample and between data
 
-        Args:
+        Parameters
+        ----------
+        sample : np.array
+            Random 2 points for form a random consensus
+        data : np.array
+            Data
 
-            sample (np.array): Random 2 points for form a random consensus
-            data (np.array): Data
-
-        Returns:
-
-            dist (np.array): Vector of distance between data point and line
+        Returns
+        -------
+        dist : np.array
+            Vector of distance between data point and line
+        dist : np.array
+            Vector of distance between data point and line
             formed by 2 random points
 
         """
@@ -57,15 +66,19 @@ class RANSAC:
         return dist
 
     def compute_inliers(self, dist):
-        """ Compute inliers
+        """Compute inliers
 
-        Args:
+        Parameters
+        ----------
+        dist : np.array
+            Distance vector
 
-            dist (np.array): Distance vector
-
-        Returns:
-
-            (inlier_indicies, nb_inliers): Inlier indicies and number of
+        Returns
+        -------
+        inlier_indicies
+            Inlier indicies and number of
+        inlier_indicies
+            Inlier indicies and number of
             inliers
 
         """
@@ -74,11 +87,15 @@ class RANSAC:
         return (inlier_indicies, nb_inliers)
 
     def optimize(self, data):
-        """ Optimize
+        """Optimize
 
-        Args:
+        Parameters
+        ----------
+        data : np.array
+            Data
 
-            data (np.array): Data
+        Returns
+        -------
 
         """
         inlier_threshold = round(self.inlier_ratio * data.shape[1])
