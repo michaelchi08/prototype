@@ -374,7 +374,7 @@ class FeatureTracker:
     def __init__(self):
         """ Constructor """
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=100, nlevels=8)
+        self.detector = ORBDetector(nfeatures=50, nlevels=2)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         # Counters

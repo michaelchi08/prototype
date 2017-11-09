@@ -29,9 +29,11 @@ def nullspace(A, atol=1e-13, rtol=0):
     A : ndarray
         A should be at most 2-D.  A 1-D array with length k will be treated
         as a 2-D with shape (1, k)
+
     atol : float
         The absolute tolerance for a zero singular value.  Singular values
         smaller than `atol` are considered to be zero.
+
     rtol : float
         The relative tolerance.  Singular values less than rtol*smax are
         considered to be zero, where smax is the largest singular value.

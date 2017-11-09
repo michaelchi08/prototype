@@ -40,7 +40,11 @@ class IMUState:
         self.p_G = np.array(p_G).reshape((3, 1))
 
         self.w_G = np.array([[0.0], [0.0], [0.0]])
-        self.G_g = np.array([[0.0], [0.0], [9.81]])
+        self.G_g = np.array([[0.0], [9.81], [0.0]])
+
+    @property
+    def size(self):
+        return 15  # Number of elements in state vector
 
     def update(self, a_m, w_m, dt):
         """ IMU state update """
@@ -115,6 +119,14 @@ class CameraState:
         """
         self.q_CG = np.array(q_CG).reshape((4, 1))
         self.p_G = np.array(p_G).reshape((3, 1))
+        self.tracks = []
+
+    @property
+    def size(self):
+        return 6  # Number of elements in state vector
+
+    def add_feature_track(self, track):
+        self.tracks.append(track)
 
     def correct(self, dX):
         """ Correct camera state
@@ -196,7 +208,7 @@ class MSCKF:
         self.ext_q_CI = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
 
         # Feature track settings
-        self.min_track_length = 3
+        self.min_track_length = 2
 
         # Covariance matrices
         self.P_imu = I(15)
@@ -309,8 +321,8 @@ class MSCKF:
             H_x_j jacobian matrix (np.matrix - 2*M x (12+6)N)
 
         """
-        X_imu_sz = 15               # Size of imu state
-        X_cam_sz = 6                # Size of cam state
+        X_imu_size = self.imu_state.size      # Size of imu state
+        X_cam_size = self.cam_states[0].size  # Size of cam state
         N = len(self.cam_states)    # Number of camera states
         M = track.tracked_length()  # Length of feature track
 
@@ -318,7 +330,7 @@ class MSCKF:
         H_f_j = zeros((2 * M, 3))
 
         # Measurement jacobian w.r.t state
-        H_x_j = zeros((2 * M, X_imu_sz + X_cam_sz * N))
+        H_x_j = zeros((2 * M, X_imu_size + X_cam_size * N))
 
         # Pose index, minus 1 because track is not observed in last cam state
         pose_idx = N - M - 1
@@ -336,15 +348,15 @@ class MSCKF:
                                          [0.0, 1.0, -Y / Z]])
 
             # Row start and end index
-            rs = 2 * i       # Row start index
-            re = 2 * i + 2   # Row end index
+            rs = 2 * i
+            re = 2 * i + 2
 
             # Column start and end index
-            cs_dhdq = X_imu_sz + (X_cam_sz * pose_idx)      # start for dh / dq
-            ce_dhdq = X_imu_sz + (X_cam_sz * pose_idx) + 3  # end for dh / dq
+            cs_dhdq = X_imu_size + (X_cam_size * pose_idx)
+            ce_dhdq = X_imu_size + (X_cam_size * pose_idx) + 3
 
-            cs_dhdp = X_imu_sz + (X_cam_sz * pose_idx) + 3  # start for dh / dp
-            ce_dhdp = X_imu_sz + (X_cam_sz * pose_idx) + 6  # end for dh / dp
+            cs_dhdp = X_imu_size + (X_cam_size * pose_idx) + 3
+            ce_dhdp = X_imu_size + (X_cam_size * pose_idx) + 6
 
             # H_f_j measurement jacobian w.r.t feature
             H_f_j[rs:re, :] = dot(dhdg, C_CG)
@@ -359,7 +371,15 @@ class MSCKF:
         return H_f_j, H_x_j
 
     def prediction_update(self, a_m, w_m, dt):
-        """ IMU state update """
+        """ IMU state update
+
+        Args:
+
+            a_m (np.array): Accelerometer measurement
+            w_m (np.array): Gyroscope measurement
+            dt (float): Time difference (s)
+
+        """
         # Propagate IMU state
         a_hat, w_hat = self.imu_state.update(a_m, w_m, dt)
 
@@ -420,7 +440,7 @@ class MSCKF:
         # Gauss Newton optimization
         r_Jprev = float("inf")  # residual jacobian
 
-        for k in range(10):
+        for k in range(20):
             N = len(track_cam_states)
             r = zeros((2 * N, 1))
             J = zeros((2 * N, 3))
@@ -534,8 +554,8 @@ class MSCKF:
         # Calculate residual vector
         for i in range(len(track_cam_states)):
             # Transform feature position from global to camera frame at pose i
-            C_C_G = C(track_cam_states[i].q_CG)
-            p_C_f = dot(C_C_G, (p_G_f - track_cam_states[i].p_G))
+            C_CG = C(track_cam_states[i].q_CG)
+            p_C_f = dot(C_CG, (p_G_f - track_cam_states[i].p_G))
 
             # Calculate predicted measurement at pose i of feature track j
             z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0]],
@@ -566,6 +586,9 @@ class MSCKF:
         pose estimate when a new image is recorded
 
         """
+        X_imu_size = self.imu_state.size
+        X_cam_size = self.cam_states[0].size
+
         # Camera pose Jacobian
         N = len(self.cam_states)
         J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, N)
@@ -574,11 +597,11 @@ class MSCKF:
         P = self.P()
 
         # Augment MSCKF covariance matrix (with new camera state)
-        X = np.block([[I(15 + 6 * N)], [J]])
+        X = np.block([[I(X_imu_size + X_cam_size * N)], [J]])
         P = dot(X, dot(P, X.T))
-        self.P_imu = P[0:15, 0:15]
-        self.P_cam = P[15:, 15:]
-        self.P_imu_cam = P[0:15, 15:]
+        self.P_imu = P[0:X_imu_size, 0:X_imu_size]
+        self.P_cam = P[X_imu_size:, X_imu_size:]
+        self.P_imu_cam = P[0:X_imu_size, X_imu_size:]
 
         # Add new camera state to sliding window by using current IMU pose
         # estimate to calculate camera pose
@@ -661,16 +684,9 @@ class MSCKF:
                         [zeros((R_o_j.shape[0], R_o.shape[1])), R_o_j]
                     ])
 
-        return H_o, r_o, R_o
-
-    def measurement_update(self, tracks):
-        # Add a camera state to state vector
-        self.augment_state()
-
-        # Calculate residuals
-        H_o, r_o, R_o = self.calculate_residuals(tracks)
+        # No residuals, do not continue
         if H_o is None and r_o is None and R_o is None:
-            return
+            return (None, None, None)
 
         # Perform QR decomposition to reduce computation in actual EKF update,
         # since R_o for 10 features seen in 10 camera poses each would yield a
@@ -685,22 +701,45 @@ class MSCKF:
         r_n = dot(Q_1.T, r_o)
         R_n = dot(Q_1.T, dot(R_o, Q_1))
 
+        return T_H, r_n, R_n
+
+    def prune_states(self):
+        # Find all camera states with no tracked landmarks
+        prune_indicies = []
+        for i in range(len(self.cam_states)):
+            if len(self.cam_states[i].tracks) == 0:
+                prune_indicies.append(i)
+
+    def measurement_update(self, tracks):
+        X_imu_size = self.imu_state.size
+        X_cam_size = self.cam_states[0].size
+
+        # Add a camera state to state vector
+        self.augment_state()
+
+        # Calculate residuals
+        T_H, r_n, R_n = self.calculate_residuals(tracks)
+        if T_H is None and r_n is None and R_n is None:
+            return
+
         # Calculate Kalman gain
         K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
 
         # State correction
         dX = dot(K, r_n)
         # -- Correct IMU state
-        dX_imu = dX[0:15]
+        dX_imu = dX[0:X_imu_size]
         self.imu_state.correct(dX_imu)
         # -- Correct camera states
         for i in range(len(self.cam_states)):
-            dX_cam = dX[15 + 6 * i:15 + 6 * i + 6]
+            rs = X_imu_size + X_cam_size * i
+            re = X_imu_size + X_cam_size * i + X_cam_size
+            dX_cam = dX[rs:re]
             self.cam_states[i].correct(dX_cam)
 
         # Covariance correction
-        A = I(15 + 6 * len(self.cam_states)) - dot(K, T_H)
+        A = I(X_imu_size + X_cam_size * len(self.cam_states)) - dot(K, T_H)
         P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
-        self.P_imu = P_corrected[0:15, 0:15]
-        self.P_cam = P_corrected[15:, 15:]
-        self.P_imu_cam = P_corrected[0:15, 15:]
+        self.P_imu = P_corrected[0:X_imu_size, 0:X_imu_size]
+        self.P_cam = P_corrected[X_imu_size:, X_imu_size:]
+        self.P_imu_cam = P_corrected[0:X_imu_size, X_imu_size:]

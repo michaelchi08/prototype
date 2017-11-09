@@ -94,7 +94,7 @@ def triangulate(x1, x2, P1, P2):
         Homogeneous 3D points as a 4xN matrix (np.array)
 
     """
-    # pre-check
+    # Pre-check
     if x1.shape[0] != 2 or x2.shape[0] != 2:
         raise RuntimeError("Input is not a 2xN matrix")
     elif x1.shape != x2.shape:
