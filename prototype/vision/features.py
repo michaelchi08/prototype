@@ -428,12 +428,41 @@ class LKFeatureTracker:
 
 
 class FeatureTracker:
-    """Feature Tracker"""
+    """Feature Tracker
+
+    Attributes
+    ----------
+    detector :
+        Feature detector
+    matcher :
+        Feature matcher
+
+    counter_frame_id : int
+        Counter Frame ID
+    counter_track_id : int
+        Counter Track ID
+
+    tracks_tracking : :obj`list` of :obj`int`
+        List of feature track id
+    tracks_lost : :obj`list` of :obj`int`
+        List of lost feature track id
+    tracks_buffer : :obj`dict` of :obj`FeatureTrack`
+        Tracks buffer
+    max_buffer_size : int
+        Max buffer size (Default: 5000)
+
+    img_ref : np.array
+        Reference image
+    fea_ref :
+        Reference feature
+    unmatched : :obj`list` of `Feature`
+        List of features
+
+    """
 
     def __init__(self):
-        """ Constructor """
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=50, nlevels=2)
+        self.detector = ORBDetector(nfeatures=40, nlevels=1,  edgeThreshold=100)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
         # Counters
@@ -459,9 +488,6 @@ class FeatureTracker:
         frame : np.array
             Frame
 
-        Returns
-        -------
-
         """
         self.img_ref = frame
         self.fea_ref = self.detect(frame)
@@ -479,6 +505,7 @@ class FeatureTracker:
 
         Returns
         -------
+        features : :obj`list` of :obj`Feature`
 
         """
         features = self.detector.detect(frame)
@@ -500,7 +527,7 @@ class FeatureTracker:
 
         Returns
         -------
-
+        result :
             (feature track id, f0 index, f1 index)
 
         """
@@ -528,7 +555,7 @@ class FeatureTracker:
         dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
         src_pts = src_pts.reshape(-1, 1, 2)
         dst_pts = dst_pts.reshape(-1, 1, 2)
-        M, mask = cv2.findFundamentalMat(src_pts, dst_pts)
+        M, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.9999999)
         match_mask = mask.ravel().tolist()
 
         # Remove outliers
@@ -566,9 +593,6 @@ class FeatureTracker:
             Reference features
         f1 : List of Features
             Current features
-
-        Returns
-        -------
 
         """
         tracks_updated = {}
@@ -629,19 +653,21 @@ class FeatureTracker:
             Reference image
         img_cur : np.array
             Current image
-        f0 : List of Features
+        f0 : :obj`list` of :obj`Feature`
             Reference features
-        f1 : List of Features
+        f1 : :obj`list` of :obj`Feature`
             Current features
-        matches : Tuple of float
+        matches : :obj`tuple` of :obj`float`
             (feature track id, f0 index, f1 index)
 
         Returns
         -------
+        match_img : np.array
+            Match image
 
         """
         # Vertically stack images with latest frame on top
-        img = np.vstack((img_cur, img_ref))
+        match_img = np.vstack((img_cur, img_ref))
 
         # Draw matches
         for m in matches:
@@ -651,19 +677,19 @@ class FeatureTracker:
 
             # Point 1
             p1 = np.array(kp1)
-            p1[1] += img.shape[0] / 2.0
+            p1[1] += match_img.shape[0] / 2.0
             p1 = (int(p1[0]), int(p1[1]))
 
             # Point 2
             p2 = np.array(kp2)
             p2 = (int(p2[0]), int(p2[1]))
 
-            cv2.line(img, p2, p1, (0, 255, 0), 1)
+            cv2.line(match_img, p2, p1, (0, 255, 0), 1)
 
-        return img
+        return match_img
 
     def remove_lost_tracks(self):
-        """ """
+        """Remove lost tracks"""
         lost_tracks = []
 
         # Remove tracks from self.tracks_buffer
@@ -687,9 +713,6 @@ class FeatureTracker:
         debug : bool
             Debug mode (Default value = False)
 
-        Returns
-        -------
-
         """
         # Initialize tracker
         if self.fea_ref is None:
@@ -708,6 +731,7 @@ class FeatureTracker:
                                     self.fea_ref, fea_cur,
                                     matches)
             cv2.imshow("Matches", img)
+            cv2.waitKey(0)
 
         # Update
         self.update_feature_tracks(matches, self.fea_ref, fea_cur)

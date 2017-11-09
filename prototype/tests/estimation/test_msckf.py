@@ -194,6 +194,8 @@ class MSCKFTest(unittest.TestCase):
         # Setup
         debug = True
         data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        K = data.calib_cam2cam["K_00"].reshape((3, 3))
+        cam_model = PinholeCameraModel(1242, 375, K)
         tracker = FeatureTracker()
 
         # MSCKF
@@ -205,12 +207,11 @@ class MSCKFTest(unittest.TestCase):
                       n_wg=0.001 * np.ones(3),
                       n_wa=0.001 * np.ones(3),
                       imu_v_G=T_rdf_flu * v0,
-                      cam_model=self.cam_model)
+                      cam_model=cam_model)
 
         # Home point
         lat_ref = data.oxts[0]['lat']
         lon_ref = data.oxts[0]['lon']
-        N = len(data.oxts)
 
         # Data storage
         t = [data.timestamps[0]]
@@ -227,8 +228,7 @@ class MSCKFTest(unittest.TestCase):
         # Loop through data
         t_prev = data.timestamps[0]
         for i in range(1, len(data.oxts)):
-        # for i in range(1, 13):
-            print(i)
+        # for i in range(1, 20):
             # Calculate position relative to home point
             lat = data.oxts[i]['lat']
             lon = data.oxts[i]['lon']
@@ -236,6 +236,7 @@ class MSCKFTest(unittest.TestCase):
 
             # Track features
             img = cv2.imread(data.image_00_files[i])
+            # tracker.update(img, True)
             tracker.update(img)
             tracks = tracker.remove_lost_tracks()
 
@@ -253,7 +254,7 @@ class MSCKFTest(unittest.TestCase):
             t_prev = t_now
 
             # MSCKF prediction and measurement update
-            msckf.prediction_update(a_m, -w_m, dt)
+            msckf.prediction_update(a_m, w_m, dt)
             msckf.measurement_update(tracks)
 
             # Show image frame

@@ -41,21 +41,24 @@ class RANSACTest(unittest.TestCase):
         self.ransac.compute_inliers(dist)
 
     def test_optimize(self):
-        m_pred, c_pred = self.ransac.optimize(self.data)
-
-        print("m_true: ", self.m_true)
-        print("m_pred: ", m_pred)
-        print("c_true: ", self.c_true)
-        print("c_pred: ", c_pred)
-
-        self.assertTrue(abs(m_pred - self.m_true) < 0.5)
-        self.assertTrue(abs(c_pred - self.c_true) < 0.5)
-
-        # Plot RANSAC optimized result
         debug = False
-        if debug:
-            x = np.linspace(0.0, 10.0, num=100)
-            y = m_pred * x + c_pred
-            plt.scatter(self.data[0, :], self.data[1, :])
-            plt.plot(x, y)
-            plt.show()
+
+        for i in range(10):
+            m_pred, c_pred, mask = self.ransac.optimize(self.data)
+            if debug:
+                print("m_true: ", self.m_true)
+                print("m_pred: ", m_pred)
+                print("c_true: ", self.c_true)
+                print("c_pred: ", c_pred)
+
+            self.assertTrue(abs(m_pred - self.m_true) < 0.5)
+            self.assertTrue(abs(c_pred - self.c_true) < 0.5)
+
+            # Plot RANSAC optimized result
+            debug = False
+            if debug:
+                x = np.linspace(0.0, 10.0, num=100)
+                y = m_pred * x + c_pred
+                plt.scatter(self.data[0, :], self.data[1, :])
+                plt.plot(x, y)
+                plt.show()

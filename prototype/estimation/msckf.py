@@ -53,6 +53,7 @@ class IMUState:
         Gravitational acceleration
 
     """
+
     def __init__(self, q_IG, b_g, v_G, b_a, p_G):
         self.q_IG = np.array(q_IG).reshape((4, 1))
         self.b_g = np.array(b_g).reshape((3, 1))
@@ -166,6 +167,7 @@ class CameraState:
         Feature tracks
 
     """
+
     def __init__(self, q_CG, p_G):
         self.q_CG = np.array(q_CG).reshape((4, 1))
         self.p_G = np.array(p_G).reshape((3, 1))
@@ -177,7 +179,7 @@ class CameraState:
         return 6  # Number of elements in state vector
 
     def add_feature_track(self, track):
-        """ Add feature track
+        """Add feature track
 
         Parameters
         ----------
@@ -250,6 +252,7 @@ class MSCKF:
         IMU camera covariance matrix
 
     """
+
     def __init__(self, **kwargs):
         # IMU settings
         # -- IMU noise vector
@@ -286,7 +289,7 @@ class MSCKF:
         self.ext_q_CI = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
 
         # Feature track settings
-        self.min_track_length = 2
+        self.min_track_length = 6
 
         # Covariance matrices
         self.P_imu = I(15)
@@ -401,6 +404,10 @@ class MSCKF:
 
         return P
 
+    def N(self):
+        """Number of camera states"""
+        return len(self.cam_states)
+
     def H(self, track, track_cam_states, p_G_f):
         """Form the Jacobian measurement matrix
 
@@ -443,6 +450,10 @@ class MSCKF:
             p_G_C = track_cam_states[i].p_G
             p_C_f = dot(C_CG, (p_G_f - p_G_C))
             X, Y, Z = p_C_f.ravel()
+            print()
+            print(p_G_C)
+            print(p_C_f)
+            print()
 
             # dh / dg
             dhdg = (1.0 / Z) * np.array([[1.0, 0.0, -X / Z],
@@ -521,7 +532,7 @@ class MSCKF:
             Estimated feature position in global frame
         k : int
             Optimized over k iterations
-        r : np.array - size 2Nx1
+        r : np.array - 2Nx1
             Residual np.array over all camera states
 
         """
@@ -675,8 +686,8 @@ class MSCKF:
             p_C_f = dot(C_CG, (p_G_f - track_cam_states[i].p_G))
 
             # Calculate predicted measurement at pose i of feature track j
-            z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0]],
-                                  [p_C_f[1, 0] / p_C_f[2, 0]]])
+            z_hat_i_j = np.array([[p_C_f[0, 0] / p_C_f[2, 0] + 1e-2],
+                                  [p_C_f[1, 0] / p_C_f[2, 0] + 1e-2]])
 
             # Convert measurment to normalized pixel coordinates
             z = track.track[i].pt
@@ -707,14 +718,13 @@ class MSCKF:
         X_cam_size = self.cam_states[0].size
 
         # Camera pose Jacobian
-        N = len(self.cam_states)
-        J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, N)
+        J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, self.N())
 
         # Build covariance matrix (without new camera state)
         P = self.P()
 
         # Augment MSCKF covariance matrix (with new camera state)
-        X = np.block([[I(X_imu_size + X_cam_size * N)], [J]])
+        X = np.block([[I(X_imu_size + X_cam_size * self.N())], [J]])
         P = dot(X, dot(P, X.T))
         self.P_imu = P[0:X_imu_size, 0:X_imu_size]
         self.P_cam = P[X_imu_size:, X_imu_size:]
@@ -723,7 +733,7 @@ class MSCKF:
         # Add new camera state to sliding window by using current IMU pose
         # estimate to calculate camera pose
         cam_q_CG = quatmul(self.ext_q_CI, self.imu_state.q_IG)
-        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC) # noqa
+        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC)  # noqa
         self.cam_states.append(CameraState(cam_q_CG, cam_p_G))
 
     def residualize_track(self, track):
@@ -749,6 +759,7 @@ class MSCKF:
             return None
 
         # Get last M camera states where feature track was tracked
+        # try:
         M = track.tracked_length()
         track_cam_states = self.cam_states[-M:]
 
@@ -768,7 +779,7 @@ class MSCKF:
 
         # Form the covariance matrix of different feature observations
         sigma_img = repmat(np.array([self.n_u, self.n_v]),
-                           1, int(np.size(r_j) / 2))
+                            1, int(np.size(r_j) / 2))
         R_j = diag(sigma_img.ravel())
 
         # Perform null space trick to decorrelate feature position error away
@@ -779,6 +790,10 @@ class MSCKF:
         H_o_j = dot(A_j.T, H_x_j)
         r_o_j = dot(A_j.T, r_j)
         R_o_j = dot(A_j.T, dot(R_j, A_j))
+
+        # except Exception:
+        #     exit(0)
+        #     return None
 
         return H_o_j, r_o_j, R_o_j
 
@@ -872,27 +887,27 @@ class MSCKF:
 
         # Calculate residuals
         T_H, r_n, R_n = self.calculate_residuals(tracks)
-        if T_H is None and r_n is None and R_n is None:
-            return
+        # if T_H is None and r_n is None and R_n is None:
+        #     return
 
-        # Calculate Kalman gain
-        K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
-
-        # State correction
-        dX = dot(K, r_n)
-        # -- Correct IMU state
-        dX_imu = dX[0:X_imu_size]
-        self.imu_state.correct(dX_imu)
-        # -- Correct camera states
-        for i in range(len(self.cam_states)):
-            rs = X_imu_size + X_cam_size * i
-            re = X_imu_size + X_cam_size * i + X_cam_size
-            dX_cam = dX[rs:re]
-            self.cam_states[i].correct(dX_cam)
-
-        # Covariance correction
-        A = I(X_imu_size + X_cam_size * len(self.cam_states)) - dot(K, T_H)
-        P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
-        self.P_imu = P_corrected[0:X_imu_size, 0:X_imu_size]
-        self.P_cam = P_corrected[X_imu_size:, X_imu_size:]
-        self.P_imu_cam = P_corrected[0:X_imu_size, X_imu_size:]
+        # # Calculate Kalman gain
+        # K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
+        #
+        # # State correction
+        # dX = dot(K, r_n)
+        # # -- Correct IMU state
+        # dX_imu = dX[0:X_imu_size]
+        # self.imu_state.correct(dX_imu)
+        # # -- Correct camera states
+        # for i in range(self.N()):
+        #     rs = X_imu_size + X_cam_size * i
+        #     re = X_imu_size + X_cam_size * i + X_cam_size
+        #     dX_cam = dX[rs:re]
+        #     self.cam_states[i].correct(dX_cam)
+        #
+        # # Covariance correction
+        # A = I(X_imu_size + X_cam_size * self.N()) - dot(K, T_H)
+        # P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
+        # self.P_imu = P_corrected[0:X_imu_size, 0:X_imu_size]
+        # self.P_cam = P_corrected[X_imu_size:, X_imu_size:]
+        # self.P_imu_cam = P_corrected[0:X_imu_size, X_imu_size:]

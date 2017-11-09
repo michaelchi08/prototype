@@ -15,11 +15,13 @@ def load_calib_file(filepath):
 
     Parameters
     ----------
-    filepath :
-        
+    filepath : str
+        File path to calibration file
 
     Returns
     -------
+
+        Dictionary of calibration file
 
     """
     data = {}
@@ -38,7 +40,7 @@ def load_calib_file(filepath):
 
 
 class VOSequence:
-    """ """
+    """VO data sequnce"""
     def __init__(self, dataset_path, sequence):
         # Dataset path and information
         self.dataset_path = dataset_path
@@ -76,9 +78,6 @@ class VOSequence:
         sequence_data_path : str
             Path to where VO sequence data is
 
-        Returns
-        -------
-
         """
         time_file = open(join(sequence_data_path, "times.txt"), "r")
         self.time = np.array([float(line) for line in time_file])
@@ -91,9 +90,6 @@ class VOSequence:
         ----------
         sequence_data_path : str
             Path to where VO sequence data is
-
-        Returns
-        -------
 
         """
         calib_file = open(join(sequence_data_path, "calib.txt"), "r")
@@ -120,7 +116,7 @@ class VOSequence:
 
     def _load_image_file_names(self, sequence_data_path):
         """Load image files names
-        
+
         Note: this function only obtains the image file names, it does not load
         images to memory
 
@@ -128,9 +124,6 @@ class VOSequence:
         ----------
         sequence_data_path : str
             Path to where VO sequence data is
-
-        Returns
-        -------
 
         """
         image_0_path = join(sequence_data_path, "image_0")
@@ -153,11 +146,8 @@ class VOSequence:
         ----------
         sequence : str
             VO sequence data
-        dataset_path :
-            
-
-        Returns
-        -------
+        dataset_path : str
+            Datatset path
 
         """
         # Build ground truth file path
@@ -182,7 +172,64 @@ class VOSequence:
 
 
 class RawSequence:
-    """ """
+    """Raw data sequence
+
+    Attributes
+    ----------
+    base_dir : str
+        Base directory
+    date : str
+        Raw data sequence date
+    drive : str
+        Raw data drive sequence
+
+    image_00_files : :obj`list` of :obj`str`
+        List of image file string for camera 0
+    image_01_files : :obj`list` of :obj`str`
+        List of image file string for camera 1
+    image_02_files : :obj`list` of :obj`str`
+        List of image file string for camera 2
+    image_03_files : :obj`list` of :obj`str`
+        List of image file string for camera 3
+
+    oxts : :obj`list` of :obj`dict`
+        Where each element
+
+            data = {
+                "lat": data[0], "lon": data[1], "alt": data[2],
+                "roll": data[3], "pitch": data[4], "yaw": data[5],
+                "vn": data[6], "ve": data[7],
+                "vf": data[8], "vl": data[9], "vu": data[10],
+                "ax": data[11], "ay": data[12], "az": data[13],
+                "af": data[14], "al": data[15], "au": data[16],
+                "wx": data[17], "wy": data[18], "wz": data[19],
+                "wf": data[20], "wl": data[21], "wu": data[22],
+                "pos_accuracy": data[23], "vel_accuracy": data[24],
+                "navstat": data[25], "numsats": data[26],
+                "posmode": data[27], "velmode": data[28],
+                "orimode": data[29]
+            }
+
+    calib_camcam : str
+        Camera to camera calibration
+    calib_imu2velo : str
+        IMU to Velodyne calibration
+    calib_velo2cam : str
+        Velodyne to camera calibration
+
+    timestamps : :obj`list` of :obj`DateTime`
+        List of `DateTime` timestamps
+
+    Parameters
+    ----------
+    base_dir : str
+        Base directory
+    date : str
+        Raw data sequence date
+    drive : str
+        Raw data drive sequence
+
+    """
     def __init__(self, base_dir, date, drive):
         # Dataset path and information
         self.base_dir = base_dir
@@ -215,7 +262,7 @@ class RawSequence:
 
     def _load_image_file_names(self):
         """Load image files names
-        
+
         Note: this function only obtains the image file names, it does not load
         images to memory
 
@@ -223,9 +270,6 @@ class RawSequence:
         ----------
         sequence_data_path : str
             Path to where VO sequence data is
-
-        Returns
-        -------
 
         """
         data_path = join(self.base_dir, self.date, self.drive_dir)

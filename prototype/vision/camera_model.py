@@ -5,9 +5,7 @@ from prototype.vision.common import projection_matrix
 
 
 class PinholeCameraModel(object):
-    def __init__(self, image_width, image_height, K, hz=None):
-    """Constructor
-
+    """ Pinhole camera model
     Parameters
     ----------
     image_width : int
@@ -19,10 +17,8 @@ class PinholeCameraModel(object):
     hz : int
         Frame rate
 
-    Returns
-    -------
-
     """
+    def __init__(self, image_width, image_height, K, hz=None):
         self.image_width = image_width
         self.image_height = image_height
         self.hz = hz
@@ -41,7 +37,7 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-        
+
             Boolean to denote whether model has been updated
 
         """
@@ -55,17 +51,20 @@ class PinholeCameraModel(object):
         return False
 
     def P(self, R, t):
-        """
+        """P
 
         Parameters
         ----------
-        R :
-            
-        t :
-            
+        R : np.array - size 3x3
+            Rotation matrix
+
+        t : np.array - size 3x1
+            Translation vector
 
         Returns
         -------
+
+            Projection matrix (np.array)
 
         """
         return np.dot(self.K, np.block([R, np.dot(-R, t)]))
@@ -84,7 +83,7 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-        
+
             Projected 3D feature onto 2D image plane
 
         """
@@ -115,7 +114,7 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-        
+
             Observed 3D features
 
         """
