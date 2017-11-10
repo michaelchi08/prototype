@@ -11,7 +11,7 @@ from numpy.matlib import repmat
 
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import nullspace
-from prototype.utils.quaternion.jpl import quatmul
+from prototype.utils.quaternion.jpl import quat2euler
 from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.utils.quaternion.jpl import quatlcomp
 from prototype.utils.quaternion.jpl import quat2rot as C
@@ -64,6 +64,8 @@ class IMUState:
         self.w_G = np.array([[0.0], [0.0], [0.0]])
         self.G_g = np.array([[0.0], [9.81], [0.0]])
 
+        self.rpy = np.array([[0.0], [0.0], [0.0]])
+
     def size(self):
         """Size of state vector"""
         return 15  # Number of elements in state vector
@@ -90,10 +92,19 @@ class IMUState:
         """
         # Calculate new accel and gyro estimates
         a = a_m - self.b_a
-        w = w_m - self.b_g - dot(C(self.q_IG), self.w_G)
+        # w = w_m - self.b_g - dot(C(self.q_IG), self.w_G)
+        w = w_m
 
         # Propagate IMU states
-        q_kp1_IG = self.q_IG + (0.5 * dot(Omega(w), self.q_IG)) * dt  # noqa
+        q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w), self.q_IG) * dt  # noqa
+        q_kp1_IG = quatnormalize(q_kp1_IG)
+
+        # self.rpy += w * dt
+        # print()
+        # print(Omega(w))
+        # print(self.q_IG.shape)
+        # print()
+
         b_kp1_g = self.b_g + zeros((3, 1))
         v_kp1_G = self.v_G + (dot(C(self.q_IG), a) - 2 * dot(skew(self.w_G), self.v_G) - dot(skew(self.w_G)**2, self.p_G) + self.G_g) * dt  # noqa
         b_kp1_a = self.b_a + zeros((3, 1))
@@ -107,6 +118,107 @@ class IMUState:
         self.p_G = p_kp1_G
 
         return (a, w)
+
+    def F(self, w_hat, q_hat, a_hat, w_G):
+        """Transition Jacobian F matrix
+
+        Predicition or transition matrix in an EKF
+
+        Parameters
+        ----------
+        w_hat : np.array
+            Estimated angular velocity
+        q_hat : np.array
+            Estimated quaternion (x, y, z, w)
+        a_hat : np.array
+            Estimated acceleration
+        w_G : np.array
+            Earth's angular velocity (i.e. Earth's rotation)
+
+        Returns
+        -------
+        F : np.array - 15x15
+            Transition jacobian matrix F
+
+        """
+        # F matrix
+        F = zeros((15, 15))
+        # -- First row --
+        F[0:3, 0:3] = -skew(w_hat)
+        F[0:3, 3:6] = -ones((3, 3))
+        # -- Third Row --
+        F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
+        F[6:9, 6:9] = -2.0 * skew(w_G)
+        F[6:9, 9:12] = -C(q_hat).T
+        F[6:9, 12:15] = -skew(w_G)**2
+        # -- Fifth Row --
+        F[12:15, 6:9] = ones((3, 3))
+
+        return F
+
+    def G(self, q_hat):
+        """Input Jacobian G matrix
+
+        A matrix that maps the input vector (IMU gaussian noise) to the state
+        vector (IMU error state vector), it tells us how the inputs affect the
+        state vector.
+
+        Parameters
+        ----------
+        q_hat : np.array
+            Estimated quaternion (x, y, z, w)
+
+        Returns
+        -------
+        G : np.array - 15x12
+            Input jacobian matrix G
+
+        """
+        # G matrix
+        G = zeros((15, 12))
+        # -- First row --
+        G[0:3, 0:3] = ones((3, 3))
+        # -- Second row --
+        G[3:6, 3:6] = ones((3, 3))
+        # -- Third row --
+        G[6:9, 6:9] = -C(q_hat).T
+        # -- Fourth row --
+        G[9:12, 9:12] = ones((3, 3))
+
+        return G
+
+    def J(self, cam_q_CI, cam_p_IC, q_hat_IG, N):
+        """Jacobian J matrix
+
+        Parameters
+        ----------
+        cam_q_CI : np.array
+            Rotation from IMU to camera frame
+            in quaternion (x, y, z, w)
+        cam_p_IC : np.array
+            Position of camera in IMU frame
+        q_hat_IG : np.array
+            Rotation from global to IMU frame
+        N : float
+            Number of camera states
+
+        Returns
+        -------
+        J: np.array
+            Jacobian matrix J
+
+        """
+        C_CI = C(cam_q_CI)
+        C_IG = C(q_hat_IG)
+        J = zeros((6, 15 + 6 * N))
+
+        # -- First row --
+        J[0:3, 0:3] = C_CI
+        # -- Second row --
+        J[3:6, 0:3] = skew(dot(C_IG.T, cam_p_IC))
+        J[3:6, 9:12] = I(3)
+
+        return J
 
     def correct(self, dX):
         """Correct the IMU State
@@ -290,110 +402,9 @@ class MSCKF:
         self.min_track_length = 3
 
         # Covariance matrices
-        self.P_imu = I(15)
-        self.P_cam = I(6)
-        self.P_imu_cam = zeros((15, 6))
-
-    def F(self, w_hat, q_hat, a_hat, w_G):
-        """Transition Jacobian F matrix
-
-        Predicition or transition matrix in an EKF
-
-        Parameters
-        ----------
-        w_hat : np.array
-            Estimated angular velocity
-        q_hat : np.array
-            Estimated quaternion (x, y, z, w)
-        a_hat : np.array
-            Estimated acceleration
-        w_G : np.array
-            Earth's angular velocity (i.e. Earth's rotation)
-
-        Returns
-        -------
-        F : np.array - 15x15
-            Transition jacobian matrix F
-
-        """
-        # F matrix
-        F = zeros((15, 15))
-        # -- First row --
-        F[0:3, 0:3] = -skew(w_hat)
-        F[0:3, 3:6] = ones((3, 3))
-        # -- Third Row --
-        F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
-        F[6:9, 6:9] = -2.0 * skew(w_G)
-        F[6:9, 9:12] = -C(q_hat).T
-        F[6:9, 12:15] = -skew(w_G)**2
-        # -- Fifth Row --
-        F[12:15, 6:9] = ones((3, 3))
-
-        return F
-
-    def G(self, q_hat):
-        """Input Jacobian G matrix
-
-        A matrix that maps the input vector (IMU gaussian noise) to the state
-        vector (IMU error state vector), it tells us how the inputs affect the
-        state vector.
-
-        Parameters
-        ----------
-        q_hat : np.array
-            Estimated quaternion (x, y, z, w)
-
-        Returns
-        -------
-        G : np.array - 15x12
-            Input jacobian matrix G
-
-        """
-        # G matrix
-        G = zeros((15, 12))
-        # -- First row --
-        G[0:3, 0:3] = ones((3, 3))
-        # -- Second row --
-        G[3:6, 3:6] = ones((3, 3))
-        # -- Third row --
-        G[6:9, 6:9] = -C(q_hat).T
-        # -- Fourth row --
-        G[9:12, 9:12] = ones((3, 3))
-
-        return G
-
-    def J(self, cam_q_CI, cam_p_IC, q_hat_IG, N):
-        """Jacobian J matrix
-
-        Parameters
-        ----------
-        cam_q_CI : np.array
-            Rotation from IMU to camera frame
-            in quaternion (x, y, z, w)
-        cam_p_IC : np.array
-            Position of camera in IMU frame
-        q_hat_IG : np.array
-            Rotation from global to IMU frame
-        N : float
-            Number of camera states
-
-        Returns
-        -------
-        J: np.array
-            Jacobian matrix J
-
-        """
-        C_CI = C(cam_q_CI)
-        C_IG = C(q_hat_IG)
-        J = zeros((6, 15 + 6 * N))
-
-        # -- First row --
-        J[0:3, 0:3] = C_CI
-        # -- Second row --
-        J[3:6, 0:3] = skew(dot(C_IG.T, cam_p_IC))
-        J[3:6, 9:12] = I(3)
-
-        return J
+        self.P_imu = I(self.imu_state.size())
+        self.P_cam = I(self.cam_states[0].size())
+        self.P_imu_cam = zeros((self.imu_state.size(), self.cam_states[0].size()))
 
     def P(self):
         """Covariance matrix"""
@@ -423,7 +434,7 @@ class MSCKF:
 
         Returns
         -------
-        H_x_j: np.matrix - 2*M x (12+6)N
+        H_x_j: np.matrix - 2*M x (15+6)N
             Measurement jacobian matrix w.r.t state
 
         """
@@ -496,14 +507,14 @@ class MSCKF:
         a_hat, w_hat = self.imu_state.update(a_m, w_m, dt)
 
         # Build the jacobians F and G
-        F = self.F(w_hat, self.imu_state.q_IG, a_hat, self.imu_state.w_G)
-        G = self.G(self.imu_state.q_IG)
+        F = self.imu_state.F(w_hat, self.imu_state.q_IG, a_hat, self.imu_state.w_G)  # noqa
+        G = self.imu_state.G(self.imu_state.q_IG)
 
         # State transition matrix
         Phi = I(15) + F * dt
 
         # Update covariance matrices
-        self.P_imu = dot(Phi, self.P_imu) + dot(self.P_imu, Phi.T) + dot(G, dot(self.Q_imu, G.T))  # noqa
+        self.P_imu = dot(Phi, dot(self.P_imu, Phi.T)) + dot(G, dot(self.Q_imu, G.T)) * dt  # noqa
         self.P_cam = self.P_cam
         self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
@@ -608,10 +619,12 @@ class MSCKF:
                 J[2 * i:(2 * (i + 1)), 1] = drdbeta.ravel()
                 J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
 
-            # Update esitmated params using Gauss Newton
+            # Check hessian if it is numerically ok
             H_approx = dot(J.T, J)
-            if np.linalg.cond(H_approx) > 1e4:
+            if np.linalg.cond(H_approx) > 10:
                 return None, None, None
+
+            # Update esitmated params using Gauss Newton
             delta = dot(inv(H_approx), dot(J.T, r))
             theta_k = np.array([[alpha], [beta], [rho]]) - delta
             alpha = theta_k[0, 0]
@@ -628,18 +641,6 @@ class MSCKF:
             # Break loop if not making any progress
             if r_J < 0.000001:
                 break
-        # except:
-        #     import matplotlib.pylab as plt
-        #     x = []
-        #     y = []
-        #     for kp in track.track:
-        #         x.append(kp.pt[0])
-        #         y.append(kp.pt[1])
-        #     plt.plot(x, y)
-        #     plt.xlim([0, 1242])
-        #     plt.ylim([0, 375])
-        #     plt.show()
-        #     exit(0)
 
         # Debug
         if debug:
@@ -670,7 +671,7 @@ class MSCKF:
         X_cam_size = self.cam_states[0].size()
 
         # Camera pose Jacobian
-        J = self.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, self.N())
+        J = self.imu_state.J(self.ext_q_CI, self.ext_p_IC, self.imu_state.q_IG, self.N())
 
         # Build covariance matrix (without new camera state)
         P = self.P()

@@ -11,7 +11,7 @@ def skew(v):
 
     Returns
     -------
-    
+
         Skew symetric matrix (np.matrix)
 
     """
@@ -22,14 +22,14 @@ def skew(v):
 
 def nullspace(A, atol=1e-13, rtol=0):
     """Compute an approximate basis for the nullspace of A.
-    
+
     The algorithm used by this function is based on the singular value
     decomposition of `A`.
 
     Parameters
     ----------
     A :
-        
+
     atol :
          (Default value = 1e-13)
     rtol :
@@ -38,7 +38,7 @@ def nullspace(A, atol=1e-13, rtol=0):
     Returns
     -------
 
-    
+
     """
 
     A = np.atleast_2d(A)

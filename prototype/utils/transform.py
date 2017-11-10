@@ -77,7 +77,7 @@ class Transform:
 
         Returns
         -------
-        
+
             Homogenous transform matrix (np.array - 4x4)
 
         """

@@ -1,4 +1,6 @@
 from math import sqrt
+from math import atan2
+from math import asin
 
 import numpy as np
 
@@ -48,11 +50,11 @@ def quatnormalize(q):
 
 def quatconj(q):
     """Conjugate / inverse JPL quaternion
-    
+
     Source:
-    
+
         Page 4.
-    
+
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
@@ -74,11 +76,11 @@ def quatconj(q):
 
 def quatmul(p, q):
     """Muliply JPL quaternions
-    
+
     Source:
-    
+
         Page 3.
-    
+
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
@@ -107,11 +109,11 @@ def quatmul(p, q):
 
 def quat2rot(q):
     """JPL Quaternion to rotation matrix
-    
+
     Source:
-    
+
         Page 9.
-    
+
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
@@ -156,7 +158,7 @@ def Omega(w):
 
     Returns
     -------
-    
+
         Differential form of an angular velocity (np.array)
 
     """
@@ -166,11 +168,11 @@ def Omega(w):
 
 def quatlcomp(q):
     """Quaternion left compound
-    
+
     Source:
-    
+
         Page 4.
-    
+
         Trawny, Nikolas, and Stergios I. Roumeliotis. "Indirect Kalman filter
         for 3D attitude estimation." University of Minnesota, Dept. of Comp.
         Sci. & Eng., Tech. Rep 2 (2005): 2005.
@@ -190,3 +192,24 @@ def quatlcomp(q):
 
     return np.block([[scalar * np.eye(3) - skew(vector), vector],
                      [-vector.T, scalar]])
+
+
+def quat2euler(q):
+    x, y, z, w = q.ravel()
+
+    ysqr = y * y
+
+    t0 = +2.0 * (w * x + y * z)
+    t1 = +1.0 - 2.0 * (x * x + ysqr)
+    X = atan2(t0, t1)
+
+    t2 = +2.0 * (w * y - z * x)
+    t2 = +1.0 if t2 > +1.0 else t2
+    t2 = -1.0 if t2 < -1.0 else t2
+    Y = asin(t2)
+
+    t3 = +2.0 * (w * z + x * y)
+    t4 = +1.0 - 2.0 * (ysqr + z * z)
+    Z = atan2(t3, t4)
+
+    return np.array([[X], [Y], [Z]])

@@ -51,4 +51,10 @@ class JPLQuaternionTest(unittest.TestCase):
 
     def test_Omega(self):
         X = Omega(np.array([1.0, 2.0, 3.0]))
+        expected = np.array([[-0.0,  3.0, -2.0, 1.0],
+                             [-3.0, -0.0, 1.0, 2.0],
+                             [2.0, -1.0, -0.0, 3.0],
+                             [-1.0, -2.0, -3.0, 0.0]])
+
         self.assertEqual(X.shape, (4, 4))
+        self.assertTrue(np.array_equal(X, expected))

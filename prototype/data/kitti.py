@@ -350,6 +350,81 @@ class RawSequence:
                 t = dt.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
                 self.timestamps.append(t)
 
+    def get_dt(self, index):
+        if index > 0 and index < (len(self.timestamps) - 1):
+            t_prev = self.timestamps[index - 1]
+            t_now = self.timestamps[index]
+            dt = (t_now - t_prev).total_seconds()
+            return dt
+        else:
+            return 0.0
+
+    def get_local_pos_true(self):
+        lat_ref = self.oxts[0]['lat']
+        lon_ref = self.oxts[0]['lon']
+        alt_ref = self.oxts[0]['alt']
+        local_pos = np.zeros((3, 1))
+
+        for i in range(1, len(self.oxts)):
+            # Calculate position relative to home point
+            lat = self.oxts[i]['lat']
+            lon = self.oxts[i]['lon']
+            height = self.oxts[i]['alt'] - alt_ref
+            dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
+
+            pos = np.array([[dist_E], [dist_N], [height]])
+            local_pos = np.hstack((local_pos, pos))
+
+        return local_pos
+
+    def get_vel_true(self, index=None):
+        if index is None:
+            vel_x = [data["vx"] for data in self.oxts]
+            vel_y = [data["vy"] for data in self.oxts]
+            vel_z = [data["vz"] for data in self.oxts]
+        else:
+            vel_x = [self.oxts[index]["vx"]]
+            vel_y = [self.oxts[index]["vy"]]
+            vel_z = [self.oxts[index]["vz"]]
+
+        return np.array([vel_x, vel_y, vel_z])
+
+    def get_ang_vel_true(self, index=None):
+        if index is None:
+            gyro_x = [data["wx"] for data in self.oxts]
+            gyro_y = [data["wy"] for data in self.oxts]
+            gyro_z = [data["wz"] for data in self.oxts]
+        else:
+            gyro_x = [self.oxts[index]["wx"]]
+            gyro_y = [self.oxts[index]["wy"]]
+            gyro_z = [self.oxts[index]["wz"]]
+
+        return np.array([gyro_x, gyro_y, gyro_z])
+
+    def get_accel_true(self, index=None):
+        if index is None:
+            accel_x = [data["ax"] for data in self.oxts]
+            accel_y = [data["ay"] for data in self.oxts]
+            accel_z = [data["az"] for data in self.oxts]
+        else:
+            accel_x = [self.oxts[index]["ax"]]
+            accel_y = [self.oxts[index]["ay"]]
+            accel_z = [self.oxts[index]["az"]]
+
+        return np.array([accel_x, accel_y, accel_z])
+
+    def get_att_true(self, index=None):
+        if index is None:
+            roll = [data["roll"] for data in self.oxts]
+            pitch = [data["pitch"] for data in self.oxts]
+            yaw = [data["yaw"] for data in self.oxts]
+        else:
+            roll = [self.oxts[index]["roll"]]
+            pitch = [self.oxts[index]["pitch"]]
+            yaw = [self.oxts[index]["yaw"]]
+
+        return np.array([roll, pitch, yaw])
+
     def plot_accelerometer(self):
         """ """
         accel_x = [data["ax"] for data in self.oxts]

@@ -9,7 +9,8 @@ from prototype.utils.linalg import nullspace
 
 class LinalgTest(unittest.TestCase):
     def test_skew(self):
-        X = skew(np.array([1.0, 2.0, 3.0]))
+        v = np.array([[1.0], [2.0], [3.0]])
+        X = skew(v)
         X_expected = np.array([[0.0, -3.0, 2.0],
                                [3.0, 0.0, -1.0],
                                [-2.0, 1.0, 0.0]])

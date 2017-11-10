@@ -10,20 +10,23 @@ from numpy import array_equal
 
 from prototype.data.kitti import RawSequence
 from prototype.utils.utils import deg2rad
-from prototype.utils.euler import roty
+from prototype.utils.euler import rotz
 from prototype.utils.transform import T_rdf_flu
 from prototype.utils.gps import latlon_diff
 from prototype.utils.linalg import skew
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import quatnormalize
-from prototype.estimation.msckf import CameraState
-from prototype.estimation.msckf import MSCKF
+from prototype.utils.quaternion.jpl import quat2euler
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
 from prototype.vision.features import FeatureTracker
+
+from prototype.estimation.msckf import IMUState
+from prototype.estimation.msckf import CameraState
+from prototype.estimation.msckf import MSCKF
 
 # GLOBAL VARIABLE
 RAW_DATASET = "/data/raw"
@@ -37,6 +40,67 @@ class CameraStateTest(unittest.TestCase):
 
         self.assertTrue(array_equal(p_G, cam.p_G.ravel()))
         self.assertTrue(array_equal(q_CG, cam.q_CG.ravel()))
+
+
+class IMUStateTest(unittest.TestCase):
+    def setUp(self):
+        self.imu_state = IMUState(
+            np.array([0.0, 0.0, 0.0, 1.0]),
+            np.array([0.0, 0.0, 0.0]),
+            np.array([0.0, 0.0, 0.0]),
+            np.array([0.0, 0.0, 0.0]),
+            np.array([0.0, 0.0, 0.0])
+        )
+
+    def test_F(self):
+        w_hat = np.array([0.0, 0.0, 0.0])
+        q_hat = np.array([1.0, 0.0, 0.0, 0.0])
+        a_hat = np.array([1.0, 2.0, 3.0])
+        w_G = np.array([0.0, 0.0, 0.0])
+
+        F = self.imu_state.F(w_hat, q_hat, a_hat, w_G)
+
+        # -- First row --
+        self.assertTrue(array_equal(F[0:3, 0:3], -skew(w_hat)))
+        self.assertTrue(array_equal(F[0:3, 3:6], -np.ones((3, 3))))
+        # -- Third Row --
+        self.assertTrue(array_equal(F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
+        self.assertTrue(array_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
+        self.assertTrue(array_equal(F[6:9, 9:12], -C(q_hat).T))
+        self.assertTrue(array_equal(F[6:9, 12:15], -skew(w_G)**2))
+        # -- Fifth Row --
+        self.assertTrue(array_equal(F[12:15, 6:9], np.ones((3, 3))))
+
+    def test_G(self):
+        q_hat = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+        G = self.imu_state.G(q_hat)
+
+        # -- First row --
+        self.assertTrue(array_equal(G[0:3, 0:3], np.ones((3, 3))))
+        # -- Second row --
+        self.assertTrue(array_equal(G[3:6, 3:6], np.ones((3, 3))))
+        # -- Third row --
+        self.assertTrue(array_equal(G[6:9, 6:9], -C(q_hat).T))
+        # -- Fourth row --
+        self.assertTrue(array_equal(G[9:12, 9:12], np.ones((3, 3))))
+
+    def test_J(self):
+        # Setup
+        cam_q_CI = np.array([0.0, 0.0, 0.0, 1.0])
+        cam_p_IC = np.array([0.0, 0.0, 0.0])
+        q_hat_IG = np.array([0.0, 0.0, 0.0, 1.0])
+        N = 1
+        J = self.imu_state.J(cam_q_CI, cam_p_IC, q_hat_IG, N)
+
+        # Assert
+        C_CI = C(cam_q_CI)
+        C_IG = C(q_hat_IG)
+        # -- First row --
+        self.assertTrue(array_equal(J[0:3, 0:3], C_CI))
+        # -- Second row --
+        self.assertTrue(array_equal(J[3:6, 0:3], skew(dot(C_IG.T, cam_p_IC))))
+        # -- Third row --
+        self.assertTrue(array_equal(J[3:6, 9:12], I(3)))
 
 
 class MSCKFTest(unittest.TestCase):
@@ -82,66 +146,111 @@ class MSCKFTest(unittest.TestCase):
 
         return (self.cam_model, track, cam_states, landmark)
 
-    def test_F(self):
-        w_hat = np.array([0.0, 0.0, 0.0])
-        q_hat = np.array([1.0, 0.0, 0.0, 0.0])
-        a_hat = np.array([1.0, 2.0, 3.0])
-        w_G = np.array([0.0, 0.0, 0.0])
+    def plot_position(self, pos_true, pos_est):
+        N = pos_est.shape[1]
+        pos_true = pos_true[:, :N]
+        pos_est = pos_est[:, :N]
 
-        F = self.msckf.F(w_hat, q_hat, a_hat, w_G)
+        plt.plot(pos_true[0, :], pos_true[1, :],
+                 color="red", label="Grouth truth")
+        plt.plot(pos_est[0, :], pos_est[1, :],
+                 color="green", marker="o", label="Estimated")
 
-        # -- First row --
-        self.assertTrue(array_equal(F[0:3, 0:3], -skew(w_hat)))
-        self.assertTrue(array_equal(F[0:3, 3:6], np.ones((3, 3))))
-        # -- Third Row --
-        self.assertTrue(array_equal(F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
-        self.assertTrue(array_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
-        self.assertTrue(array_equal(F[6:9, 9:12], -C(q_hat).T))
-        self.assertTrue(array_equal(F[6:9, 12:15], -skew(w_G)**2))
-        # -- Fifth Row --
-        self.assertTrue(array_equal(F[12:15, 6:9], np.ones((3, 3))))
+        plt.xlabel("East (m)")
+        plt.ylabel("North (m)")
+        plt.axis("equal")
 
-    def test_G(self):
-        q_hat = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
-        G = self.msckf.G(q_hat)
+    def plot_attitude(self, timestamps, att_true, att_est):
+        N = att_est.shape[1]
+        t = timestamps[:N]
+        att_true = att_true[:, :N]
+        att_est = att_est[:, :N]
 
-        # -- First row --
-        self.assertTrue(array_equal(G[0:3, 0:3], np.ones((3, 3))))
-        # -- Second row --
-        self.assertTrue(array_equal(G[3:6, 3:6], np.ones((3, 3))))
-        # -- Third row --
-        self.assertTrue(array_equal(G[6:9, 6:9], -C(q_hat).T))
-        # -- Fourth row --
-        self.assertTrue(array_equal(G[9:12, 9:12], np.ones((3, 3))))
+        plt.subplot(311)
+        plt.plot(t, att_true[0, :], color="red")
+        plt.plot(t, att_est[0, :], color="blue")
+        plt.title("Roll")
 
-    def test_J(self):
-        # Setup
-        cam_q_CI = np.array([0.0, 0.0, 0.0, 1.0])
-        cam_p_IC = np.array([0.0, 0.0, 0.0])
-        q_hat_IG = np.array([0.0, 0.0, 0.0, 1.0])
-        N = 1
-        J = self.msckf.J(cam_q_CI, cam_p_IC, q_hat_IG, N)
+        plt.subplot(312)
+        plt.plot(t, att_true[1, :], color="red")
+        plt.plot(t, att_est[1, :], color="blue")
+        plt.title("Pitch")
 
-        # Assert
-        C_CI = C(cam_q_CI)
-        C_IG = C(q_hat_IG)
-        # -- First row --
-        self.assertTrue(array_equal(J[0:3, 0:3], C_CI))
-        # -- Second row --
-        self.assertTrue(array_equal(J[3:6, 0:3], skew(dot(C_IG.T, cam_p_IC))))
-        # -- Third row --
-        self.assertTrue(array_equal(J[3:6, 9:12], I(3)))
+        plt.subplot(313)
+        plt.plot(t, att_true[2, :], color="red")
+        plt.plot(t, att_est[2, :], color="blue")
+        plt.title("Yaw")
+        plt.xlabel("Date Time")
+        plt.ylabel("rad s^-1")
+
+    def plot_sliding_window(self, cam_states, yaw0):
+        x = []
+        y = []
+        for cam_state in cam_states:
+            cam_pos = cam_state.p_G
+            cam_pos = np.array([cam_pos[2], -cam_pos[0], -cam_pos[1]])
+            cam_pos = dot(rotz(-yaw0), cam_pos)
+            x.append(cam_pos[0, 0])
+            y.append(cam_pos[1, 0])
+
+        plt.plot(x, y, color="blue", marker="o", label="Camera Poses")
+        plt.xlabel("East (m)")
+        plt.ylabel("North (m)")
+        plt.axis("equal")
 
     def test_H(self):
         pass
 
     def test_prediction_update(self):
-        a_m = np.array([[0.0], [0.0], [10.0]])
-        w_m = np.array([[0.0], [0.0], [0.0]])
-        dt = 0.1
+        # Setup
+        debug = False
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        K = data.calib_cam2cam["K_00"].reshape((3, 3))
+        cam_model = PinholeCameraModel(1242, 375, K)
 
-        for i in range(10):
-            self.msckf.prediction_update(a_m, w_m, dt)
+        # Initialize MSCKF
+        v0 = np.array([data.oxts[0]["vf"], data.oxts[0]["vl"], 0.0])
+        yaw0 = data.oxts[0]["yaw"]
+        msckf = MSCKF(n_g=0.001 * np.ones(3),
+                      n_a=0.001 * np.ones(3),
+                      n_wg=0.001 * np.ones(3),
+                      n_wa=0.001 * np.ones(3),
+                      imu_v_G=T_rdf_flu * v0,
+                      cam_model=cam_model)
+
+        # Data storage
+        pos_est = np.zeros((3, 1))
+        att_est = np.zeros((3, 1))
+        rpy_est = np.zeros((3, 1))
+
+        # Loop through data
+        for i in range(1, len(data.oxts[:20])):
+            # Accelerometer and gyroscope and dt measurements
+            a_m = T_rdf_flu * data.get_accel_true(i)
+            w_m = T_rdf_flu * data.get_ang_vel_true(i)
+            dt = data.get_dt(i)
+
+            # MSCKF prediction and measurement update
+            msckf.prediction_update(a_m, -w_m, dt)
+            msckf_pos = dot(rotz(-yaw0), np.array([msckf.imu_state.p_G[2],
+                                                   -msckf.imu_state.p_G[0],
+                                                   -msckf.imu_state.p_G[1]]))
+            msckf_att = quat2euler(msckf.imu_state.q_IG)
+            msckf_att = np.array([-msckf_att[2], msckf_att[0], msckf_att[1]])
+            msckf_rpy = np.array([-msckf.imu_state.rpy[2], msckf.imu_state.rpy[0], msckf.imu_state.rpy[1]])
+
+            # Store history
+            pos_est = np.hstack((pos_est, msckf_pos))
+            att_est = np.hstack((att_est, msckf_att))
+            rpy_est = np.hstack((rpy_est, msckf_rpy))
+
+        if debug:
+            self.plot_position(data.get_local_pos_true(), pos_est)
+            self.plot_attitude(data.timestamps, data.get_att_true(), rpy_est)
+            self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
+            data.plot_gyroscope()
+            data.plot_accelerometer()
+            plt.show()
 
     def test_estimate_feature(self):
         # Generate test case
@@ -149,10 +258,9 @@ class MSCKFTest(unittest.TestCase):
         (cam_model, track, track_cam_states, landmark) = data
 
         # Estimate feature
-        results = self.msckf.estimate_feature(cam_model,
-                                              track,
-                                              track_cam_states)
-        p_G_f, k, r = results
+        p_G_f, k, r = self.msckf.estimate_feature(cam_model,
+                                                  track,
+                                                  track_cam_states)
 
         # Debug
         debug = False
@@ -178,9 +286,7 @@ class MSCKFTest(unittest.TestCase):
         cam_model = PinholeCameraModel(1242, 375, K)
 
         # Initialize MSCKF
-        v0 = np.array([data.oxts[0]["vf"],
-                       data.oxts[0]["vl"],
-                       0.0])
+        v0 = np.array([data.oxts[0]["vf"], data.oxts[0]["vl"], 0.0])
         msckf = MSCKF(n_g=0.001 * np.ones(3),
                       n_a=0.001 * np.ones(3),
                       n_wg=0.001 * np.ones(3),
@@ -193,97 +299,53 @@ class MSCKFTest(unittest.TestCase):
         tracker = FeatureTracker()
         tracker.update(img)
 
-        # Home point
-        lat_ref = data.oxts[0]['lat']
-        lon_ref = data.oxts[0]['lon']
-
         # Data storage
-        t = [data.timestamps[0]]
-        ground_truth_x = []
-        ground_truth_y = []
-        msckf_x = [0.0]
-        msckf_y = [0.0]
-        msckf_vx = [data.oxts[0]["vf"]]
-        msckf_vy = [data.oxts[0]["vl"]]
-
+        pos_est = np.zeros((3, 1))
+        att_est = np.zeros((3, 1))
         yaw0 = data.oxts[0]["yaw"]
-        # print("Init yaw: ", yaw0)
 
         # Loop through data
-        t_prev = data.timestamps[0]
         # for i in range(1, len(data.oxts)):
-        for i in range(1, 20):
-            # Calculate position relative to home point
-            lat = data.oxts[i]['lat']
-            lon = data.oxts[i]['lon']
-            dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
-
+        for i in range(1, 23):
+            print("Frame: ", i)
             # Track features
             img = cv2.imread(data.image_00_files[i])
             # tracker.update(img, True)
             tracker.update(img)
             tracks = tracker.remove_lost_tracks()
 
-            # Accelerometer and gyroscope measurements
-            a_m = T_rdf_flu * np.array([[data.oxts[i]["ax"]],
-                                        [data.oxts[i]["ay"]],
-                                        [data.oxts[i]["az"]]])
-            w_m = T_rdf_flu * np.array([[data.oxts[i]["wx"]],
-                                        [data.oxts[i]["wy"]],
-                                        [data.oxts[i]["wz"]]])
-
-            # Calculate time difference
-            t_now = data.timestamps[i]
-            dt = (t_now - t_prev).total_seconds()
-            t_prev = t_now
+            # Accelerometer and gyroscope and dt measurements
+            a_m = T_rdf_flu * data.get_accel_true(i)
+            w_m = T_rdf_flu * data.get_ang_vel_true(i)
+            dt = data.get_dt(i)
 
             # MSCKF prediction and measurement update
             msckf.prediction_update(a_m, -w_m, dt)
             msckf.measurement_update(tracks)
+
+            # Store position
+            msckf_pos = dot(rotz(-yaw0), np.array([msckf.imu_state.p_G[2],
+                                                   -msckf.imu_state.p_G[0],
+                                                   -msckf.imu_state.p_G[1]]))
+            msckf_att = quat2euler(msckf.imu_state.q_IG)
+            msckf_att = np.array([-msckf_att[2], msckf_att[0], msckf_att[1]])
+
+            # Store history
+            pos_est = np.hstack((pos_est, msckf_pos))
+            att_est = np.hstack((att_est, msckf_att))
 
             # Show image frame
             # if debug:
             #     cv2.imshow("image", img)
             #     cv2.waitKey(1)
 
-            # Store position
-            t.append(data.timestamps[i])
-            ground_truth_x.append(dist_E)
-            ground_truth_y.append(dist_N)
-
-            p_G = np.dot(roty(yaw0), msckf.imu_state.p_G)
-            msckf_x.append(p_G[2])
-            msckf_y.append(-p_G[0])
-            # msckf_x.append(msckf.imu_state.p_G[0])
-            # msckf_y.append(msckf.imu_state.p_G[1])
-
-            # Store velocity
-            msckf_vx.append(msckf.imu_state.v_G[2])
-            msckf_vy.append(-msckf.imu_state.v_G[0])
-
         # Plot
         if debug:
-            plt.subplot(311)
-            plt.plot(ground_truth_x, ground_truth_y, color="red")
-            plt.plot(msckf_x, msckf_y, color="green")
-            plt.xlabel("East (m)")
-            plt.ylabel("North (m)")
-            plt.axis("equal")
+            plt.figure()
+            self.plot_position(data.get_local_pos_true(), pos_est)
+            self.plot_sliding_window(msckf.cam_states, yaw0)
+            plt.legend(loc=0)
 
-            plt.subplot(312)
-            plt.plot(t,
-                     [data.oxts[i]["vf"] for i in range(len(t))],
-                     color="red")
-            plt.plot(t, msckf_vx, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Forward Velocity (ms^-1)")
-
-            plt.subplot(313)
-            plt.plot(t,
-                     [data.oxts[i]["vl"] for i in range(len(t))],
-                     color="red")
-            plt.plot(t, msckf_vy, "green")
-            plt.xlabel("Date time")
-            plt.ylabel("Left Velocity (ms^-1)")
-
+            # plt.figure()
+            # self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
             plt.show()
