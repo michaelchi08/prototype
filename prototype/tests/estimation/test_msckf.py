@@ -17,6 +17,7 @@ from prototype.utils.linalg import skew
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.utils.quaternion.jpl import quat2euler
+from prototype.utils.quaternion.jpl import euler2quat
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
@@ -72,11 +73,11 @@ class IMUStateTest(unittest.TestCase):
         self.assertTrue(array_equal(F[12:15, 6:9], np.ones((3, 3))))
 
     def test_G(self):
-        q_hat = np.array([1.0, 0.0, 0.0, 0.0]).reshape((4, 1))
+        q_hat = np.array([0.0, 0.0, 0.0, 1.0]).reshape((4, 1))
         G = self.imu_state.G(q_hat)
 
         # -- First row --
-        self.assertTrue(array_equal(G[0:3, 0:3], np.ones((3, 3))))
+        self.assertTrue(array_equal(G[0:3, 0:3], -np.ones((3, 3))))
         # -- Second row --
         self.assertTrue(array_equal(G[3:6, 3:6], np.ones((3, 3))))
         # -- Third row --
@@ -199,11 +200,27 @@ class MSCKFTest(unittest.TestCase):
         plt.axis("equal")
 
     def test_H(self):
-        pass
+        # Generate test case
+        data = self.create_test_case()
+        (cam_model, track, track_cam_states, landmark) = data
+
+        # test H
+        p_G_f, k, r = self.msckf.estimate_feature(cam_model,
+                                                  track,
+                                                  track_cam_states)
+        self.msckf.augment_state()
+        self.msckf.augment_state()
+        H_f_j, H_x_j = self.msckf.H(track, track_cam_states, p_G_f)
+
+        print(H_f_j)
+
+        self.assertEqual(H_f_j.shape, (4, 3))
+        self.assertEqual(H_x_j.shape, (4, 33))
 
     def test_prediction_update(self):
         # Setup
         debug = False
+        # debug = True
         data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
         K = data.calib_cam2cam["K_00"].reshape((3, 3))
         cam_model = PinholeCameraModel(1242, 375, K)
@@ -237,7 +254,9 @@ class MSCKFTest(unittest.TestCase):
                                                    -msckf.imu_state.p_G[1]]))
             msckf_att = quat2euler(msckf.imu_state.q_IG)
             msckf_att = np.array([-msckf_att[2], msckf_att[0], msckf_att[1]])
-            msckf_rpy = np.array([-msckf.imu_state.rpy[2], msckf.imu_state.rpy[0], msckf.imu_state.rpy[1]])
+            msckf_rpy = np.array([-msckf.imu_state.rpy[2],
+                                   msckf.imu_state.rpy[0],
+                                   msckf.imu_state.rpy[1]])
 
             # Store history
             pos_est = np.hstack((pos_est, msckf_pos))
@@ -281,18 +300,23 @@ class MSCKFTest(unittest.TestCase):
     def test_measurement_update(self):
         # Setup
         debug = True
-        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        # debug = False
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
         K = data.calib_cam2cam["K_00"].reshape((3, 3))
         cam_model = PinholeCameraModel(1242, 375, K)
 
         # Initialize MSCKF
         v0 = np.array([data.oxts[0]["vf"], data.oxts[0]["vl"], 0.0])
+        # q0 = euler2quat(data.get_att_true(0))
         msckf = MSCKF(n_g=0.001 * np.ones(3),
                       n_a=0.001 * np.ones(3),
                       n_wg=0.001 * np.ones(3),
                       n_wa=0.001 * np.ones(3),
+                      # imu_q_IG=T_rdf_flu * q0,
                       imu_v_G=T_rdf_flu * v0,
-                      cam_model=cam_model)
+                      cam_model=cam_model,
+                      plot_covar=True)
 
         # Initialize feature tracker
         img = cv2.imread(data.image_00_files[0])
@@ -305,9 +329,8 @@ class MSCKFTest(unittest.TestCase):
         yaw0 = data.oxts[0]["yaw"]
 
         # Loop through data
-        # for i in range(1, len(data.oxts)):
-        for i in range(1, 23):
-            print("Frame: ", i)
+        for i in range(1, len(data.oxts)):
+        # for i in range(1, 30):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             # tracker.update(img, True)
@@ -321,7 +344,7 @@ class MSCKFTest(unittest.TestCase):
 
             # MSCKF prediction and measurement update
             msckf.prediction_update(a_m, -w_m, dt)
-            msckf.measurement_update(tracks)
+            # msckf.measurement_update(tracks)
 
             # Store position
             msckf_pos = dot(rotz(-yaw0), np.array([msckf.imu_state.p_G[2],
@@ -334,18 +357,32 @@ class MSCKFTest(unittest.TestCase):
             pos_est = np.hstack((pos_est, msckf_pos))
             att_est = np.hstack((att_est, msckf_att))
 
+            msckf.covar_plot.update(msckf.P_imu)
+            # if msckf.cax is None:
+            #     msckf.plot_covariance(True)
+            # else:
+            #     msckf.cax.set_data(msckf.P_imu)
+            #     index = 0
+            #     for i in range(msckf.imu_state.size()):
+            #         for j in range(msckf.imu_state.size()):
+            #             txt = msckf.txt[index]
+            #             txt.set_text(str(round(msckf.P_imu[i][j], 0)))
+            #             index += 1
+            #     msckf.fig.canvas.draw()
+
             # Show image frame
             # if debug:
+            #     print("Frame: ", i)
             #     cv2.imshow("image", img)
             #     cv2.waitKey(1)
 
         # Plot
-        if debug:
-            plt.figure()
-            self.plot_position(data.get_local_pos_true(), pos_est)
-            self.plot_sliding_window(msckf.cam_states, yaw0)
-            plt.legend(loc=0)
-
-            # plt.figure()
-            # self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
-            plt.show()
+        # if debug:
+        #     plt.figure()
+        #     self.plot_position(data.get_local_pos_true(), pos_est)
+        #     self.plot_sliding_window(msckf.cam_states, yaw0)
+        #     plt.legend(loc=0)
+        #
+        #     plt.figure()
+        #     self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
+        #     plt.show()

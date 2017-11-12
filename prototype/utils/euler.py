@@ -16,7 +16,7 @@ def rotx(theta):
 
     Returns
     -------
-    
+
         Rotation matrix (np.array)
 
     """
@@ -35,7 +35,7 @@ def roty(theta):
 
     Returns
     -------
-    
+
         Rotation matrix (np.array)
 
     """
@@ -54,7 +54,7 @@ def rotz(theta):
 
     Returns
     -------
-    
+
         Rotation matrix (np.array)
 
     """
@@ -66,13 +66,13 @@ def rotz(theta):
 def euler2rot(euler, euler_seq):
     """Convert euler to rotation matrix R
     This function assumes we are performing a body fixed intrinsic rotation.
-    
+
     Source:
-    
+
         Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
         Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
         Princeton University Press, 1999. Print.
-    
+
         Page 86.
 
     Parameters
@@ -84,7 +84,7 @@ def euler2rot(euler, euler_seq):
 
     Returns
     -------
-    
+
         Rotation matrix (np.array)
 
     """
@@ -130,13 +130,13 @@ def euler2rot(euler, euler_seq):
 def euler2quat(euler, euler_seq):
     """Convert euler to quaternion
     This function assumes we are performing an intrinsic rotation.
-    
+
     Source:
-    
+
         Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
         Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
         Princeton University Press, 1999. Print.
-    
+
         Page 167.
 
     Parameters
@@ -148,7 +148,7 @@ def euler2quat(euler, euler_seq):
 
     Returns
     -------
-    
+
         Quaternion (np.array)
 
     """

@@ -62,11 +62,13 @@ def enforce_psd(A):
 
     """
     (rows, cols) = A.shape
-    for i in rows:
-        for j in cols:
+    for i in range(rows):
+        for j in range(cols):
             if i == j:
                 A[i, j] = abs(A[i, j])
             else:
                 x = np.mean([A[i, j], A[j, i]])
                 A[i, j] = x
                 A[j, i] = x
+
+    return A

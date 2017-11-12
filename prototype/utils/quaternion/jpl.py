@@ -1,4 +1,6 @@
 from math import sqrt
+from math import cos
+from math import sin
 from math import atan2
 from math import asin
 
@@ -213,3 +215,21 @@ def quat2euler(q):
     Z = atan2(t3, t4)
 
     return np.array([[X], [Y], [Z]])
+
+
+def euler2quat(euler):
+    roll, pitch, yaw = euler.ravel()
+
+    cy = cos(yaw * 0.5)
+    sy = sin(yaw * 0.5)
+    cr = cos(roll * 0.5)
+    sr = sin(roll * 0.5)
+    cp = cos(pitch * 0.5)
+    sp = sin(pitch * 0.5)
+
+    q = np.array([[cy * sr * cp - sy * cr * sp],
+                  [cy * cr * sp + sy * sr * cp],
+                  [sy * cr * cp - cy * sr * sp],
+                  [cy * cr * cp + sy * sr * sp]])
+
+    return quatnormalize(q)

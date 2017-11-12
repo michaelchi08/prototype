@@ -105,13 +105,11 @@ class Transform:
             return np.dot(T, x)[0:3]
 
         # Input is vector (in homogeneous coordinates)
-        elif len(x) == 4 and len(x.shape) == 1:
-            x = x.reshape((4, 1))
+        elif x.shape == (4, 1):
             return np.dot(T, x)
 
         # Input is matrix
-        elif len(x) == 4 and len(x.shape) == 2:
-            x = x.reshape((4, 4))
+        elif x.shape == (4, 4):
             return np.dot(T, x)
 
 
