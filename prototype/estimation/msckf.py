@@ -23,7 +23,47 @@ from prototype.vision.geometry import triangulate_point
 
 
 class PlotCovariance:
+    """Plot covariance matrix
+
+    Attributes
+    ----------
+    show_ticks : bool
+        Show ticks
+    show_values : bool
+        Show covariance values in plot
+    show : bool
+        Show plot
+    labels : :obj`list` of :obj`str`
+        Plot labels
+
+    rows : int
+        Number of rows
+    cols : int
+        Number of columns
+    fig : matplotlib.figure.Figure
+        Figure
+    plt_ax : matplotlib.axes.Axes
+        Plot axis
+    cov_ax : matplotlib.axes.Axes
+        Covariance axis
+
+    color_bar : matplotlib
+        Color bar
+
+    Parameters
+    ----------
+    show_ticks : bool
+        Show ticks
+    show_values : bool
+        Show covariance values in plot
+    show : bool
+        Show plot
+    labels : :obj`list` of :obj`str`
+        Plot labels
+
+    """
     def __init__(self, data, **kwargs):
+        # Settings
         self.show_ticks = kwargs.get("show_ticks", False)
         self.show_values = kwargs.get("show_values", False)
         self.show = kwargs.get("show", False)
@@ -32,21 +72,35 @@ class PlotCovariance:
         # Setup plot
         self.rows, self.cols = data.shape
         self.fig = plt.figure()
-        self.ax = self.fig.add_subplot(111)
-        self.cov_axis = self.ax.matshow(np.array(data))
+        self.plt_ax = self.fig.add_subplot(111)
+        self.cov_ax = self.plt_ax.matshow(np.array(data))
 
         # Covariance matrix labels
         self.label_values = self._add_data_labels(data)
         self._add_axis_labels(data)
 
         # Color bar
-        self.color_bar = self.fig.colorbar(self.cov_axis)
+        self.color_bar = self.fig.colorbar(self.cov_ax)
 
         # Show plot
         if self.show:
             plt.show(block=False)
 
     def _add_data_labels(self, data):
+        """Add covariance matrix values into the plot
+
+        Parameters
+        ----------
+        data: np.array
+            Covariance matrix data
+
+        Returns
+        -------
+        label_values : matplotlib.text.Text
+            List of matplotlib text labels, each representing a cell in the
+            covariance plot
+
+        """
         if self.show_values is False:
             return
 
@@ -55,27 +109,43 @@ class PlotCovariance:
         for i in range(m):
             for j in range(n):
                 c = data[i][j]
-                txt = self.ax.text(i, j,
-                                   str(round(c, 2)),
-                                   va='center',
-                                   ha='center')
+                txt = self.plt_ax.text(i, j,
+                                       str(round(c, 2)),
+                                       va='center',
+                                       ha='center')
                 label_values.append(txt)
 
         return label_values
 
     def _add_axis_labels(self, data):
+        """Add covariance matrix axis labels
+
+        Parameters
+        ----------
+        data: np.array
+            Covariance matrix data
+
+        """
         if self.show_ticks is False:
             return
 
         m, n = data.shape
-        self.ax.set_xticks(np.arange(n + 1))
-        self.ax.set_yticks(np.arange(m + 1))
+        self.plt_ax.set_xticks(np.arange(n + 1))
+        self.plt_ax.set_yticks(np.arange(m + 1))
 
         if self.labels is not None:
-            self.ax.set_xticklabels(self.labels)
-            self.ax.set_yticklabels(self.labels)
+            self.plt_ax.set_xticklabels(self.labels)
+            self.plt_ax.set_yticklabels(self.labels)
 
     def _update_data_labels(self, data):
+        """Update covariance data values in plot
+
+        Parameters
+        ----------
+        data: np.array
+            Covariance matrix data
+
+        """
         if self.show_values is False:
             return
 
@@ -89,6 +159,14 @@ class PlotCovariance:
                 index += 1
 
     def _update_color_bar(self, data):
+        """Update color bar
+
+        Parameters
+        ----------
+        data: np.array
+            Covariance matrix data
+
+        """
         color_bar_ticks = np.linspace(np.min(data), np.max(data),
                                       num=11, endpoint=True)
         self.color_bar.set_ticks(color_bar_ticks)
@@ -96,14 +174,22 @@ class PlotCovariance:
         self.color_bar.draw_all()
 
     def update(self, data):
+        """Update the covariance plot
+
+        Parameters
+        ----------
+        data: np.array
+            Covariance matrix data
+
+        """
         if data.shape[0] > self.rows or data.shape[1] > self.cols:
-            self.ax.clear()
-            self.cov_axis = self.ax.matshow(np.array(data))
+            self.plt_ax.clear()
+            self.cov_ax = self.plt_ax.matshow(np.array(data))
             self._add_data_labels(data)
             self._add_axis_labels(data)
 
         else:
-            self.cov_axis.set_data(np.array(data))
+            self.cov_ax.set_data(np.array(data))
             self._update_data_labels(data)
             self._update_color_bar(data)
 
@@ -513,11 +599,11 @@ class MSCKF:
         self.att_est = np.zeros((3, 1))
 
         # Plots
-        self.labels_covariance = ["theta_x", "theta_y", "theta_z",
-                                  "bx_g", "by_g", "bz_g",
-                                  "vx", "vy", "vz",
-                                  "bx_a", "by_a", "bz_a",
-                                  "px", "py", "pz"]
+        self.labels_cov = ["theta_x", "theta_y", "theta_z",
+                           "bx_g", "by_g", "bz_g",
+                           "vx", "vy", "vz",
+                           "bx_a", "by_a", "bz_a",
+                           "px", "py", "pz"]
 
         self.P_imu_plot = None
         self.P_cam_plot = None
@@ -525,15 +611,15 @@ class MSCKF:
         if kwargs.get("plot_covar", False):
             self.P_imu_plot = PlotCovariance(
                 self.imu_state.P,
-                labels=self.labels_covariance,
+                labels=self.labels_cov,
                 show=True,
-                show_labels=True,
+                show_ticks=True,
                 show_values=True
             )
-            self.P_cam_plot = PlotCovariance(
-                self.P_cam,
-                show=True
-            )
+            # self.P_cam_plot = PlotCovariance(
+            #     self.P_cam,
+            #     show=True
+            # )
             # self.P_imu_cam_plot = PlotCovariance(
             #     self.P_imu_cam,
             #     show=True
@@ -955,14 +1041,6 @@ class MSCKF:
         R_n = dot(Q_1.T, dot(R_o, Q_1))
 
         return T_H, r_n, R_n
-
-    # def prune_cam_states(self):
-    #     """Prune camera states"""
-    #     # Find all camera states with no tracked landmarks
-    #     prune_indicies = []
-    #     for i in range(len(self.cam_states)):
-    #         if len(self.cam_states[i].tracks) == 0:
-    #             prune_indicies.append(i)
 
     def measurement_update(self, tracks):
         """Measurement update

@@ -343,7 +343,7 @@ class MSCKFTest(unittest.TestCase):
 
         # Loop through data
         # for i in range(1, len(data.oxts)):
-        for i in range(1, 2):
+        for i in range(1, 20):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             # tracker.update(img, True)
