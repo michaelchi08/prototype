@@ -1,12 +1,15 @@
 import numpy as np
+from numpy import dot
+from numpy import eye as I
+from numpy.linalg import norm
 
 
-def skew(v):
+def skew(w):
     """Skew symmetric matrix
 
     Parameters
     ----------
-    v : np.array
+    w : np.array
         vector of size 3
 
     Returns
@@ -15,9 +18,26 @@ def skew(v):
         Skew symetric matrix (np.matrix)
 
     """
-    return np.array([[0.0, -v[2], v[1]],
-                     [v[2], 0.0, -v[0]],
-                     [-v[1], v[0], 0.0]])
+    return np.array([[0.0, -w[2], w[1]],
+                     [w[2], 0.0, -w[0]],
+                     [-w[1], w[0], 0.0]])
+
+
+def skewsq(w):
+    """Skew symmetric matrix squared
+
+    Parameters
+    ----------
+    w : np.array
+        vector of size 3
+
+    Returns
+    -------
+
+        Squared skew symetric matrix (np.matrix)
+
+    """
+    return (dot(w, w.T) - dot(norm(w)**2, I(3)))
 
 
 def nullspace(A, atol=1e-13, rtol=0):
@@ -59,15 +79,17 @@ def enforce_psd(A):
 
     Returns
     -------
+    A : np.array
+        Positive semi-definite matrix
 
     """
-    (rows, cols) = A.shape
+    rows, cols = A.shape
     for i in range(rows):
         for j in range(cols):
             if i == j:
                 A[i, j] = abs(A[i, j])
             else:
-                x = np.mean([A[i, j], A[j, i]])
+                x = 0.5 * (A[i, j] + A[j, i])
                 A[i, j] = x
                 A[j, i] = x
 

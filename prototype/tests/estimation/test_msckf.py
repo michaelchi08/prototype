@@ -45,17 +45,27 @@ class CameraStateTest(unittest.TestCase):
 
 class IMUStateTest(unittest.TestCase):
     def setUp(self):
+        n_g = np.ones(3) * 0.01  # Gyro Noise
+        n_a = np.ones(3) * 0.01  # Accel Noise
+        n_wg = np.ones(3) * 0.01  # Gyro Random Walk Noise
+        n_wa = np.ones(3) * 0.01  # Accel Random Walk Noise
+        n_imu = np.block([n_g.ravel(),
+                          n_wg.ravel(),
+                          n_a.ravel(),
+                          n_wa.ravel()]).reshape((12, 1))
+
         self.imu_state = IMUState(
             np.array([0.0, 0.0, 0.0, 1.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([0.0, 0.0, 0.0]),
             np.array([0.0, 0.0, 0.0]),
-            np.array([0.0, 0.0, 0.0])
+            np.array([0.0, 0.0, 0.0]),
+            n_imu
         )
 
     def test_F(self):
-        w_hat = np.array([0.0, 0.0, 0.0])
-        q_hat = np.array([1.0, 0.0, 0.0, 0.0])
+        w_hat = np.array([1.0, 2.0, 3.0])
+        q_hat = np.array([0.0, 0.0, 0.0, 1.0])
         a_hat = np.array([1.0, 2.0, 3.0])
         w_G = np.array([0.0, 0.0, 0.0])
 
@@ -212,8 +222,6 @@ class MSCKFTest(unittest.TestCase):
         self.msckf.augment_state()
         H_f_j, H_x_j = self.msckf.H(track, track_cam_states, p_G_f)
 
-        print(H_f_j)
-
         self.assertEqual(H_f_j.shape, (4, 3))
         self.assertEqual(H_x_j.shape, (4, 33))
 
@@ -233,7 +241,9 @@ class MSCKFTest(unittest.TestCase):
                       n_wg=0.001 * np.ones(3),
                       n_wa=0.001 * np.ones(3),
                       imu_v_G=T_rdf_flu * v0,
-                      cam_model=cam_model)
+                      cam_model=cam_model,
+                      # plot_covar=True)
+                      plot_covar=False)
 
         # Data storage
         pos_est = np.zeros((3, 1))
@@ -257,6 +267,7 @@ class MSCKFTest(unittest.TestCase):
             msckf_rpy = np.array([-msckf.imu_state.rpy[2],
                                    msckf.imu_state.rpy[0],
                                    msckf.imu_state.rpy[1]])
+            msckf.update_plot()
 
             # Store history
             pos_est = np.hstack((pos_est, msckf_pos))
@@ -301,6 +312,7 @@ class MSCKFTest(unittest.TestCase):
         # Setup
         debug = True
         # debug = False
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
         data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
         K = data.calib_cam2cam["K_00"].reshape((3, 3))
@@ -317,6 +329,7 @@ class MSCKFTest(unittest.TestCase):
                       imu_v_G=T_rdf_flu * v0,
                       cam_model=cam_model,
                       plot_covar=True)
+                      # plot_covar=False)
 
         # Initialize feature tracker
         img = cv2.imread(data.image_00_files[0])
@@ -329,8 +342,8 @@ class MSCKFTest(unittest.TestCase):
         yaw0 = data.oxts[0]["yaw"]
 
         # Loop through data
-        for i in range(1, len(data.oxts)):
-        # for i in range(1, 30):
+        # for i in range(1, len(data.oxts)):
+        for i in range(1, 2):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             # tracker.update(img, True)
@@ -344,7 +357,7 @@ class MSCKFTest(unittest.TestCase):
 
             # MSCKF prediction and measurement update
             msckf.prediction_update(a_m, -w_m, dt)
-            # msckf.measurement_update(tracks)
+            msckf.measurement_update(tracks)
 
             # Store position
             msckf_pos = dot(rotz(-yaw0), np.array([msckf.imu_state.p_G[2],
@@ -357,32 +370,15 @@ class MSCKFTest(unittest.TestCase):
             pos_est = np.hstack((pos_est, msckf_pos))
             att_est = np.hstack((att_est, msckf_att))
 
-            msckf.covar_plot.update(msckf.P_imu)
-            # if msckf.cax is None:
-            #     msckf.plot_covariance(True)
-            # else:
-            #     msckf.cax.set_data(msckf.P_imu)
-            #     index = 0
-            #     for i in range(msckf.imu_state.size()):
-            #         for j in range(msckf.imu_state.size()):
-            #             txt = msckf.txt[index]
-            #             txt.set_text(str(round(msckf.P_imu[i][j], 0)))
-            #             index += 1
-            #     msckf.fig.canvas.draw()
-
-            # Show image frame
-            # if debug:
-            #     print("Frame: ", i)
-            #     cv2.imshow("image", img)
-            #     cv2.waitKey(1)
+            msckf.update_plot()
 
         # Plot
-        # if debug:
-        #     plt.figure()
-        #     self.plot_position(data.get_local_pos_true(), pos_est)
-        #     self.plot_sliding_window(msckf.cam_states, yaw0)
-        #     plt.legend(loc=0)
-        #
-        #     plt.figure()
-        #     self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
-        #     plt.show()
+        if debug:
+            plt.figure()
+            self.plot_position(data.get_local_pos_true(), pos_est)
+            self.plot_sliding_window(msckf.cam_states, yaw0)
+            plt.legend(loc=0)
+
+            plt.figure()
+            self.plot_attitude(data.timestamps, data.get_att_true(), att_est)
+            plt.show()
