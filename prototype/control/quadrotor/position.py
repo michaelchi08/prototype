@@ -5,7 +5,7 @@ from numpy import dot
 
 from prototype.control.pid import PID
 from prototype.utils.utils import deg2rad
-from prototype.utils.utils import euler2rot
+from prototype.utils.euler import euler2rot
 
 
 class PositionController(object):
@@ -24,13 +24,13 @@ class PositionController(object):
         Parameters
         ----------
         setpoints :
-            
+
         actual :
-            
+
         yaw :
-            
+
         dt :
-            
+
 
         Returns
         -------

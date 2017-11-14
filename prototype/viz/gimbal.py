@@ -5,7 +5,7 @@ import numpy as np
 from scipy.linalg import norm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
 
-from prototype.utils.utils import euler2rot
+from prototype.utils.euler import euler2rot
 from prototype.utils.utils import deg2rad
 
 
@@ -15,13 +15,13 @@ def dh_transform_matrix(theta, alpha, a, d):
     Parameters
     ----------
     theta :
-        
+
     alpha :
-        
+
     a :
-        
+
     d :
-        
+
 
     Returns
     -------
@@ -44,17 +44,17 @@ def plot_3d_cylinder(ax, radius, height, origin, orientation, color):
     Parameters
     ----------
     ax :
-        
+
     radius :
-        
+
     height :
-        
+
     origin :
-        
+
     orientation :
-        
+
     color :
-        
+
 
     Returns
     -------
@@ -122,13 +122,13 @@ def plot_3d_cube(ax, width, origin, orientation):
     Parameters
     ----------
     ax :
-        
+
     width :
-        
+
     origin :
-        
+
     orientation :
-        
+
 
     Returns
     -------
@@ -199,7 +199,7 @@ class GimbalPlot:
         Parameters
         ----------
         ax :
-            
+
 
         Returns
         -------
@@ -245,7 +245,7 @@ class GimbalPlot:
         Parameters
         ----------
         ax :
-            
+
 
         Returns
         -------
@@ -264,7 +264,7 @@ class GimbalPlot:
         Parameters
         ----------
         ax :
-            
+
 
         Returns
         -------
@@ -278,7 +278,7 @@ class GimbalPlot:
         Parameters
         ----------
         ax :
-            
+
 
         Returns
         -------

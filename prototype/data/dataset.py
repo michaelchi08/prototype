@@ -3,17 +3,19 @@ import shutil
 
 
 def download(url, output_dir):
-    """
+    """Donwload
 
     Parameters
     ----------
-    url :
-        
-    output_dir :
-        
+    url : str
+        URL to download from
+    output_dir : str
+        Output directory
 
-    Returns
-    -------
+    Raises
+    ------
+    RuntimeError
+        If cURL or Wget could not be found
 
     """
     # pre-check
@@ -35,15 +37,12 @@ def download(url, output_dir):
 
 
 def download_kitti_vo_dataset(output_dir):
-    """
+    """Download KITTI VO dataset
 
     Parameters
     ----------
-    output_dir :
-        
-
-    Returns
-    -------
+    output_dir : str
+        Output directory
 
     """
     base_url = "http://kitti.is.tue.mpg.de/kitti"

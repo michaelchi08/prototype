@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import proj3d
 
 from prototype.utils.utils import rotz
 from prototype.utils.utils import deg2rad
-from prototype.utils.utils import euler2rot
+from prototype.utils.euler import euler2rot
 
 
 class Arrow3D(FancyArrowPatch):
@@ -19,7 +19,7 @@ class Arrow3D(FancyArrowPatch):
         Parameters
         ----------
         renderer :
-            
+
 
         Returns
         -------
@@ -45,7 +45,7 @@ class QuadPlot:
         Parameters
         ----------
         ax :
-            
+
 
         Returns
         -------

@@ -13,15 +13,17 @@ LANDMARK_DATA_FILE = "features.dat"
 
 
 def load_feature_data(dataset_path):
-    """
+    """ Load feature data
 
     Parameters
     ----------
-    dataset_path :
-        
+    dataset_path : str
+        Dataset path
 
     Returns
     -------
+    data : np.array
+        Feature data as matrix
 
     """
     # setup
@@ -36,20 +38,30 @@ def load_feature_data(dataset_path):
 
     # clean up
     csv_file.close()
+    data = np.vstack(data).T
 
-    return np.vstack(data).T
+    return data
 
 
 def load_single_observed_data(fp):
-    """
+    """ Load single observed data
 
     Parameters
     ----------
-    fp :
-        
+    fp : str
+        File path
 
     Returns
     -------
+    data : dict
+
+        data = {
+            "time": float,
+            "nb_observations": int
+            "state": np.array
+            "keypoints": [np.array],
+            "feature_ids": [int]
+        }
 
     """
     # setup
@@ -92,15 +104,24 @@ def load_single_observed_data(fp):
 
 
 def load_observed_data(dataset_path):
-    """
+    """Load observed data
 
     Parameters
     ----------
-    dataset_path :
-        
+    dataset_path : str
+        Dataset Path
 
     Returns
     -------
+    data : dict
+
+        data = {
+            "time": None,
+            "nb_observations": None,
+            "state": None,
+            "keypoints": [],
+            "feature_ids": []
+        }
 
     """
     # setup
@@ -127,15 +148,12 @@ def load_observed_data(dataset_path):
 
 
 def plot_camera(ax):
-    """
+    """Plot camera
 
     Parameters
     ----------
-    ax :
-        
-
-    Returns
-    -------
+    ax : matplotlib.axes.Axis
+        Plot axis
 
     """
     p = Rectangle((0, 0), 0.1, 0.1, ec="black", fill=False)
@@ -144,30 +162,27 @@ def plot_camera(ax):
 
 
 def plot_3d(feature_data, observed_data):
-    """
+    """Plot 3D
 
     Parameters
     ----------
-    feature_data :
-        
-    observed_data :
-        
+    feature_data : np.array
+        Feature data matrix
 
-    Returns
-    -------
+    observed_data : np.array
+        Observed data matrix
 
     """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 
     # plot 3d points
-    ax.scatter(
-        feature_data[0, :],
-        feature_data[1, :],
-        feature_data[2, :],
-        c="r",
-        s=5,
-        depthshade=False)
+    ax.scatter(feature_data[0, :],
+               feature_data[1, :],
+               feature_data[2, :],
+               c="r",
+               s=5,
+               depthshade=False)
     plt.show(block=False)
 
     ax.set_xlim([-3.0, 3.0])

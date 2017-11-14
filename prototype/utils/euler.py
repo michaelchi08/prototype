@@ -3,8 +3,6 @@ from math import sin
 
 import numpy as np
 
-from prototype.utils.quaternion.hamiltonian import quatnormalize
-
 
 def rotx(theta):
     """Rotation matrix around x-axis (counter-clockwise, right-handed)
@@ -125,49 +123,3 @@ def euler2rot(euler, euler_seq):
     return np.array([[R11, R12, R13],
                      [R21, R22, R23],
                      [R31, R32, R33]])
-
-
-def euler2quat(euler, euler_seq):
-    """Convert euler to quaternion
-    This function assumes we are performing an intrinsic rotation.
-
-    Source:
-
-        Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
-        Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
-        Princeton University Press, 1999. Print.
-
-        Page 167.
-
-    Parameters
-    ----------
-    euler : np.array
-        Euler angle (roll, pitch, yaw)
-    euler_seq : float
-        Euler rotation sequence
-
-    Returns
-    -------
-
-        Quaternion (np.array)
-
-    """
-    if euler_seq == 321:
-        phi, theta, psi = euler
-        c_phi = cos(phi / 2.0)
-        c_theta = cos(theta / 2.0)
-        c_psi = cos(psi / 2.0)
-        s_phi = sin(phi / 2.0)
-        s_theta = sin(theta / 2.0)
-        s_psi = sin(psi / 2.0)
-
-        qw = c_psi * c_theta * c_phi + s_psi * s_theta * s_phi
-        qx = c_psi * c_theta * s_psi - s_psi * s_theta * c_phi
-        qy = c_psi * s_theta * c_phi + s_psi * c_theta * s_phi
-        qz = s_psi * c_theta * c_phi - c_psi * s_theta * s_phi
-
-        return np.array(quatnormalize([qw, qx, qy, qz]))
-
-    else:
-        err_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
-        raise RuntimeError(err_msg)

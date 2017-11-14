@@ -12,12 +12,27 @@ from prototype.vision.camera_model import PinholeCameraModel
 
 
 class DatasetGenerator(object):
-    """Dataset Generator"""
+    """Dataset Generator
+
+    Attributes
+    ----------
+    camera_model : PinholeCameraModel
+        Camera model
+    nb_features : int
+        Number of features
+    feature_bounds : dict
+        feature_bounds = {
+            "x": {"min": -10.0, "max": 10.0},
+            "y": {"min": -10.0, "max": 10.0},
+            "z": {"min": -10.0, "max": 10.0}
+        }
+
+    """
 
     def __init__(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        self.camera = PinholeCameraModel(640, 640, K, hz=10)
-        self.nb_features = 100
+        self.camera_model = PinholeCameraModel(640, 640, K, hz=10)
+        self.nb_features = 1000
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
             "y": {"min": -10.0, "max": 10.0},
@@ -41,9 +56,6 @@ class DatasetGenerator(object):
         ----------
         save_dir : str
             Path to save output
-
-        Returns
-        -------
 
         """
         # Setup state file
@@ -71,9 +83,6 @@ class DatasetGenerator(object):
         ----------
         save_dir : str
             Path to save output
-
-        Returns
-        -------
 
         """
         # Setup
@@ -122,9 +131,6 @@ class DatasetGenerator(object):
         save_dir : str
             Path to save output
 
-        Returns
-        -------
-
         """
         mat2csv(os.path.join(save_dir, "features.dat"), self.features)
 
@@ -141,7 +147,7 @@ class DatasetGenerator(object):
 
         Returns
         -------
-        
+
             Target angular velocity to complete a circle of radius r and
             velocity v
 
@@ -157,7 +163,7 @@ class DatasetGenerator(object):
         time = 0.0
         x = np.array([0, 0, 0]).reshape(3, 1)
         w = self.calculate_circle_angular_velocity(0.5, 1.0)
-        u = np.array([1.0, w]).reshape(2, 1)
+        u = np.array([0.1, 0.0]).reshape(2, 1)
         self.features = self.generate_features()
 
         # Simulate two wheel robot
@@ -170,7 +176,7 @@ class DatasetGenerator(object):
             t = nwu2edn([x[0], x[1], 0.0])
 
             # Check feature
-            observed = self.camera.check_features(dt, self.features, rpy, t)
+            observed = self.camera_model.check_features(dt, self.features, rpy, t)
             if observed is not None:
                 self.observed_features.append(observed)
                 self.robot_states.append(x)
@@ -186,9 +192,6 @@ class DatasetGenerator(object):
         ----------
         save_dir : str
             Path to save output
-
-        Returns
-        -------
 
         """
         # mkdir calibration directory

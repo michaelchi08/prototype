@@ -9,8 +9,7 @@ from prototype.utils.utils import rotz
 from prototype.utils.utils import deg2rad
 from prototype.utils.utils import rad2deg
 from prototype.utils.quaternion.hamiltonian import quat2rot
-from prototype.utils.utils import euler2rot
-from prototype.utils.utils import euler2quat
+from prototype.utils.euler import euler2rot
 
 
 class MathTest(unittest.TestCase):
@@ -34,41 +33,6 @@ class MathTest(unittest.TestCase):
         p = np.dot(R, [2, 1, 0])
         expected = [0.70795136, 2.12103863, 0.0]
         self.assertTrue(np.allclose(expected, p))
-
-    def test_euler2rot(self):
-        euler = [0.1, 0.2, 0.3]
-
-        # test euler-sequence 123
-        R1 = euler2rot(euler, 123)
-        quat = euler2quat(euler, 123)
-        R2 = quat2rot(quat)
-        self.assertTrue(np.allclose(R1, R2))
-
-        # test euler-sequence 321
-        R = euler2rot(euler, 321)
-        expected = [[0.93629336, -0.27509585, 0.21835066],
-                    [0.28962948, 0.95642509, -0.03695701],
-                    [-0.19866933, 0.0978434, 0.97517033]]
-        self.assertTrue(np.allclose(expected, R))
-
-    def test_euler2quat(self):
-        euler = [0.1, 0.2, 0.3]
-
-        # test euler-sequence 123
-        quat = euler2quat(euler, 123)
-        expected = [0.981856172866081,
-                    0.06407134770607117,
-                    0.09115754934299072,
-                    0.15343930202422262]
-        self.assertEqual(expected, quat)
-
-        # test euler-sequence 321
-        quat = euler2quat(euler, 321)
-        expected = [0.9836907551963402,
-                    0.03428276336964735,
-                    0.10605752555507605,
-                    0.14117008022286104]
-        self.assertEqual(expected, quat)
 
     def test_enu2nwu(self):
         pass

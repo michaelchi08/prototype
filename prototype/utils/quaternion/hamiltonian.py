@@ -78,7 +78,7 @@ def quatmul(p, q):
 
     Returns
     -------
-    
+
         Product of quaternion multiplication (np.array - 4x1)
 
     """
@@ -96,7 +96,7 @@ def quatangle(angle):
     Parameters
     ----------
     angle :
-        
+
 
     Returns
     -------
@@ -130,7 +130,7 @@ def quat2rot(q):
 
     Returns
     -------
-    
+
         3 x 3 rotation matrix
 
     """
@@ -160,17 +160,20 @@ def quat2rot(q):
 
 
 def quat2euler(q, euler_seq):
-    """
+    """Quaternion to Euler
 
     Parameters
     ----------
-    q :
-        
-    euler_seq :
-        
+    q : np.array
+        Quaternion (w, x, y, z)
+
+    euler_seq : int
+        Euler sequence
 
     Returns
     -------
+    euler : np.array
+        Euler angles
 
     """
     qw, qx, qy, qz = q
@@ -195,3 +198,50 @@ def quat2euler(q, euler_seq):
     else:
         error_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
         raise RuntimeError(error_msg)
+
+
+def euler2quat(euler, euler_seq):
+    """Convert euler to quaternion
+    This function assumes we are performing an intrinsic rotation.
+
+    Source:
+
+        Kuipers, Jack B. Quaternions and Rotation Sequences: A Primer with
+        Applications to Orbits, Aerospace, and Virtual Reality. Princeton, N.J:
+        Princeton University Press, 1999. Print.
+
+        Page 167.
+
+    Parameters
+    ----------
+    euler : np.array
+        Euler angle (roll, pitch, yaw)
+    euler_seq : float
+        Euler rotation sequence
+
+    Returns
+    -------
+
+        Quaternion (np.array)
+
+    """
+    if euler_seq == 321:
+        phi, theta, psi = euler
+        c_phi = cos(phi / 2.0)
+        c_theta = cos(theta / 2.0)
+        c_psi = cos(psi / 2.0)
+        s_phi = sin(phi / 2.0)
+        s_theta = sin(theta / 2.0)
+        s_psi = sin(psi / 2.0)
+
+        qw = c_psi * c_theta * c_phi + s_psi * s_theta * s_phi
+        qx = c_psi * c_theta * s_psi - s_psi * s_theta * c_phi
+        qy = c_psi * s_theta * c_phi + s_psi * c_theta * s_phi
+        qz = s_psi * c_theta * c_phi - c_psi * s_theta * s_phi
+
+        q = np.array([qw, qx, qy, qz])
+        return quatnormalize(q)
+
+    else:
+        err_msg = "Error! Unsupported euler sequence [%s]" % str(euler_seq)
+        raise RuntimeError(err_msg)

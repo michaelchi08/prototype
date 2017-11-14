@@ -9,8 +9,8 @@ from prototype.vision.vo_plot import plot_3d
 
 import numpy as np
 from numpy import dot
-from prototype.utils.utils import euler2rot
-from prototype.utils.utils import euler2quat
+from prototype.utils.euler import euler2rot
+from prototype.utils.quaternion.hamiltonian import euler2quat
 from prototype.vision.common import projection_matrix
 
 DATASET_PATH = "/tmp/dataset_test"
@@ -32,7 +32,7 @@ class VOPlotTest(unittest.TestCase):
         feature_data = load_feature_data(DATASET_PATH)
         observed_data = load_observed_data(DATASET_PATH)
 
-        self.assertEqual(feature_data.shape, (3, 100))
+        self.assertEqual(feature_data.shape, (3, 1000))
         self.assertTrue(observed_data is not None)
         # plot_3d(feature_data, observed_data)
 
@@ -51,7 +51,7 @@ class VOPlotTest(unittest.TestCase):
         x[1] = x[1] / x[2]
         x[2] = x[2] / x[2]
 
-        print("quaternion: ", euler2quat(rpy, 123))
+        print("quaternion: ", euler2quat(rpy, 321))
         print("R: ", R)
         print("K: ", self.dataset.camera.K)
         print("predicted: ", x[0:2])

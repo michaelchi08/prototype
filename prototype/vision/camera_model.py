@@ -1,6 +1,6 @@
 import numpy as np
 
-from prototype.utils.utils import euler2rot
+from prototype.utils.euler import euler2rot
 from prototype.vision.common import projection_matrix
 
 

@@ -19,7 +19,7 @@ def load_calib_file(filepath):
 
     Returns
     -------
-
+    data : dict
         Dictionary of calibration file
 
     """
