@@ -1,4 +1,3 @@
-import os
 from os.path import join
 from os.path import realpath
 import datetime as dt
@@ -351,6 +350,7 @@ class RawSequence:
                 self.timestamps.append(t)
 
     def get_dt(self, index):
+        """Get dt"""
         if index > 0 and index < (len(self.timestamps) - 1):
             t_prev = self.timestamps[index - 1]
             t_now = self.timestamps[index]
@@ -360,6 +360,7 @@ class RawSequence:
             return 0.0
 
     def get_local_pos_true(self):
+        """Get true local position"""
         lat_ref = self.oxts[0]['lat']
         lon_ref = self.oxts[0]['lon']
         alt_ref = self.oxts[0]['alt']
@@ -378,42 +379,46 @@ class RawSequence:
         return local_pos
 
     def get_vel_true(self, index=None):
+        """Get true velocity"""
         if index is None:
-            vel_x = [data["vx"] for data in self.oxts]
-            vel_y = [data["vy"] for data in self.oxts]
-            vel_z = [data["vz"] for data in self.oxts]
+            vel_x = [data["vf"] for data in self.oxts]
+            vel_y = [data["vl"] for data in self.oxts]
+            vel_z = [data["vu"] for data in self.oxts]
         else:
-            vel_x = [self.oxts[index]["vx"]]
-            vel_y = [self.oxts[index]["vy"]]
-            vel_z = [self.oxts[index]["vz"]]
+            vel_x = [self.oxts[index]["vf"]]
+            vel_y = [self.oxts[index]["vl"]]
+            vel_z = [self.oxts[index]["vu"]]
 
         return np.array([vel_x, vel_y, vel_z])
 
     def get_ang_vel_true(self, index=None):
+        """Get true angular velocity"""
         if index is None:
-            gyro_x = [data["wx"] for data in self.oxts]
-            gyro_y = [data["wy"] for data in self.oxts]
-            gyro_z = [data["wz"] for data in self.oxts]
+            gyro_x = [data["wf"] for data in self.oxts]
+            gyro_y = [data["wl"] for data in self.oxts]
+            gyro_z = [data["wu"] for data in self.oxts]
         else:
-            gyro_x = [self.oxts[index]["wx"]]
-            gyro_y = [self.oxts[index]["wy"]]
-            gyro_z = [self.oxts[index]["wz"]]
+            gyro_x = [self.oxts[index]["wf"]]
+            gyro_y = [self.oxts[index]["wl"]]
+            gyro_z = [self.oxts[index]["wu"]]
 
         return np.array([gyro_x, gyro_y, gyro_z])
 
     def get_accel_true(self, index=None):
+        """Get true acceleration"""
         if index is None:
-            accel_x = [data["ax"] for data in self.oxts]
-            accel_y = [data["ay"] for data in self.oxts]
-            accel_z = [data["az"] for data in self.oxts]
+            accel_x = [data["af"] for data in self.oxts]
+            accel_y = [data["al"] for data in self.oxts]
+            accel_z = [data["au"] for data in self.oxts]
         else:
-            accel_x = [self.oxts[index]["ax"]]
-            accel_y = [self.oxts[index]["ay"]]
-            accel_z = [self.oxts[index]["az"]]
+            accel_x = [self.oxts[index]["af"]]
+            accel_y = [self.oxts[index]["al"]]
+            accel_z = [self.oxts[index]["au"]]
 
         return np.array([accel_x, accel_y, accel_z])
 
     def get_att_true(self, index=None):
+        """Get true attitude"""
         if index is None:
             roll = [data["roll"] for data in self.oxts]
             pitch = [data["pitch"] for data in self.oxts]
@@ -426,10 +431,10 @@ class RawSequence:
         return np.array([roll, pitch, yaw])
 
     def plot_accelerometer(self):
-        """ """
-        accel_x = [data["ax"] for data in self.oxts]
-        accel_y = [data["ay"] for data in self.oxts]
-        accel_z = [data["az"] for data in self.oxts]
+        """Plot accelerometer"""
+        accel_x = [data["af"] for data in self.oxts]
+        accel_y = [data["al"] for data in self.oxts]
+        accel_z = [data["au"] for data in self.oxts]
 
         fig = plt.figure()
         ax1 = fig.add_subplot(311)
@@ -453,10 +458,10 @@ class RawSequence:
         fig.tight_layout()
 
     def plot_gyroscope(self):
-        """ """
-        gyro_x = [data["wx"] for data in self.oxts]
-        gyro_y = [data["wy"] for data in self.oxts]
-        gyro_z = [data["wz"] for data in self.oxts]
+        """Plot gyroscope"""
+        gyro_x = [data["wf"] for data in self.oxts]
+        gyro_y = [data["wl"] for data in self.oxts]
+        gyro_z = [data["wu"] for data in self.oxts]
 
         fig = plt.figure()
         plt.suptitle("Gyroscope")
@@ -482,7 +487,7 @@ class RawSequence:
         fig.tight_layout()
 
     def plot_ground_truth(self):
-        """ """
+        """Plot ground truth"""
         # Home point
         lat_ref = self.oxts[0]['lat']
         lon_ref = self.oxts[0]['lon']

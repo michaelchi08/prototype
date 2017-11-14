@@ -100,14 +100,14 @@ def triangulate(x1, x2, P1, P2):
         Observations in the first camera as 2xN matrix
     x2 : np.array
         Observations in the second camera as 2xN matrix
-    P1 :
-
-    P2 :
-
+    P1 : np.array
+        Camera 1 projection matrix
+    P2 : np.array
+        Camera 2 projection matrix
 
     Returns
     -------
-
+    X : np.array
         Homogeneous 3D points as a 4xN matrix (np.array)
 
     """
@@ -119,4 +119,6 @@ def triangulate(x1, x2, P1, P2):
 
     n = x1.shape[1]
     X = [triangulate_point(x1[:, i], x2[:, i], P1, P2) for i in range(n)]
-    return np.array(X).T
+    X = np.array(X).T
+
+    return X

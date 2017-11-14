@@ -8,7 +8,6 @@ from numpy import dot
 from numpy import diag
 from numpy.linalg import inv
 from numpy.matlib import repmat
-import matplotlib.pylab as plt
 
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import skewsq
@@ -20,181 +19,7 @@ from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import quat2euler
 from prototype.utils.quaternion.jpl import Omega
 from prototype.vision.geometry import triangulate_point
-
-
-class PlotCovariance:
-    """Plot covariance matrix
-
-    Attributes
-    ----------
-    show_ticks : bool
-        Show ticks
-    show_values : bool
-        Show covariance values in plot
-    show : bool
-        Show plot
-    labels : :obj`list` of :obj`str`
-        Plot labels
-
-    rows : int
-        Number of rows
-    cols : int
-        Number of columns
-    fig : matplotlib.figure.Figure
-        Figure
-    plt_ax : matplotlib.axes.Axes
-        Plot axis
-    cov_ax : matplotlib.axes.Axes
-        Covariance axis
-
-    color_bar : matplotlib
-        Color bar
-
-    Parameters
-    ----------
-    show_ticks : bool
-        Show ticks
-    show_values : bool
-        Show covariance values in plot
-    show : bool
-        Show plot
-    labels : :obj`list` of :obj`str`
-        Plot labels
-
-    """
-    def __init__(self, data, **kwargs):
-        # Settings
-        self.show_ticks = kwargs.get("show_ticks", False)
-        self.show_values = kwargs.get("show_values", False)
-        self.show = kwargs.get("show", False)
-        self.labels = kwargs.get("labels", None)
-
-        # Setup plot
-        self.rows, self.cols = data.shape
-        self.fig = plt.figure()
-        self.plt_ax = self.fig.add_subplot(111)
-        self.cov_ax = self.plt_ax.matshow(np.array(data))
-
-        # Covariance matrix labels
-        self.label_values = self._add_data_labels(data)
-        self._add_axis_labels(data)
-
-        # Color bar
-        self.color_bar = self.fig.colorbar(self.cov_ax)
-
-        # Show plot
-        if self.show:
-            plt.show(block=False)
-
-    def _add_data_labels(self, data):
-        """Add covariance matrix values into the plot
-
-        Parameters
-        ----------
-        data: np.array
-            Covariance matrix data
-
-        Returns
-        -------
-        label_values : matplotlib.text.Text
-            List of matplotlib text labels, each representing a cell in the
-            covariance plot
-
-        """
-        if self.show_values is False:
-            return
-
-        m, n = data.shape
-        label_values = []
-        for i in range(m):
-            for j in range(n):
-                c = data[i][j]
-                txt = self.plt_ax.text(i, j,
-                                       str(round(c, 2)),
-                                       va='center',
-                                       ha='center')
-                label_values.append(txt)
-
-        return label_values
-
-    def _add_axis_labels(self, data):
-        """Add covariance matrix axis labels
-
-        Parameters
-        ----------
-        data: np.array
-            Covariance matrix data
-
-        """
-        if self.show_ticks is False:
-            return
-
-        m, n = data.shape
-        self.plt_ax.set_xticks(np.arange(n + 1))
-        self.plt_ax.set_yticks(np.arange(m + 1))
-
-        if self.labels is not None:
-            self.plt_ax.set_xticklabels(self.labels)
-            self.plt_ax.set_yticklabels(self.labels)
-
-    def _update_data_labels(self, data):
-        """Update covariance data values in plot
-
-        Parameters
-        ----------
-        data: np.array
-            Covariance matrix data
-
-        """
-        if self.show_values is False:
-            return
-
-        index = 0
-        m, n = data.shape
-
-        for i in range(m):
-            for j in range(n):
-                txt = self.label_values[index]
-                txt.set_text(str(round(data[i][j], 0)))
-                index += 1
-
-    def _update_color_bar(self, data):
-        """Update color bar
-
-        Parameters
-        ----------
-        data: np.array
-            Covariance matrix data
-
-        """
-        color_bar_ticks = np.linspace(np.min(data), np.max(data),
-                                      num=11, endpoint=True)
-        self.color_bar.set_ticks(color_bar_ticks)
-        self.color_bar.set_clim(vmin=np.min(data), vmax=np.max(data))
-        self.color_bar.draw_all()
-
-    def update(self, data):
-        """Update the covariance plot
-
-        Parameters
-        ----------
-        data: np.array
-            Covariance matrix data
-
-        """
-        if data.shape[0] > self.rows or data.shape[1] > self.cols:
-            self.plt_ax.clear()
-            self.cov_ax = self.plt_ax.matshow(np.array(data))
-            self._add_data_labels(data)
-            self._add_axis_labels(data)
-
-        else:
-            self.cov_ax.set_data(np.array(data))
-            self._update_data_labels(data)
-            self._update_color_bar(data)
-
-        # Update plot
-        self.fig.canvas.draw()
+from prototype.viz.plot_matrix import PlotMatrix
 
 
 class IMUState:
@@ -377,12 +202,19 @@ class IMUState:
         a_hat = (a_m - self.b_a) * dt
         w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
 
+        # a_hat[0] = 0.0
+        # a_hat[1] = 9.81
+        # a_hat[2] = 0.0
+        # w_hat[0] = 0.0
+        # w_hat[1] = 0.0
+        # w_hat[2] = 0.0
+
         # Propagate IMU states
         q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w_hat), self.q_IG)  # noqa
-        q_kp1_IG = quatnormalize(q_kp1_IG)
+        # q_kp1_IG = quatnormalize(q_kp1_IG)
 
         b_kp1_g = self.b_g + zeros((3, 1))
-        v_kp1_G = self.v_G + dot(C(self.q_IG), a_hat) - 2 * dot(skew(self.w_G), self.v_G) * dt - dot(skewsq(self.w_G), self.p_G) * dt + self.G_g * dt  # noqa
+        v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) + (-2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.G_g) * dt  # noqa
         b_kp1_a = self.b_a + zeros((3, 1))
         p_kp1_G = self.p_G + self.v_G * dt
 
@@ -594,9 +426,14 @@ class MSCKF:
         self.P_cam = I(x_cam_size)
         self.P_imu_cam = zeros((x_imu_size, x_cam_size))
 
-        # Filter history
-        self.pos_est = np.zeros((3, 1))
+        # History
+        self.record = kwargs.get("record", True)
+        self.pos_est = self.imu_state.p_G
+        self.vel_est = np.array([self.imu_state.v_G[2],
+                                 -self.imu_state.v_G[0],
+                                 -self.imu_state.v_G[1]])
         self.att_est = np.zeros((3, 1))
+        self.rpy_est = np.zeros((3, 1))
 
         # Plots
         self.labels_cov = ["theta_x", "theta_y", "theta_z",
@@ -609,35 +446,43 @@ class MSCKF:
         self.P_cam_plot = None
         self.P_imu_cam_plot = None
         if kwargs.get("plot_covar", False):
-            self.P_imu_plot = PlotCovariance(
+            self.P_imu_plot = PlotMatrix(
                 self.imu_state.P,
                 labels=self.labels_cov,
                 show=True,
                 show_ticks=True,
                 show_values=True
             )
-            # self.P_cam_plot = PlotCovariance(
+            # self.P_cam_plot = PlotMatrix(
             #     self.P_cam,
             #     show=True
             # )
-            # self.P_imu_cam_plot = PlotCovariance(
+            # self.P_imu_cam_plot = PlotMatrix(
             #     self.P_imu_cam,
             #     show=True
             # )
 
-    def record_state(self):
+    def record_state(self, w_m):
         # Position
         pos = np.array([self.imu_state.p_G[2],
                         -self.imu_state.p_G[0],
                         -self.imu_state.p_G[1]])
 
+        # Velocity
+        vel = np.array([self.imu_state.v_G[2],
+                        -self.imu_state.v_G[0],
+                        -self.imu_state.v_G[1]])
+
         # Attitude
         att = quat2euler(self.imu_state.q_IG)
         att = np.array([-att[2], att[0], att[1]])
+        rpy = np.array([-w_m[2], w_m[0], w_m[1]])
 
         # Store history
         self.pos_est = np.hstack((self.pos_est, pos))
+        self.vel_est = np.hstack((self.vel_est, vel))
         self.att_est = np.hstack((self.att_est, att))
+        self.rpy_est = np.hstack((self.rpy_est, rpy))
 
     def update_plot(self):
         if self.P_imu_plot:
@@ -747,6 +592,41 @@ class MSCKF:
         self.P_cam = self.P_cam
         self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
+        if self.record:
+            self.record_state(w_m)
+
+    def triangulate(self, cam_model, track, track_cam_states):
+        """Triangulate observed features"""
+        # Calculate rotation and translation of camera 0 and 1
+        C_C0G = C(track_cam_states[0].q_CG)
+        C_C1G = C(track_cam_states[1].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_G_C1 = track_cam_states[1].p_G
+        # -- Set camera 0 as origin, work out rotation and translation of
+        # -- camera 1 relative to to camera 0
+        C_C0C1 = dot(C_C0G, C_C1G.T)
+        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
+        # -- Convert from pixel coordinates to image coordinates
+        cx, cy = cam_model.K[0, 2], cam_model.K[1, 2]
+        fx, fy = cam_model.K[0, 0], cam_model.K[1, 1]
+        x1 = track.track[0].pt
+        x2 = track.track[1].pt
+        x1 = np.array([(x1[0] - cx) / fx, (x1[1] - cy) / fy])
+        x2 = np.array([(x2[0] - cx) / fx, (x2[1] - cy) / fy])
+        # -- Convert points to homogenous coordinates and normalize
+        x1 = np.block([x1, 1.0]).reshape((3, 1))
+        x2 = np.block([x2, 1.0]).reshape((3, 1))
+        x1 = x1 / np.linalg.norm(x1)
+        x2 = x2 / np.linalg.norm(x2)
+        # -- Triangulate
+        A = np.block([x1, -dot(C_C0C1, x2)])
+        b = t_C0_C1C0
+        result = np.linalg.lstsq(A, b)
+        x, residual, rank, s = result
+        p_C1C0_G = x[0] * x1
+
+        return p_C1C0_G
+
     def estimate_feature(self, cam_model, track, track_cam_states, debug=False):
         """Estimate feature 3D location by optimizing over inverse depth
         parameterization using Gauss Newton Optimization
@@ -774,32 +654,18 @@ class MSCKF:
 
         """
         # Calculate initial estimate of 3D position
-        # -- Calculate rotation and translation of camera 0 and 1
         C_C0G = C(track_cam_states[0].q_CG)
-        C_C1G = C(track_cam_states[1].q_CG)
         p_G_C0 = track_cam_states[0].p_G
-        p_G_C1 = track_cam_states[1].p_G
-        # -- Set camera 0 as origin, work out rotation and translation of
-        # -- camera 1 relative to to camera 0
-        C_C0C1 = dot(C_C0G, C_C1G.T)
-        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
-        # -- Triangulate
-        x1 = np.block([track.track[0].pt, 1.0])
-        x2 = np.block([track.track[1].pt, 1.0])
-        P1 = cam_model.P(np.eye(3), ones((3, 1)))
-        P2 = cam_model.P(C_C0C1, t_C0_C1C0)
-        X = triangulate_point(x1, x2, P1, P2)
-        if X is None:
-            return None, None, None
+        X = self.triangulate(cam_model, track, track_cam_states)
 
         # Create inverse depth params (these are to be optimized)
-        alpha = X[0] / X[2]
-        beta = X[1] / X[2]
-        rho = 1.0 / X[2]
+        alpha = X[0, 0] / X[2, 0]
+        beta = X[1, 0] / X[2, 0]
+        rho = 1.0 / X[2, 0]
 
         # Gauss Newton optimization
         r_Jprev = float("inf")  # residual jacobian
-        max_iter = 20
+        max_iter = 30
         for k in range(max_iter):
             N = len(track_cam_states)
             r = zeros((2 * N, 1))
@@ -1067,7 +933,7 @@ class MSCKF:
             return
 
         # Calculate Kalman gain
-        K = dot(dot(self.P(), T_H.T), inv(dot(T_H, dot(self.P(), T_H.T)) + R_n))
+        K = dot(self.P(), dot(T_H.T, inv(dot(T_H, dot(self.P(), T_H.T)) + R_n)))
 
         # State correction
         dx = dot(K, r_n)
