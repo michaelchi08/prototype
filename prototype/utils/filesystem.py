@@ -13,7 +13,7 @@ def walkdir(path, ext=None):
 
     Returns
     -------
-    
+
         List of files
 
     """

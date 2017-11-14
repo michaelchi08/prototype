@@ -176,7 +176,8 @@ class DatasetGenerator(object):
             t = nwu2edn([x[0], x[1], 0.0])
 
             # Check feature
-            observed = self.camera_model.check_features(dt, self.features, rpy, t)
+            observed = self.camera_model.check_features(
+                dt, self.features, rpy, t)
             if observed is not None:
                 self.observed_features.append(observed)
                 self.robot_states.append(x)

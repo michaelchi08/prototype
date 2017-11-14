@@ -3,6 +3,7 @@ import numpy as np
 
 class IMUSim:
     """ """
+
     def __init__(self):
         # Previous velocity and angular velocity
         self.v_W_km1 = np.array([0.0, 0.0, 0.0])
@@ -63,15 +64,15 @@ def generate_signal(n, dt, q_white, q_walk, q_ramp, random_state=0):
     Parameters
     ----------
     n :
-        
+
     dt :
-        
+
     q_white :
-        
+
     q_walk :
-        
+
     q_ramp :
-        
+
     random_state :
          (Default value = 0)
 

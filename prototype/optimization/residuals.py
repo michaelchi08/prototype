@@ -22,7 +22,7 @@ def reprojection_error(K, image_point, rotation, translation, world_point):
 
     Returns
     -------
-    
+
         Reprojection error (float)
 
     """

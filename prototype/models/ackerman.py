@@ -11,13 +11,13 @@ def ackerman_model(x, u, L, dt):
     Parameters
     ----------
     x :
-        
+
     u :
-        
+
     L :
-        
+
     dt :
-        
+
 
     Returns
     -------

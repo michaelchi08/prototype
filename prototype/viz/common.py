@@ -15,9 +15,9 @@ def plot_error_ellipse(mean, cov):
     Parameters
     ----------
     mean :
-        
+
     cov :
-        
+
 
     Returns
     -------

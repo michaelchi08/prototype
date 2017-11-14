@@ -13,7 +13,7 @@ def parse_data_dir(path):
     Parameters
     ----------
     path :
-        
+
 
     Returns
     -------
@@ -30,9 +30,9 @@ def parse_ground_truth(data_path, sequence):
     Parameters
     ----------
     data_path :
-        
+
     sequence :
-        
+
 
     Returns
     -------
@@ -66,9 +66,9 @@ def get_scale(ground_truth, frame_id):
     Parameters
     ----------
     ground_truth :
-        
+
     frame_id :
-        
+
 
     Returns
     -------
@@ -97,13 +97,13 @@ def benchmark_mono_vo(data_path, sequence, vo, **kwargs):
     Parameters
     ----------
     data_path :
-        
+
     sequence :
-        
+
     vo :
-        
+
     **kwargs :
-        
+
 
     Returns
     -------

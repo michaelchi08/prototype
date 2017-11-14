@@ -18,6 +18,7 @@ class PinholeCameraModel(object):
         Frame rate
 
     """
+
     def __init__(self, image_width, image_height, K, hz=None):
         self.image_width = image_width
         self.image_height = image_height

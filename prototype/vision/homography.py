@@ -120,11 +120,11 @@ def warp_images(img1, img2, tp):
     Parameters
     ----------
     img1 :
-        
+
     img2 :
-        
+
     tp :
-        
+
 
     Returns
     -------

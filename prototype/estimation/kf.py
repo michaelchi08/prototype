@@ -6,10 +6,10 @@ from numpy.linalg import inv
 
 class KF(object):
     """Kalman Filter
-    
+
     This class implements a generic Kalman Filter, the notation used in the code
     is baesd on:
-    
+
         Thrun, S., Burgard, W., & Fox, D. (2006). Probabilistic robotics.
         Cambridge, Mass: The MIT Press.
 
@@ -20,6 +20,7 @@ class KF(object):
     -------
 
     """
+
     def __init__(self, **kwargs):
         """ Constructor
 
@@ -98,9 +99,9 @@ class KF(object):
         Parameters
         ----------
         u :
-            
+
         y :
-            
+
 
         Returns
         -------

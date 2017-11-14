@@ -40,11 +40,13 @@ def load_calib_file(filepath):
 
 class VOSequence:
     """VO data sequnce"""
+
     def __init__(self, dataset_path, sequence):
         # Dataset path and information
         self.dataset_path = dataset_path
         self.sequence = sequence
-        self.sequence_data_path = join(self.dataset_path, "sequences", sequence)
+        self.sequence_data_path = join(
+            self.dataset_path, "sequences", sequence)
 
         # Time
         self.time = np.array([])
@@ -229,6 +231,7 @@ class RawSequence:
         Raw data drive sequence
 
     """
+
     def __init__(self, base_dir, date, drive):
         # Dataset path and information
         self.base_dir = base_dir

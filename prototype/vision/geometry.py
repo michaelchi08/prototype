@@ -28,9 +28,9 @@ def eight_point(x1, x2):
     # Build matrix for equations
     A = np.zeros((n, 9))
     for i in range(n):
-        A[i] = [x1[0, i]*x2[0, i], x1[0, i]*x2[1, i], x1[0, i]*x2[2, i],
-                x1[1, i]*x2[0, i], x1[1, i]*x2[1, i], x1[1, i]*x2[2, i],
-                x1[2, i]*x2[0, i], x1[2, i]*x2[1, i], x1[2, i]*x2[2, i]]
+        A[i] = [x1[0, i] * x2[0, i], x1[0, i] * x2[1, i], x1[0, i] * x2[2, i],
+                x1[1, i] * x2[0, i], x1[1, i] * x2[1, i], x1[1, i] * x2[2, i],
+                x1[2, i] * x2[0, i], x1[2, i] * x2[1, i], x1[2, i] * x2[2, i]]
 
     # Compute linear least square solution
     U, S, V = np.linalg.svd(A)

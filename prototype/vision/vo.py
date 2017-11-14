@@ -8,11 +8,11 @@ def feature_tracking(image_ref, image_cur, px_ref):
     Parameters
     ----------
     image_ref :
-        
+
     image_cur :
-        
+
     px_ref :
-        
+
 
     Returns
     -------
@@ -43,6 +43,7 @@ def feature_tracking(image_ref, image_cur, px_ref):
 
 class BasicVO:
     """ """
+
     def __init__(self, fx, cx, cy):
         self.last_frame = None
         self.R = None
@@ -60,7 +61,7 @@ class BasicVO:
         Parameters
         ----------
         frame :
-            
+
 
         Returns
         -------
@@ -87,11 +88,11 @@ class BasicVO:
         Parameters
         ----------
         frame_id :
-            
+
         frame :
-            
+
         scale :
-            
+
         min_nb_features :
              (Default value = 1500)
 
@@ -119,11 +120,11 @@ class BasicVO:
         Parameters
         ----------
         frame_id :
-            
+
         frame :
-            
+
         scale :
-            
+
 
         Returns
         -------

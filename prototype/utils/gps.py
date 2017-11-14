@@ -25,7 +25,7 @@ def latlon_offset(lat_ref, lon_ref, offset_N, offset_E):
 
     Returns
     -------
-    
+
         (lat, lon)
 
     """
@@ -48,9 +48,9 @@ def latlon_diff(lat_ref, lon_ref, lat, lon):
     offset_E : float
         Offset in East direction (meters)
     lat :
-        
+
     lon :
-        
+
 
     Returns
     -------
@@ -81,7 +81,7 @@ def latlon_dist(lat_ref, lon_ref, lat, lon):
 
     Returns
     -------
-    
+
         Euclidean distance between two GPS coordinates (float)
 
     """

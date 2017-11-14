@@ -53,6 +53,7 @@ class Keyframe:
 
 class Feature:
     """Feature"""
+
     def __init__(self, pt, size, des):
         """ Constructor
 
@@ -253,7 +254,8 @@ class ORBDetector:
         # Show debug image
         if debug is True:
             image = None
-            image = cv2.drawKeypoints(frame, keypoints, None, color=(0, 255, 0))
+            image = cv2.drawKeypoints(
+                frame, keypoints, None, color=(0, 255, 0))
             cv2.imshow("Keypoints", image)
 
         return features
@@ -546,7 +548,8 @@ class FeatureTracker:
         dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
         src_pts = src_pts.reshape(-1, 1, 2)
         dst_pts = dst_pts.reshape(-1, 1, 2)
-        M, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
+        M, mask = cv2.findFundamentalMat(
+            src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
         match_mask = mask.ravel().tolist()
 
         # Remove outliers

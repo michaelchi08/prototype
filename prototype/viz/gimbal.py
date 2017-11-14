@@ -31,8 +31,8 @@ def dh_transform_matrix(theta, alpha, a, d):
     s = sin
 
     return np.matrix([
-        [c(theta), -s(theta)*c(alpha), s(theta)*s(alpha), a*c(theta)],
-        [s(theta), c(theta)*c(alpha), -c(theta)*s(alpha), a*s(theta)],
+        [c(theta), -s(theta) * c(alpha), s(theta) * s(alpha), a * c(theta)],
+        [s(theta), c(theta) * c(alpha), -c(theta) * s(alpha), a * s(theta)],
         [0.0, s(alpha), c(alpha), d],
         [0.0, 0.0, 0.0, 1.0],
     ])
@@ -175,6 +175,7 @@ def plot_3d_cube(ax, width, origin, orientation):
 
 class GimbalPlot:
     """ """
+
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
         self.attitude = np.array([deg2rad(10.0), deg2rad(10.0), 0.0])

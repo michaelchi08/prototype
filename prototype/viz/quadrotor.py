@@ -9,6 +9,7 @@ from prototype.utils.euler import euler2rot
 
 class Arrow3D(FancyArrowPatch):
     """ """
+
     def __init__(self, xs, ys, zs, *args, **kwargs):
         FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
@@ -33,6 +34,7 @@ class Arrow3D(FancyArrowPatch):
 
 class QuadPlot:
     """ """
+
     def __init__(self):
         self.arm_length = 0.4
         self.arm_config = "x"

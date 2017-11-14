@@ -14,7 +14,7 @@ def normalize(points):
     Parameters
     ----------
     points :
-        
+
 
     Returns
     -------
@@ -34,7 +34,7 @@ def convert2homogeneous(points):
     Parameters
     ----------
     points :
-        
+
 
     Returns
     -------
@@ -52,11 +52,11 @@ def focal_length(image_width, image_height, fov):
     Parameters
     ----------
     image_width :
-        
+
     image_height :
-        
+
     fov :
-        
+
 
     Returns
     -------
@@ -81,7 +81,7 @@ def projection_matrix(K, R, t):
 
     Returns
     -------
-    
+
         Projection Matrix (3 x 4 matrix)
 
     """
@@ -158,7 +158,7 @@ def camera_intrinsics(fx, fy, cx, cy):
 
     Returns
     -------
-    
+
         Camera intrinsics matrix as a 3x3 matrix
 
     """
@@ -183,7 +183,7 @@ def rand3dfeatures(nb_features, feature_bounds):
     nb_features : int
         number of 3D features to generate
     feature_bounds :
-        
+
 
     Returns
     -------

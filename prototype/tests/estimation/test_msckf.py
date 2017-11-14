@@ -75,7 +75,8 @@ class IMUStateTest(unittest.TestCase):
         self.assertTrue(array_equal(F[0:3, 0:3], -skew(w_hat)))
         self.assertTrue(array_equal(F[0:3, 3:6], -np.ones((3, 3))))
         # -- Third Row --
-        self.assertTrue(array_equal(F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
+        self.assertTrue(array_equal(
+            F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
         self.assertTrue(array_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
         self.assertTrue(array_equal(F[6:9, 9:12], -C(q_hat).T))
         self.assertTrue(array_equal(F[6:9, 12:15], -skew(w_G)**2))

@@ -35,7 +35,7 @@ class Camera(object):
 
         Returns
         -------
-        
+
             Camera frame (np.array)
 
         """

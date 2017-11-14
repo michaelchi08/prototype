@@ -39,9 +39,9 @@ class QuadrotorModel(object):
         Parameters
         ----------
         motor_inputs :
-            
+
         dt :
-            
+
 
         Returns
         -------

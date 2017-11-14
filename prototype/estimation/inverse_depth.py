@@ -81,7 +81,7 @@ def R(q):
 
     Returns
     -------
-    
+
         Rotation matrix (np.matrix)
 
     """
@@ -100,7 +100,7 @@ def camera_motion_model(X, dt):
 
     Returns
     -------
-    
+
         Updated camera state vector
 
     """
@@ -142,7 +142,7 @@ def h_C(y, r_W_C, q_WC, K, image_size):
 
     Returns
     -------
-    
+
         (u, v) pixel coordinates
 
     """

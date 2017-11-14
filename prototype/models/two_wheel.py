@@ -13,11 +13,11 @@ def two_wheel_2d_model(x, u, dt):
     Parameters
     ----------
     x :
-        
+
     u :
-        
+
     dt :
-        
+
 
     Returns
     -------
@@ -36,11 +36,11 @@ def two_wheel_2d_linearized_model(x, u, dt):
     Parameters
     ----------
     x :
-        
+
     u :
-        
+
     dt :
-        
+
 
     Returns
     -------
@@ -69,7 +69,7 @@ def two_wheel_2d_measurement_model(x):
     Parameters
     ----------
     x :
-        
+
 
     Returns
     -------
@@ -84,7 +84,7 @@ def two_wheel_2d_measurement_linearized_model(x):
     Parameters
     ----------
     x :
-        
+
 
     Returns
     -------
@@ -99,11 +99,11 @@ def two_wheel_3d_model(x, u, dt):
     Parameters
     ----------
     x :
-        
+
     u :
-        
+
     dt :
-        
+
 
     Returns
     -------

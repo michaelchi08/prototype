@@ -42,6 +42,7 @@ class PlotMatrix:
         Plot labels
 
     """
+
     def __init__(self, data, **kwargs):
         # Settings
         self.show_ticks = kwargs.get("show_ticks", False)

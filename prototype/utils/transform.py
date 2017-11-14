@@ -7,6 +7,7 @@ from prototype.utils.euler import rotx
 
 class TVec3:
     """Transform Vec3"""
+
     def __init__(self, frame_to, frame_from, x):
         """ Constructor
 
@@ -27,24 +28,28 @@ class TVec3:
 
 class TPos(TVec3):
     """Transform Position"""
+
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class TVel(TVec3):
     """Transform Velocity"""
+
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class TAngVel(TVec3):
     """Transform Position"""
+
     def __init__(self, frame_to, frame_from, x):
         self.super(frame_to, frame_from, x)
 
 
 class Transform:
     """Transform"""
+
     def __init__(self, frame_to, frame_from, **kwargs):
         """ Constructor
 

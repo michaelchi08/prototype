@@ -16,7 +16,7 @@ def range2d(p1, p2):
 
     Returns
     -------
-    
+
         Range between p1 and p2
 
     """
@@ -39,7 +39,7 @@ def bearing2d(f, x, theta):
 
     Returns
     -------
-    
+
         Bearing between feature and robot position
 
     """
@@ -67,7 +67,7 @@ def feature_inview_2d(f, x, theta, rmax, thmax):
 
     Returns
     -------
-    
+
         Boolean to denote whether feature is in view of robot
 
     """

@@ -12,11 +12,12 @@ from prototype.utils.utils import deg2rad
 
 
 def axis_equal_3dplot(ax):
-    extents = np.array([getattr(ax, 'get_{}lim'.format(dim))() for dim in 'xyz'])
-    sz = extents[:,1] - extents[:,0]
+    extents = np.array([getattr(ax, 'get_{}lim'.format(dim))()
+                        for dim in 'xyz'])
+    sz = extents[:, 1] - extents[:, 0]
     centers = np.mean(extents, axis=1)
     maxsize = max(abs(sz))
-    r = maxsize/2
+    r = maxsize / 2
     for ctr, dim in zip(centers, 'xyz'):
         getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
 

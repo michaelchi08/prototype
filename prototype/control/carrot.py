@@ -10,9 +10,9 @@ def atan3(y, x):
     Parameters
     ----------
     y :
-        
+
     x :
-        
+
 
     Returns
     -------
@@ -80,7 +80,7 @@ class CarrotController(object):
 
         Returns
         -------
-        
+
             (closest_point, retval)
             where `closest_point` is a 2D vector of the closest point and `retval`
             denotes whether `closest_point` is
@@ -122,7 +122,7 @@ class CarrotController(object):
 
         Returns
         -------
-        
+
             (carrot_pt, retval)
             where `carrot_pt` is a 2D vector of the carrot point and `retval`
             denotes whether `carrot_pt` is

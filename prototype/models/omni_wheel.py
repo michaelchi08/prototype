@@ -20,9 +20,9 @@ class OmniWheelModel(object):
         Parameters
         ----------
         u :
-            
+
         dt :
-            
+
 
         Returns
         -------
@@ -30,13 +30,13 @@ class OmniWheelModel(object):
         """
         # Wheel constraints
         J_1 = np.matrix([[0, 1, self.length],
-                        [-cos(pi / 6), -sin(pi / 6), self.length],
-                        [cos(pi / 6), -sin(pi / 6), self.length]])
+                         [-cos(pi / 6), -sin(pi / 6), self.length],
+                         [cos(pi / 6), -sin(pi / 6), self.length]])
 
         # Wheel radius
         J_2 = np.matrix([[self.radius, 0.0, 0.0],
-                        [0.0, self.radius, 0.0],
-                        [0.0, 0.0, self.radius]])
+                         [0.0, self.radius, 0.0],
+                         [0.0, 0.0, self.radius]])
 
         # Rotation matrix
         R = np.matrix([[cos(self.x(3)), -sin(self.x(3)), 0],

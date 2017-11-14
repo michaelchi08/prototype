@@ -7,6 +7,7 @@ from prototype.utils.utils import deg2rad
 
 class AttitudeController(object):
     """ """
+
     def __init__(self):
         self.roll_controller = PID(200.0, 0.5, 10.0)
         self.pitch_controller = PID(200.0, 0.5, 10.0)
@@ -21,11 +22,11 @@ class AttitudeController(object):
         Parameters
         ----------
         setpoints :
-            
+
         actual :
-            
+
         dt :
-            
+
 
         Returns
         -------

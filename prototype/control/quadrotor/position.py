@@ -10,6 +10,7 @@ from prototype.utils.euler import euler2rot
 
 class PositionController(object):
     """ """
+
     def __init__(self):
         self.x_controller = PID(0.5, 0.0, 0.035)
         self.y_controller = PID(0.5, 0.0, 0.035)
