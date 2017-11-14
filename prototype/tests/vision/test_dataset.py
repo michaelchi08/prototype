@@ -19,5 +19,5 @@ class DatasetGeneratorTest(unittest.TestCase):
     def test_simulate_test_data(self):
         self.dataset.simulate_test_data()
 
-    # def test_generate_test_data(self):
-    #     self.dataset.generate_test_data(self.save_dir)
+    def test_generate_test_data(self):
+        self.dataset.generate_test_data(self.save_dir)

@@ -12,7 +12,8 @@ from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import FeatureTrack
 
 
-DEBUG = True
+DEBUG = False
+
 
 def debug(s):
     if DEBUG:
@@ -196,16 +197,26 @@ class DatasetGenerator(object):
         time = dist / v
         return (2 * pi) / time
 
-    def detect(self, time, x, rpy, t, dt):
+    def detect(self, time, x, dt):
         """Update tracker with current image
 
         Parameters
         ----------
+        time : float
+            Time
+        x : np.array
+            Robot state
         dt : float
             Time difference
 
         """
-        # Detect features on latest image frame
+        # Convert both euler angles and translation from NWU to EDN
+        # Note: We assume here that we are using a two wheel robot model
+        # where x = [pos_x, pos_y, theta] in world frame
+        rpy = nwu2edn([0.0, 0.0, x[2]])  # Motion model only modelled yaw
+        t = nwu2edn([x[0], x[1], 0.0])   # Translation
+
+        # Obtain list of features observed at this time step
         fea_cur = self.cam_model.check_features(dt, self.features, rpy, t)
         if fea_cur is None:
             return
@@ -255,7 +266,6 @@ class DatasetGenerator(object):
 
         debug("tracks_tracking: {}".format(self.tracks_tracking))
         debug("landmarks_tracking: {}\n".format(self.landmarks_tracking))
-
         self.counter_frame_id += 1
 
         # Keep track of features, robot state and time
@@ -263,14 +273,29 @@ class DatasetGenerator(object):
         self.robot_states.append(x)
         self.time.append(time)
 
+    def remove_lost_tracks(self):
+        """Remove lost tracks"""
+        lost_tracks = []
+
+        # Remove tracks from self.tracks_buffer
+        for track_id in self.tracks_lost:
+            track = self.tracks_buffer[track_id]
+            lost_tracks.append(track)
+            del self.tracks_buffer[track_id]
+
+        # Reset tracks lost array
+        self.tracks_lost = []
+
+        return lost_tracks
+
     def simulate_test_data(self):
         """Simulate test data"""
         # Initialize states
         dt = 0.01
         time = 0.0
         x = np.array([0, 0, 0]).reshape(3, 1)
-        # w = self.calculate_circle_angular_velocity(0.5, 1.0)
-        u = np.array([0.1, 0.3]).reshape(2, 1)
+        w = self.calculate_circle_angular_velocity(0.5, 1.0)
+        u = np.array([0.1, w]).reshape(2, 1)
         self.features = self.generate_features()
 
         # Simulate two wheel robot
@@ -278,12 +303,8 @@ class DatasetGenerator(object):
             # Update state
             x = two_wheel_2d_model(x, u, dt)
 
-            # Convert both euler angles and translation from NWU to EDN
-            rpy = nwu2edn([0.0, 0.0, x[2]])
-            t = nwu2edn([x[0], x[1], 0.0])
-
             # Check feature
-            self.detect(time, x, rpy, t, dt)
+            self.detect(time, x, dt)
 
             # Update
             time += dt
