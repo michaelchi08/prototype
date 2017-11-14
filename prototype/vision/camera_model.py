@@ -38,7 +38,7 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-
+        result : bool
             Boolean to denote whether model has been updated
 
         """
@@ -64,11 +64,12 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-
-            Projection matrix (np.array)
+        P : np.array
+            Projection matrix
 
         """
-        return np.dot(self.K, np.block([R, np.dot(-R, t)]))
+        P = np.dot(self.K, np.block([R, np.dot(-R, t)]))
+        return P
 
     def project(self, X, R, t):
         """Project 3D point to image plane
@@ -84,7 +85,7 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-
+        x : np.array
             Projected 3D feature onto 2D image plane
 
         """
@@ -96,6 +97,7 @@ class PinholeCameraModel(object):
         x[0] /= x[2]
         x[1] /= x[2]
         x[2] /= x[2]
+        x = np.array(x)
 
         return x
 
@@ -115,8 +117,9 @@ class PinholeCameraModel(object):
 
         Returns
         -------
-
-            Observed 3D features
+        observed : list of [[np.array, int], ...]
+            List of observed 3D features as a tuple (pixel coordinates, landmark
+            id)
 
         """
         observed = []

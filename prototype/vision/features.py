@@ -78,11 +78,14 @@ class FeatureTrack:
     def __init__(self, track_id, frame_id, data0, data1=None):
         """ Constructor
 
-        Args:
-
-            frame_id (int): Frame id
-            track_id (int): Track id
-            data (Keypoint or Feature): data
+        Parameters
+        ----------
+        frame_id : int
+            Frame id
+        track_id int
+            Track id
+        data : Keypoint or Feature
+            Keypoint or feature
 
         """
         self.track_id = track_id
@@ -103,9 +106,6 @@ class FeatureTrack:
             Frame id
         data : Keypoint or Feature
             data
-
-        Returns
-        -------
 
         """
         self.frame_end = frame_id

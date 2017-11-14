@@ -9,6 +9,14 @@ from prototype.models.two_wheel import two_wheel_2d_model
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
+from prototype.vision.features import FeatureTrack
+
+
+DEBUG = True
+
+def debug(s):
+    if DEBUG:
+        print(s)
 
 
 class DatasetGenerator(object):
@@ -27,12 +35,33 @@ class DatasetGenerator(object):
             "z": {"min": -10.0, "max": 10.0}
         }
 
+    counter_frame_id : int
+        Counter Frame ID
+    counter_track_id : int
+        Counter Track ID
+
+    tracks_tracking : :obj`list` of :obj`int`
+        List of feature track id
+    tracks_lost : :obj`list` of :obj`int`
+        List of lost feature track id
+    tracks_buffer : :obj`dict` of :obj`FeatureTrack`
+        Tracks buffer
+    max_buffer_size : int
+        Max buffer size (Default: 5000)
+
+    img_ref : np.array
+        Reference image
+    fea_ref :
+        Reference feature
+    unmatched : :obj`list` of `Feature`
+        List of features
+
     """
 
     def __init__(self):
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
-        self.camera_model = PinholeCameraModel(640, 640, K, hz=10)
-        self.nb_features = 1000
+        self.cam_model = PinholeCameraModel(640, 640, K, hz=10)
+        self.nb_features = 100
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
             "y": {"min": -10.0, "max": 10.0},
@@ -43,6 +72,17 @@ class DatasetGenerator(object):
         self.time = []
         self.robot_states = []
         self.observed_features = []
+
+        # Counters
+        self.counter_frame_id = 0
+        self.counter_track_id = 0
+
+        # Feature tracks
+        self.landmarks_tracking = []
+        self.landmarks_buffer = {}
+        self.tracks_tracking = []
+        self.tracks_lost = []
+        self.tracks_buffer = {}
 
     def generate_features(self):
         """Setup features"""
@@ -156,14 +196,81 @@ class DatasetGenerator(object):
         time = dist / v
         return (2 * pi) / time
 
+    def detect(self, time, x, rpy, t, dt):
+        """Update tracker with current image
+
+        Parameters
+        ----------
+        dt : float
+            Time difference
+
+        """
+        # Detect features on latest image frame
+        fea_cur = self.cam_model.check_features(dt, self.features, rpy, t)
+        if fea_cur is None:
+            return
+
+        # Remove lost feature tracks
+        landmark_ids_cur = [landmark_id for _, landmark_id in fea_cur]
+        for landmark_id in self.landmarks_tracking:
+            if landmark_id not in landmark_ids_cur:
+                debug("Landmark id: %d is not seen anymore!" % landmark_id)
+
+                track_id = self.landmarks_buffer[landmark_id]
+                track = self.tracks_buffer[track_id]
+                self.tracks_lost.append(track_id)
+                debug("Remove [track_id: %d, landmark_id: %d]" % (track_id,
+                                                                  landmark_id))
+
+                self.landmarks_tracking.remove(landmark_id)
+                del self.landmarks_buffer[landmark_id]
+                del self.tracks_buffer[track_id]
+                self.tracks_tracking.remove(track_id)
+
+        # Add or update feature tracks
+        for feature in fea_cur:
+            kp, landmark_id = feature
+
+            if landmark_id not in self.landmarks_tracking:
+                # Add track
+                frame_id = self.counter_frame_id
+                track_id = self.counter_track_id
+                track = FeatureTrack(frame_id, track_id, kp)
+                debug("Add [track_id: %d, landmark_id: %d]" % (track_id,
+                                                               landmark_id))
+
+                self.landmarks_tracking.append(landmark_id)
+                self.landmarks_buffer[landmark_id] = track_id
+                self.tracks_tracking.append(track_id)
+                self.tracks_buffer[track_id] = track
+                self.counter_track_id += 1
+
+            elif landmark_id in self.landmarks_tracking:
+                # Update track
+                track_id = self.landmarks_buffer[landmark_id]
+                track = self.tracks_buffer[track_id]
+                track.update(self.counter_frame_id, kp)
+                debug("Update [track_id: %d, landmark_id: %d]" % (track_id,
+                                                                  landmark_id))
+
+        debug("tracks_tracking: {}".format(self.tracks_tracking))
+        debug("landmarks_tracking: {}\n".format(self.landmarks_tracking))
+
+        self.counter_frame_id += 1
+
+        # Keep track of features, robot state and time
+        self.observed_features.append(fea_cur)
+        self.robot_states.append(x)
+        self.time.append(time)
+
     def simulate_test_data(self):
         """Simulate test data"""
         # Initialize states
         dt = 0.01
         time = 0.0
         x = np.array([0, 0, 0]).reshape(3, 1)
-        w = self.calculate_circle_angular_velocity(0.5, 1.0)
-        u = np.array([0.1, 0.0]).reshape(2, 1)
+        # w = self.calculate_circle_angular_velocity(0.5, 1.0)
+        u = np.array([0.1, 0.3]).reshape(2, 1)
         self.features = self.generate_features()
 
         # Simulate two wheel robot
@@ -176,12 +283,7 @@ class DatasetGenerator(object):
             t = nwu2edn([x[0], x[1], 0.0])
 
             # Check feature
-            observed = self.camera_model.check_features(
-                dt, self.features, rpy, t)
-            if observed is not None:
-                self.observed_features.append(observed)
-                self.robot_states.append(x)
-                self.time.append(time)
+            self.detect(time, x, rpy, t, dt)
 
             # Update
             time += dt
