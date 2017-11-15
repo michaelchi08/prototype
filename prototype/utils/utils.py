@@ -126,6 +126,26 @@ def rotz(theta):
                      [0.0, 0.0, 1.0]])
 
 
+def rotnormalize(R):
+    """Normalize rotation matrix R by enforcing det(R) = 1 by finding the
+    nearest orthogonal matrix
+
+    Parameters
+    ----------
+    R : np.array - 3x3
+        Rotation matrix
+
+    Returns
+    -------
+    R : np.array - 3x3
+        Unitary rotation matrix
+
+    """
+    U, S, V = np.linalg.svd(R)
+    R = np.dot(U, np.dot(np.eye(S.shape[0]), V))
+    return R
+
+
 def enu2nwu(enu):
     """ Convert vector in ENU to NWU coordinate system
 

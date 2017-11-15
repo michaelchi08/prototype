@@ -20,20 +20,20 @@ class DatasetGeneratorTest(unittest.TestCase):
             shutil.rmtree(self.save_dir)
 
     def test_step(self):
-        w_BG_history = np.zeros((3, 1))
+        w_B_history = np.zeros((3, 1))
         a_B_history = np.zeros((3, 1))
 
         for i in range(30):
-            (a_B, w_BG) = self.dataset.step()
+            (a_B, w_B) = self.dataset.step()
             a_B_history = np.hstack((a_B_history, a_B))
-            w_BG_history = np.hstack((w_BG_history, w_BG))
+            w_B_history = np.hstack((w_B_history, w_B))
 
-        plt.plot(range(a_B_history.shape[1]), a_B_history[0, :], label="ax")
-        plt.plot(range(a_B_history.shape[1]), a_B_history[1, :], label="ay")
-        plt.plot(range(a_B_history.shape[1]), a_B_history[2, :], label="az")
-        plt.plot(range(w_BG_history.shape[1]), w_BG_history[0, :], label="wx")
-        plt.plot(range(w_BG_history.shape[1]), w_BG_history[1, :], label="wy")
-        plt.plot(range(w_BG_history.shape[1]), w_BG_history[2, :], label="wz")
+        plt.plot(self.dataset.time, a_B_history[0, :], label="ax")
+        plt.plot(self.dataset.time, a_B_history[1, :], label="ay")
+        plt.plot(self.dataset.time, a_B_history[2, :], label="az")
+        plt.plot(self.dataset.time, w_B_history[0, :], label="wx")
+        plt.plot(self.dataset.time, w_B_history[1, :], label="wy")
+        plt.plot(self.dataset.time, w_B_history[2, :], label="wz")
         plt.legend(loc=0)
         plt.show()
 

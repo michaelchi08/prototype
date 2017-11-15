@@ -9,17 +9,23 @@ from numpy import diag
 from numpy.linalg import inv
 from numpy.matlib import repmat
 
+from prototype.utils.utils import rotnormalize
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import skewsq
 from prototype.utils.linalg import nullspace
 from prototype.utils.linalg import enforce_psd
 from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.utils.quaternion.jpl import quatlcomp
-from prototype.utils.quaternion.jpl import quat2rot as C
+from prototype.utils.quaternion.jpl import quatrcomp
 from prototype.utils.quaternion.jpl import quat2euler
 from prototype.utils.quaternion.jpl import Omega
-from prototype.vision.geometry import triangulate_point
 from prototype.viz.plot_matrix import PlotMatrix
+
+
+def C(q):
+    R = dot(quatrcomp(q).T, quatlcomp(q))
+    R = rotnormalize(R[0:3, 0:3])
+    return R
 
 
 class IMUState:
@@ -203,12 +209,16 @@ class IMUState:
         w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
 
         # Propagate IMU states
+        # -- Orientation
         q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w_hat), self.q_IG)  # noqa
-        # q_kp1_IG = quatnormalize(q_kp1_IG)
-
+        q_kp1_IG = quatnormalize(q_kp1_IG)
+        # -- Gyro bias
         b_kp1_g = self.b_g + zeros((3, 1))
-        v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) + (-2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.G_g) * dt  # noqa
+        # -- Velocity
+        v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) * dt - dot(skewsq(self.w_G), self.p_G) * dt + self.G_g * dt  # noqa
+        # -- Accel bias
         b_kp1_a = self.b_a + zeros((3, 1))
+        # -- Position
         p_kp1_G = self.p_G + self.v_G * dt
 
         # Update states

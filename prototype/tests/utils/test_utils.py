@@ -6,6 +6,7 @@ import numpy as np
 from prototype.utils.utils import rotx
 from prototype.utils.utils import roty
 from prototype.utils.utils import rotz
+from prototype.utils.utils import rotnormalize
 from prototype.utils.utils import deg2rad
 from prototype.utils.utils import rad2deg
 from prototype.utils.quaternion.hamiltonian import quat2rot
@@ -33,6 +34,12 @@ class MathTest(unittest.TestCase):
         p = np.dot(R, [2, 1, 0])
         expected = [0.70795136, 2.12103863, 0.0]
         self.assertTrue(np.allclose(expected, p))
+
+    def test_rotnormalize(self):
+        theta = 0.785
+        R = rotz(theta)
+        R = rotnormalize(R)
+        self.assertTrue(abs(np.linalg.det(R) - 1.0) < 1e-10)
 
     def test_enu2nwu(self):
         pass

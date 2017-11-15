@@ -6,7 +6,8 @@ import numpy as np
 from prototype.utils.utils import rotz
 from prototype.utils.utils import nwu2edn
 from prototype.utils.data import mat2csv
-from prototype.models.two_wheel import two_wheel_2d_model
+from prototype.models.husky import HuskyModel
+from prototype.control.utils import circle_trajectory
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
@@ -61,22 +62,38 @@ class DatasetGenerator(object):
     """
 
     def __init__(self):
+        # Camera
         K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
         self.cam_model = PinholeCameraModel(640, 640, K, hz=10)
+
+        # Features
         self.nb_features = 100
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
             "y": {"min": -10.0, "max": 10.0},
             "z": {"min": -10.0, "max": 10.0}
         }
+        self.features = self.generate_features()
 
-        self.features = []
-        self.time_history = []
-        self.robot_states = []
-        self.observed_features = []
+        # Simulation settings
+        self.dt = 0.1
+        self.t = 0.0
 
+        # Calculate desired inputs for a circle trajectory
+        circle_r = 10.0
+        circle_vel = 1.0
+        circle_w = circle_trajectory(circle_r, circle_vel)
+        self.v_B = np.array([[circle_vel], [0.0], [0.0]])
+        self.w_B = np.array([[0.0], [0.0], [circle_w]])
+        v_kp1_G = self.v_B * self.dt
+
+        # Motion model and history
+        self.model = HuskyModel(vel=self.v_B)
+        self.time_true = np.array([0.0])
         self.pos_true = np.zeros((3, 1))
-        self.att_true = np.zeros((3, 1))
+        self.vel_true = np.zeros((3, 1))
+        self.acc_true = np.zeros((3, 1))
+        self.rpy_true = np.zeros((3, 1))
 
         # Counters
         self.counter_frame_id = 0
@@ -88,33 +105,6 @@ class DatasetGenerator(object):
         self.tracks_tracking = []
         self.tracks_lost = []
         self.tracks_buffer = {}
-
-        # Initialize states
-        self.dt = 0.01
-        self.time = 0.0
-
-        # Initialize features
-        self.features = self.generate_features()
-
-    def get_state(self):
-        """Returns robot state
-
-        Returns
-        -------
-        (pos, v_B, rpy, w_BG) : Tuple of size 4 each is a np.array 3x1
-
-            p : Position in world frame (m)
-            v_B : Velocity in body frame (ms^-1)
-            rpy : Roll, pitch and yaw in world frame (rads)
-            w_BG : Angular velocity in body frame (rads^-1)
-
-        """
-        pos = np.block([[self.x[0, 0]], [self.x[1, 0]], [0.0]])
-        v_B = np.array([[self.v_B], [0.0], [0.0]])
-        rpy = np.array([[0.0], [0.0], [self.x[2]]])
-        w_BG = np.array([[0.0], [0.0], [self.w_BG]])
-
-        return pos, v_B, rpy, w_BG
 
     def generate_features(self):
         """Setup features"""
@@ -136,64 +126,64 @@ class DatasetGenerator(object):
         state_file.write(",".join(header) + "\n")
 
         # Write state file
-        for i in range(len(self.time_history)):
-            t = self.time_history[i]
-            x = self.robot_states[i].ravel().tolist()
+        for i in range(len(self.time_true)):
+            t = self.time_true[i]
+            pos = self.pos_true[:, i].ravel().tolist()
 
             state_file.write(str(t) + ",")
-            state_file.write(str(x[0]) + ",")
-            state_file.write(str(x[1]) + ",")
-            state_file.write(str(x[2]) + "\n")
+            state_file.write(str(pos[0]) + ",")
+            state_file.write(str(pos[1]) + ",")
+            state_file.write(str(pos[2]) + "\n")
 
         # Clean up
         state_file.close()
 
-    def output_observed(self, save_dir):
-        """Output observed features
-
-        Parameters
-        ----------
-        save_dir : str
-            Path to save output
-
-        """
-        # Setup
-        index_file = open(os.path.join(save_dir, "index.dat"), "w")
-
-        # Output observed features
-        for i in range(len(self.time_history)):
-            # Setup output file
-            output_path = save_dir + "/observed_" + str(i) + ".dat"
-            index_file.write(output_path + '\n')
-            obs_file = open(output_path, "w")
-
-            # Data
-            t = self.time_history[i]
-            x = self.robot_states[i].ravel().tolist()
-            observed = self.observed_features[i]
-
-            # Output time, robot state, and number of observed features
-            obs_file.write(str(t) + '\n')
-            obs_file.write(','.join(map(str, x)) + '\n')
-            obs_file.write(str(len(observed)) + '\n')
-
-            # Output observed features
-            for obs in self.observed_features[i]:
-                img_pt, feature_id = obs
-
-                # Convert to string
-                img_pt = ','.join(map(str, img_pt[0:2]))
-                feature_id = str(feature_id)
-
-                # Write to file
-                obs_file.write(img_pt + '\n')
-                obs_file.write(feature_id + '\n')
-
-            # Close observed file
-            obs_file.close()
-
-        # Close index file
-        index_file.close()
+    # def output_observed(self, save_dir):
+    #     """Output observed features
+    #
+    #     Parameters
+    #     ----------
+    #     save_dir : str
+    #         Path to save output
+    #
+    #     """
+    #     # Setup
+    #     index_file = open(os.path.join(save_dir, "index.dat"), "w")
+    #
+    #     # Output observed features
+    #     for i in range(len(self.time_true)):
+    #         # Setup output file
+    #         output_path = save_dir + "/observed_" + str(i) + ".dat"
+    #         index_file.write(output_path + '\n')
+    #         obs_file = open(output_path, "w")
+    #
+    #         # Data
+    #         t = self.time_true[i]
+    #         x = self.pos_true[i].ravel().tolist()
+    #         observed = self.observed_features[i]
+    #
+    #         # Output time, robot state, and number of observed features
+    #         obs_file.write(str(t) + '\n')
+    #         obs_file.write(','.join(map(str, x)) + '\n')
+    #         obs_file.write(str(len(observed)) + '\n')
+    #
+    #         # Output observed features
+    #         for obs in self.observed_features[i]:
+    #             img_pt, feature_id = obs
+    #
+    #             # Convert to string
+    #             img_pt = ','.join(map(str, img_pt[0:2]))
+    #             feature_id = str(feature_id)
+    #
+    #             # Write to file
+    #             obs_file.write(img_pt + '\n')
+    #             obs_file.write(feature_id + '\n')
+    #
+    #         # Close observed file
+    #         obs_file.close()
+    #
+    #     # Close index file
+    #     index_file.close()
 
     def output_features(self, save_dir):
         """Output features
@@ -206,37 +196,17 @@ class DatasetGenerator(object):
         """
         mat2csv(os.path.join(save_dir, "features.dat"), self.features)
 
-    def calculate_circle_angular_velocity(self, r, v):
-        """Calculate target circle angular velocity given a desired circle
-        radius r and velocity v
-
-        Parameters
-        ----------
-        r : float
-            Desired circle radius
-        v : float
-            Desired trajectory velocity
-
-        Returns
-        -------
-
-            Target angular velocity to complete a circle of radius r and
-            velocity v
-
-        """
-        dist = 2 * pi * r
-        time = dist / v
-        return (2 * pi) / time
-
-    def detect(self, time, x, dt):
+    def detect(self, time, pos, rpy, dt):
         """Update tracker with current image
 
         Parameters
         ----------
         time : float
             Time
-        x : np.array
-            Robot state
+        pos : np.array
+            Robot position (x, y, z)
+        rpy : np.array
+            Robot attitude (roll, pitch, yaw)
         dt : float
             Time difference
 
@@ -244,8 +214,8 @@ class DatasetGenerator(object):
         # Convert both euler angles and translation from NWU to EDN
         # Note: We assume here that we are using a two wheel robot model
         # where x = [pos_x, pos_y, theta] in world frame
-        rpy = nwu2edn([0.0, 0.0, x[2]])  # Motion model only modelled yaw
-        t = nwu2edn([x[0], x[1], 0.0])   # Translation
+        rpy = nwu2edn(rpy)  # Motion model only modelled yaw
+        t = nwu2edn(rpy)  # Translation
 
         # Obtain list of features observed at this time step
         fea_cur = self.cam_model.check_features(dt, self.features, rpy, t)
@@ -299,12 +269,6 @@ class DatasetGenerator(object):
         debug("landmarks_tracking: {}\n".format(self.landmarks_tracking))
         self.counter_frame_id += 1
 
-        # Keep track of features, robot state and time
-        self.observed_features.append(fea_cur)
-        self.robot_states.append(x)
-        self.time_history.append(time)
-
-
     def remove_lost_tracks(self):
         """Remove lost tracks"""
         lost_tracks = []
@@ -325,26 +289,30 @@ class DatasetGenerator(object):
 
         Returns
         -------
-        (a_B, w_BG) : (np.array 3x1, np.array 3x1)
+        (a_B, w_B) : (np.array 3x1, np.array 3x1)
             Accelerometer and Gyroscope measurement in body frame (mimicks IMU
             measurements)
 
         """
-        # Update state
-
+        # Update motion model
+        self.model.update(self.v_B, self.w_B, self.dt)
+        pos = self.model.p_G
+        rpy = self.model.rpy_G
 
         # Check feature
-        self.detect(self.time, self.x, self.dt)
+        self.detect(self.t, pos, rpy, self.dt)
 
         # Update
-        pos = np.block([[self.x[0, 0]], [self.x[1, 0]], [0.0]])
-        att = np.block([[0.0], [0.0], [self.x[2, 0]]])
-        self.pos_true = np.hstack((self.pos_true, pos))
-        self.att_true = np.hstack((self.att_true, att))
+        self.t += self.dt
 
-        self.time += self.dt
+        # Keep track
+        self.time_true = np.hstack((self.time_true, self.t))
+        self.pos_true = np.hstack((self.pos_true, self.model.p_G))
+        self.vel_true = np.hstack((self.vel_true, self.model.v_G))
+        self.acc_true = np.hstack((self.acc_true, self.model.a_G))
+        self.rpy_true = np.hstack((self.rpy_true, self.model.rpy_G))
 
-        return (a_B, w_BG)
+        return (self.model.a_B, self.w_B)
 
     def simulate_test_data(self):
         """Simulate test data"""
@@ -369,4 +337,4 @@ class DatasetGenerator(object):
         # Output features and robot state
         self.output_features(save_dir)
         self.output_robot_state(save_dir)
-        self.output_observed(save_dir)
+        # self.output_observed(save_dir)

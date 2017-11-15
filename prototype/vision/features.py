@@ -1,7 +1,7 @@
-import math
-
 import cv2
 import numpy as np
+
+from prototype.vision.ransac import VerticalRANSAC
 
 
 class Keypoint:
@@ -458,6 +458,8 @@ class FeatureTracker:
         self.detector = ORBDetector(nfeatures=100, nlevels=3)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
+        self.ransac = None
+
         # Counters
         self.counter_frame_id = -1
         self.counter_track_id = -1
@@ -485,6 +487,9 @@ class FeatureTracker:
         self.img_ref = frame
         self.fea_ref = self.detect(frame)
         self.tracks_tracking = [None for f in self.fea_ref]
+
+        if self.ransac is None:
+            self.ransac = VerticalRANSAC(frame.shape[1])
 
     def detect(self, frame):
         """Detect features
@@ -542,20 +547,27 @@ class FeatureTracker:
         matches = self.matcher.match(des1, des0)
         matches = sorted(matches, key=lambda x: x.distance)
 
+        # # Perform RANSAC (by utilizing findFundamentalMat()) on matches
+        # # This acts as a stage 2 filter where outliers are rejected
+        # src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
+        # dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
+        # src_pts = src_pts.reshape(-1, 1, 2)
+        # dst_pts = dst_pts.reshape(-1, 1, 2)
+        # M, mask = cv2.findFundamentalMat(
+        #     src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
+        # match_mask = mask.ravel().tolist()
+
         # Perform RANSAC (by utilizing findFundamentalMat()) on matches
         # This acts as a stage 2 filter where outliers are rejected
         src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
         dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
-        src_pts = src_pts.reshape(-1, 1, 2)
-        dst_pts = dst_pts.reshape(-1, 1, 2)
-        M, mask = cv2.findFundamentalMat(
-            src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
+        mask = self.ransac.match(src_pts, dst_pts)
         match_mask = mask.ravel().tolist()
 
         # Remove outliers
         final_matches = []
         for i in range(len(match_mask)):
-            if match_mask[i] == 1:
+            if match_mask[i] is True:
                 final_matches.append(matches[i])
 
         # Convert matches in the form of (feature track id, f0 index, f1 index)

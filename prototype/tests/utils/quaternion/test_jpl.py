@@ -2,12 +2,17 @@ import unittest
 
 import numpy as np
 
+from prototype.utils.utils import deg2rad
+from prototype.utils.utils import rotnormalize
 from prototype.utils.quaternion.jpl import quatnorm
 from prototype.utils.quaternion.jpl import quatnormalize
 from prototype.utils.quaternion.jpl import quatconj
 from prototype.utils.quaternion.jpl import quatmul
 from prototype.utils.quaternion.jpl import quat2rot
 from prototype.utils.quaternion.jpl import Omega
+from prototype.utils.quaternion.jpl import quatlcomp
+from prototype.utils.quaternion.jpl import quatrcomp
+from prototype.utils.quaternion.jpl import euler2quat
 
 
 class JPLQuaternionTest(unittest.TestCase):
@@ -58,3 +63,39 @@ class JPLQuaternionTest(unittest.TestCase):
 
         self.assertEqual(X.shape, (4, 4))
         self.assertTrue(np.array_equal(X, expected))
+
+    def test_quatlcomp(self):
+        X = quatlcomp(np.array([1.0, 2.0, 3.0, 1.0]))
+        expected = np.array([[1.0, 3.0, -2.0, 1.0],
+                             [-3.0, 1.0, 1.0, 2.0],
+                             [2.0, -1.0, 1.0, 3.0],
+                             [-1.0, -2.0, -3.0, 1.0]])
+        self.assertEqual(X.shape, (4, 4))
+        self.assertTrue(np.array_equal(X, expected))
+
+    def test_quatrcomp(self):
+        X = quatrcomp(np.array([1.0, 2.0, 3.0, 1.0]))
+        expected = np.array([[1.0, -3.0, 2.0, 1.0],
+                             [3.0, 1.0, -1.0, 2.0],
+                             [-2.0, 1.0, 1.0, 3.0],
+                             [-1.0, -2.0, -3.0, 1.0]])
+        self.assertEqual(X.shape, (4, 4))
+        self.assertTrue(np.array_equal(X, expected))
+
+    def test_sandbox(self):
+        roll = 10.0
+        pitch = 20.0
+        yaw = 30.0
+        euler = np.array([deg2rad(roll), deg2rad(pitch), deg2rad(yaw)])
+        q = euler2quat(euler)
+
+        R1 = quat2rot(q)
+
+        R2 = np.dot(quatrcomp(q).T, quatlcomp(q))
+        R2 = rotnormalize(R2[0:3, 0:3])
+
+        print()
+        print("R1:\n", R1)
+        print(np.dot(R1, x))
+        print("R2:\n", R2)
+        print(np.dot(R2, x))
