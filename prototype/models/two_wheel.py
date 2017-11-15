@@ -63,36 +63,6 @@ def two_wheel_2d_linearized_model(x, u, dt):
                      [G7, G8, G9]])
 
 
-def two_wheel_2d_measurement_model(x):
-    """Two wheel measurement model
-
-    Parameters
-    ----------
-    x :
-
-
-    Returns
-    -------
-
-    """
-    return np.dot(np.eye(3), x)
-
-
-def two_wheel_2d_measurement_linearized_model(x):
-    """Two wheel measurement model linearized
-
-    Parameters
-    ----------
-    x :
-
-
-    Returns
-    -------
-
-    """
-    return np.eye(3)
-
-
 def two_wheel_3d_model(x, u, dt):
     """Two wheel 3D motion model
 

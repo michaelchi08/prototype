@@ -202,13 +202,6 @@ class IMUState:
         a_hat = (a_m - self.b_a) * dt
         w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
 
-        # a_hat[0] = 0.0
-        # a_hat[1] = 9.81
-        # a_hat[2] = 0.0
-        # w_hat[0] = 0.0
-        # w_hat[1] = 0.0
-        # w_hat[2] = 0.0
-
         # Propagate IMU states
         q_kp1_IG = self.q_IG + 0.5 * dot(Omega(w_hat), self.q_IG)  # noqa
         # q_kp1_IG = quatnormalize(q_kp1_IG)

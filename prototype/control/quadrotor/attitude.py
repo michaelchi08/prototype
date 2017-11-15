@@ -6,7 +6,24 @@ from prototype.utils.utils import deg2rad
 
 
 class AttitudeController(object):
-    """ """
+    """Attitude Controller
+
+    Attributes
+    ----------
+    roll_controller : PID
+        PID controller for roll
+    pitch_controller : PID
+        PID controller for pitch
+    yaw_controller : PID
+        PID controller for yaw
+
+    dt : float
+        Time difference
+    outputs : np.array - 1x4
+        Position controller output where the elements represent roll, pitch, yaw
+        and throttle
+
+    """
 
     def __init__(self):
         self.roll_controller = PID(200.0, 0.5, 10.0)
@@ -17,19 +34,24 @@ class AttitudeController(object):
         self.outputs = np.array([0.0, 0.0, 0.0, 0.0])
 
     def update(self, setpoints, actual, dt):
-        """
+        """Update
 
         Parameters
         ----------
-        setpoints :
-
-        actual :
-
-        dt :
-
+        setpoints : np.array - 1x3
+            Attitude setpoints in body frame (roll, pitch, yaw, z)
+        actual : np.array - 1x3
+            Actual attitude in body frame (roll, pitch, yaw, z)
+        yaw : float
+            Yaw setpoint
+        dt : float
+            Time difference
 
         Returns
         -------
+        outputs : np.array - 1x4
+            Attitude controller output where the elements represent roll, pitch,
+            yaw and throttle
 
         """
         self.dt += dt

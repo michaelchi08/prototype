@@ -9,7 +9,24 @@ from prototype.utils.euler import euler2rot
 
 
 class PositionController(object):
-    """ """
+    """Position Controller
+
+    Attributes
+    ----------
+    x_controller : PID
+        PID controller for x-axis
+    y_controller : PID
+        PID controller for y-axis
+    z_controller : PID
+        PID controller for z-axis
+
+    dt : float
+        Time difference
+    outputs : np.array - 1x4
+        Position controller output where the elements represent roll, pitch, yaw
+        and throttle
+
+    """
 
     def __init__(self):
         self.x_controller = PID(0.5, 0.0, 0.035)
@@ -20,21 +37,24 @@ class PositionController(object):
         self.outputs = np.array([0.0, 0.0, 0.0, 0.0])
 
     def update(self, setpoints, actual, yaw, dt):
-        """
+        """Update controller
 
         Parameters
         ----------
-        setpoints :
-
-        actual :
-
-        yaw :
-
-        dt :
-
+        setpoints : np.array - 1x3
+            Position setpoints in world frame (x, y, z)
+        actual : np.array - 1x3
+            Actual position in world frame (x, y, z)
+        yaw : float
+            Yaw setpoint
+        dt : float
+            Time difference
 
         Returns
         -------
+        outputs : np.array - 1x4
+            Position controller output where the elements represent roll, pitch,
+            yaw and throttle
 
         """
         # Check rate

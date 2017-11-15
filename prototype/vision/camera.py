@@ -4,18 +4,16 @@ import cv2
 
 
 class Camera(object):
-    def __init__(self, index=0):
-    """Constructor
-    
-            index (int): Camera index
+    """Camera
 
     Parameters
     ----------
-
-    Returns
-    -------
+    index : int
+        Camera index
 
     """
+
+    def __init__(self, index=0):
         self.frame = None
         self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
@@ -30,13 +28,10 @@ class Camera(object):
     def update(self):
         """Update camera
 
-        Parameters
-        ----------
-
         Returns
         -------
-
-            Camera frame (np.array)
+        frame : np.array
+            Camera frame
 
         """
         status, self.frame = self.capture.read()

@@ -3,6 +3,7 @@ from math import pi
 
 import numpy as np
 
+from prototype.utils.utils import rotz
 from prototype.utils.utils import nwu2edn
 from prototype.utils.data import mat2csv
 from prototype.models.two_wheel import two_wheel_2d_model
@@ -70,9 +71,12 @@ class DatasetGenerator(object):
         }
 
         self.features = []
-        self.time = []
+        self.time_history = []
         self.robot_states = []
         self.observed_features = []
+
+        self.pos_true = np.zeros((3, 1))
+        self.att_true = np.zeros((3, 1))
 
         # Counters
         self.counter_frame_id = 0
@@ -84,6 +88,33 @@ class DatasetGenerator(object):
         self.tracks_tracking = []
         self.tracks_lost = []
         self.tracks_buffer = {}
+
+        # Initialize states
+        self.dt = 0.01
+        self.time = 0.0
+
+        # Initialize features
+        self.features = self.generate_features()
+
+    def get_state(self):
+        """Returns robot state
+
+        Returns
+        -------
+        (pos, v_B, rpy, w_BG) : Tuple of size 4 each is a np.array 3x1
+
+            p : Position in world frame (m)
+            v_B : Velocity in body frame (ms^-1)
+            rpy : Roll, pitch and yaw in world frame (rads)
+            w_BG : Angular velocity in body frame (rads^-1)
+
+        """
+        pos = np.block([[self.x[0, 0]], [self.x[1, 0]], [0.0]])
+        v_B = np.array([[self.v_B], [0.0], [0.0]])
+        rpy = np.array([[0.0], [0.0], [self.x[2]]])
+        w_BG = np.array([[0.0], [0.0], [self.w_BG]])
+
+        return pos, v_B, rpy, w_BG
 
     def generate_features(self):
         """Setup features"""
@@ -105,8 +136,8 @@ class DatasetGenerator(object):
         state_file.write(",".join(header) + "\n")
 
         # Write state file
-        for i in range(len(self.time)):
-            t = self.time[i]
+        for i in range(len(self.time_history)):
+            t = self.time_history[i]
             x = self.robot_states[i].ravel().tolist()
 
             state_file.write(str(t) + ",")
@@ -130,14 +161,14 @@ class DatasetGenerator(object):
         index_file = open(os.path.join(save_dir, "index.dat"), "w")
 
         # Output observed features
-        for i in range(len(self.time)):
+        for i in range(len(self.time_history)):
             # Setup output file
             output_path = save_dir + "/observed_" + str(i) + ".dat"
             index_file.write(output_path + '\n')
             obs_file = open(output_path, "w")
 
             # Data
-            t = self.time[i]
+            t = self.time_history[i]
             x = self.robot_states[i].ravel().tolist()
             observed = self.observed_features[i]
 
@@ -271,7 +302,8 @@ class DatasetGenerator(object):
         # Keep track of features, robot state and time
         self.observed_features.append(fea_cur)
         self.robot_states.append(x)
-        self.time.append(time)
+        self.time_history.append(time)
+
 
     def remove_lost_tracks(self):
         """Remove lost tracks"""
@@ -288,26 +320,36 @@ class DatasetGenerator(object):
 
         return lost_tracks
 
+    def step(self):
+        """Step
+
+        Returns
+        -------
+        (a_B, w_BG) : (np.array 3x1, np.array 3x1)
+            Accelerometer and Gyroscope measurement in body frame (mimicks IMU
+            measurements)
+
+        """
+        # Update state
+
+
+        # Check feature
+        self.detect(self.time, self.x, self.dt)
+
+        # Update
+        pos = np.block([[self.x[0, 0]], [self.x[1, 0]], [0.0]])
+        att = np.block([[0.0], [0.0], [self.x[2, 0]]])
+        self.pos_true = np.hstack((self.pos_true, pos))
+        self.att_true = np.hstack((self.att_true, att))
+
+        self.time += self.dt
+
+        return (a_B, w_BG)
+
     def simulate_test_data(self):
         """Simulate test data"""
-        # Initialize states
-        dt = 0.01
-        time = 0.0
-        x = np.array([0, 0, 0]).reshape(3, 1)
-        w = self.calculate_circle_angular_velocity(0.5, 1.0)
-        u = np.array([0.1, w]).reshape(2, 1)
-        self.features = self.generate_features()
-
-        # Simulate two wheel robot
         for i in range(300):
-            # Update state
-            x = two_wheel_2d_model(x, u, dt)
-
-            # Check feature
-            self.detect(time, x, dt)
-
-            # Update
-            time += dt
+            self.step()
 
     def generate_test_data(self, save_dir):
         """Generate test data

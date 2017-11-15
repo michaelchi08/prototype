@@ -51,15 +51,17 @@ def focal_length(image_width, image_height, fov):
 
     Parameters
     ----------
-    image_width :
-
-    image_height :
-
-    fov :
-
+    image_width : int
+        Image width
+    image_height : int
+        Image height
+    fov : float
+        Field of view
 
     Returns
     -------
+    (fx, fy) : (float, float)
+        Focal length in x and y axis
 
     """
     fx = (image_width / 2.0) / tan(deg2rad(fov) / 2.0)
@@ -81,7 +83,7 @@ def projection_matrix(K, R, t):
 
     Returns
     -------
-
+    P : np.array
         Projection Matrix (3 x 4 matrix)
 
     """
@@ -131,15 +133,18 @@ def camera_center(P):
 
     Parameters
     ----------
-    P : np.array of size 3 x 4
+    P : np.array 3x4 matrix
         Projection Matrix
 
     Returns
     -------
+    camera_center : np.array
+        camera center
 
     """
     K, R, t = factor_projection_matrix(P)
-    return np.dot(R.T, t)
+    camera_center = np.dot(R.T, t)
+    return camera_center
 
 
 def camera_intrinsics(fx, fy, cx, cy):
@@ -173,17 +178,17 @@ def rand3dfeatures(nb_features, feature_bounds):
 
     Parameters
     ----------
-    bounds : dict
-        3D feature bounds, for example
-        bounds = {
-        "x": {"min": -1.0, "max": 1.0},
-        "y": {"min": -1.0, "max": 1.0},
-        "z": {"min": -1.0, "max": 1.0}
-        }
     nb_features : int
         number of 3D features to generate
-    feature_bounds :
 
+    feature_bounds :
+        3D feature bounds, for example
+
+        bounds = {
+            "x": {"min": -1.0, "max": 1.0},
+            "y": {"min": -1.0, "max": 1.0},
+            "z": {"min": -1.0, "max": 1.0}
+        }
 
     Returns
     -------

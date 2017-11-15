@@ -33,18 +33,51 @@ class QuadrotorModel(object):
         self.position_controller = PositionController()
         self.attitude_controller = AttitudeController()
 
+    @property
+    def attitude(self):
+        """Attitude"""
+        roll = self.states[0]
+        pitch = self.states[1]
+        yaw = self.states[2]
+        att = np.array([[roll], [pitch], [yaw]])
+        return att
+
+    @property
+    def angular_velocity(self):
+        """Angular Velocity"""
+        wx = self.states[3]
+        wy = self.states[4]
+        wz = self.states[5]
+        w = np.array([[wx], [wy], [wz]])
+        return w
+
+    @property
+    def position(self):
+        """Position"""
+        x = self.states[6]
+        y = self.states[7]
+        z = self.states[8]
+        pos = np.array([[x], [y], [z]])
+        return pos
+
+    @property
+    def velocity(self):
+        """Velocity"""
+        vx = self.states[9]
+        vy = self.states[10]
+        vz = self.states[11]
+        vel = np.array([[vx], [vy], [vz]])
+        return vel
+
     def update(self, motor_inputs, dt):
-        """
+        """Update quadrotor motion model
 
         Parameters
         ----------
-        motor_inputs :
-
-        dt :
-
-
-        Returns
-        -------
+        motor_inputs : np.array
+            Motor inputs
+        dt : float
+            Time difference
 
         """
         # states
@@ -56,9 +89,9 @@ class QuadrotorModel(object):
         q = self.states[4]
         r = self.states[5]
 
-        x = self.states[6]  # noqa
-        y = self.states[7]  # noqa
-        z = self.states[8]  # noqa
+        x = self.states[6]  # NOQA
+        y = self.states[7]  # NOQA
+        z = self.states[8]  # NOQA
 
         vx = self.states[9]
         vy = self.states[10]
@@ -76,19 +109,19 @@ class QuadrotorModel(object):
         taur = tau[3]
 
         # update
-        self.states[0] = ph + (p + q * sin(ph) * tan(th) + r * cos(ph) * tan(th)) * dt  # noqa
-        self.states[1] = th + (q * cos(ph) - r * sin(ph)) * dt  # noqa
-        self.states[2] = ps + ((1 / cos(th)) * (q * sin(ph) + r * cos(ph))) * dt  # noqa
-        self.states[3] = p + (-((self.Iz - self.Iy) / self.Ix) * q * r - (self.kr * p / self.Ix) + (1 / self.Ix) * taup) * dt  # noqa
-        self.states[4] = q + (-((self.Ix - self.Iz) / self.Iy) * p * r - (self.kr * q / self.Iy) + (1 / self.Iy) * tauq) * dt  # noqa
-        self.states[5] = r + (-((self.Iy - self.Ix) / self.Iz) * p * q - (self.kr * r / self.Iz) + (1 / self.Iz) * taur) * dt  # noqa
+        self.states[0] = ph + (p + q * sin(ph) * tan(th) + r * cos(ph) * tan(th)) * dt  # NOQA
+        self.states[1] = th + (q * cos(ph) - r * sin(ph)) * dt  # NOQA
+        self.states[2] = ps + ((1 / cos(th)) * (q * sin(ph) + r * cos(ph))) * dt  # NOQA
+        self.states[3] = p + (-((self.Iz - self.Iy) / self.Ix) * q * r - (self.kr * p / self.Ix) + (1 / self.Ix) * taup) * dt  # NOQA
+        self.states[4] = q + (-((self.Ix - self.Iz) / self.Iy) * p * r - (self.kr * q / self.Iy) + (1 / self.Iy) * tauq) * dt  # NOQA
+        self.states[5] = r + (-((self.Iy - self.Ix) / self.Iz) * p * q - (self.kr * r / self.Iz) + (1 / self.Iz) * taur) * dt  # NOQA
         self.states[6] = x + vx * dt
         self.states[7] = y + vy * dt
         self.states[8] = z + vz * dt
 
-        self.states[9] = vx + ((-self.kt * vx / self.m) + (1 / self.m) * (cos(ph) * sin(th) * cos(ps) + sin(ph) * sin(ps)) * tauf) * dt  # noqa
-        self.states[10] = vy + ((-self.kt * vy / self.m) + (1 / self.m) * (cos(ph) * sin(th) * sin(ps) - sin(ph) * cos(ps)) * tauf) * dt  # noqa
-        self.states[11] = vz + (-(self.kt * vz / self.m) + (1 / self.m) * (cos(ph) * cos(th)) * tauf - self.g) * dt  # noqa
+        self.states[9] = vx + ((-self.kt * vx / self.m) + (1 / self.m) * (cos(ph) * sin(th) * cos(ps) + sin(ph) * sin(ps)) * tauf) * dt  # NOQA
+        self.states[10] = vy + ((-self.kt * vy / self.m) + (1 / self.m) * (cos(ph) * sin(th) * sin(ps) - sin(ph) * cos(ps)) * tauf) * dt  # NOQA
+        self.states[11] = vz + (-(self.kt * vz / self.m) + (1 / self.m) * (cos(ph) * cos(th)) * tauf - self.g) * dt  # NOQA
 
         # constrain yaw to be [-180, 180]
         self.states[2] = rad2deg(self.states[2])
