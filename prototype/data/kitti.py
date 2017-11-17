@@ -352,7 +352,7 @@ class RawSequence:
                 t = dt.datetime.strptime(line[:-4], '%Y-%m-%d %H:%M:%S.%f')
                 self.timestamps.append(t)
 
-    def get_dt(self, index):
+    def get_dt(self, index=None):
         """Get dt"""
         if index > 0 and index < (len(self.timestamps) - 1):
             t_prev = self.timestamps[index - 1]
@@ -362,27 +362,46 @@ class RawSequence:
         else:
             return 0.0
 
-    def get_local_pos_true(self):
-        """Get true local position"""
+    def get_timestamps(self, index=None):
+        """Get timestamp"""
+        if index is None:
+            timestamps = self.timestamps
+        else:
+            timestamps = self.timestamps[index]
+        return timestamps
+
+    def get_local_position(self, index=None):
+        """Get local position"""
         lat_ref = self.oxts[0]['lat']
         lon_ref = self.oxts[0]['lon']
         alt_ref = self.oxts[0]['alt']
         local_pos = np.zeros((3, 1))
 
-        for i in range(1, len(self.oxts)):
+        if index is None:
+            for i in range(1, len(self.oxts)):
+                # Calculate position relative to home point
+                lat = self.oxts[i]['lat']
+                lon = self.oxts[i]['lon']
+                height = self.oxts[i]['alt'] - alt_ref
+                dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
+
+                pos = np.array([[dist_E], [dist_N], [height]])
+                local_pos = np.hstack((local_pos, pos))
+
+        else:
             # Calculate position relative to home point
-            lat = self.oxts[i]['lat']
-            lon = self.oxts[i]['lon']
-            height = self.oxts[i]['alt'] - alt_ref
+            lat = self.oxts[index]['lat']
+            lon = self.oxts[index]['lon']
+            height = self.oxts[index]['alt'] - alt_ref
             dist_N, dist_E = latlon_diff(lat_ref, lon_ref, lat, lon)
 
             pos = np.array([[dist_E], [dist_N], [height]])
-            local_pos = np.hstack((local_pos, pos))
+            local_pos = pos
 
         return local_pos
 
-    def get_vel_true(self, index=None):
-        """Get true velocity"""
+    def get_body_velocity(self, index=None):
+        """Get velocity in body frame"""
         if index is None:
             vel_x = [data["vf"] for data in self.oxts]
             vel_y = [data["vl"] for data in self.oxts]
@@ -394,8 +413,21 @@ class RawSequence:
 
         return np.array([vel_x, vel_y, vel_z])
 
-    def get_ang_vel_true(self, index=None):
-        """Get true angular velocity"""
+    def get_inertial_velocity(self, index=None):
+        """Get velocity in inertial frame"""
+        if index is None:
+            vel_x = [data["ve"] for data in self.oxts]
+            vel_y = [data["vn"] for data in self.oxts]
+            vel_z = [data["vu"] for data in self.oxts]
+        else:
+            vel_x = [self.oxts[index]["ve"]]
+            vel_y = [self.oxts[index]["vn"]]
+            vel_z = [self.oxts[index]["vu"]]
+
+        return np.array([vel_x, vel_y, vel_z])
+
+    def get_gyroscope(self, index=None):
+        """Get gyroscope measurement"""
         if index is None:
             gyro_x = [data["wf"] for data in self.oxts]
             gyro_y = [data["wl"] for data in self.oxts]
@@ -407,8 +439,8 @@ class RawSequence:
 
         return np.array([gyro_x, gyro_y, gyro_z])
 
-    def get_accel_true(self, index=None):
-        """Get true acceleration"""
+    def get_accelerometer(self, index=None):
+        """Get accelerometer"""
         if index is None:
             accel_x = [data["af"] for data in self.oxts]
             accel_y = [data["al"] for data in self.oxts]
@@ -420,8 +452,8 @@ class RawSequence:
 
         return np.array([accel_x, accel_y, accel_z])
 
-    def get_att_true(self, index=None):
-        """Get true attitude"""
+    def get_attitude(self, index=None):
+        """Get attitude"""
         if index is None:
             roll = [data["roll"] for data in self.oxts]
             pitch = [data["pitch"] for data in self.oxts]
@@ -432,6 +464,32 @@ class RawSequence:
             yaw = [self.oxts[index]["yaw"]]
 
         return np.array([roll, pitch, yaw])
+
+    def get_imu_measurements(self, index=None):
+        # Gyroscope
+        if index is None:
+            gyro_x = [data["wf"] for data in self.oxts]
+            gyro_y = [data["wl"] for data in self.oxts]
+            gyro_z = [data["wu"] for data in self.oxts]
+        else:
+            gyro_x = [self.oxts[index]["wf"]]
+            gyro_y = [self.oxts[index]["wl"]]
+            gyro_z = [self.oxts[index]["wu"]]
+
+        # Accelerometer
+        if index is None:
+            accel_x = [data["af"] for data in self.oxts]
+            accel_y = [data["al"] for data in self.oxts]
+            accel_z = [data["au"] for data in self.oxts]
+        else:
+            accel_x = [self.oxts[index]["af"]]
+            accel_y = [self.oxts[index]["al"]]
+            accel_z = [self.oxts[index]["au"]]
+
+        a = np.array([accel_x, accel_y, accel_z])
+        w = np.array([gyro_x, gyro_y, gyro_z])
+
+        return (a, w)
 
     def plot_accelerometer(self):
         """Plot accelerometer"""

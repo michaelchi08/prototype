@@ -33,14 +33,17 @@ def convert2homogeneous(points):
 
     Parameters
     ----------
-    points :
-
+    points : np.array - 2xN or 3xN
+        Points to covert to homogenous coordinates
 
     Returns
     -------
+    points_homo : np.array - 3xN or 4xN
+        Points in homogeneous coordinates
 
     """
-    return np.vstack((points, np.ones((1, points.shape[1]))))
+    points_homo = np.vstack((points, np.ones((1, points.shape[1]))))
+    return points_homo
 
 
 def focal_length(image_width, image_height, fov):

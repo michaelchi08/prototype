@@ -172,7 +172,8 @@ class PlotMatrix:
         else:
             self.cov_ax.set_data(np.array(data))
             self._update_data_labels(data)
-            self._update_color_bar(data)
+
+        self._update_color_bar(data)
 
         # Update plot
         self.fig.canvas.draw()

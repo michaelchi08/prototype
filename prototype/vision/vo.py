@@ -3,19 +3,20 @@ import numpy as np
 
 
 def feature_tracking(image_ref, image_cur, px_ref):
-    """
+    """Feature Tracking
 
     Parameters
     ----------
-    image_ref :
-
-    image_cur :
-
+    image_ref : np.array
+        Reference image
+    image_cur : np.array
+        Current image
     px_ref :
-
+        Reference pixels
 
     Returns
     -------
+    (kp1, kp2) : (list of Keypoints, list of Keypoints)
 
     """
     # Setup
@@ -42,7 +43,7 @@ def feature_tracking(image_ref, image_cur, px_ref):
 
 
 class BasicVO:
-    """ """
+    """Basic Visual Odometry"""
 
     def __init__(self, fx, cx, cy):
         self.last_frame = None

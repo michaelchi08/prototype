@@ -92,21 +92,15 @@ def get_scale(ground_truth, frame_id):
 
 
 def benchmark_mono_vo(data_path, sequence, vo, **kwargs):
-    """
+    """Benchmark Monocular VO
 
     Parameters
     ----------
-    data_path :
-
-    sequence :
-
+    data_path : str
+        Path to data
+    sequence : str
+        Data sequence
     vo :
-
-    **kwargs :
-
-
-    Returns
-    -------
 
     """
     map_size = kwargs.get("map_size", (600, 600))

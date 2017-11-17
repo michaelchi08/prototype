@@ -67,12 +67,16 @@ class Transform:
         self.frame_to = frame_to
         self.frame_from = frame_from
 
-        self.R = kwargs.get("R", np.zeros((3, 3)))
-        self.t = kwargs.get("t", np.zeros((3, 1)))
+        data = kwargs.get("data", None)
+        if data is not None:
+            self.R = data[0:3, 0:3].reshape((3, 3))
+            self.t = data[0:3, 3].reshape((3, 1))
 
-        # Ensure rotation and translation are of correct shape
-        self.R = self.R.reshape((3, 3))
-        self.t = self.t.reshape((3, 1))
+        else:
+            self.R = kwargs.get("R", np.zeros((3, 3)))
+            self.t = kwargs.get("t", np.zeros((3, 1)))
+            self.R = self.R.reshape((3, 3))
+            self.t = self.t.reshape((3, 1))
 
     def data(self):
         """Obtain transform as a 4x4 homogeneous transform matrix
@@ -103,8 +107,20 @@ class Transform:
         # Transform matrix
         T = self.data()
 
+        # Input is transform class
+        if type(x) == Transform:
+            return Transform(self.frame_to,
+                             x.frame_from,
+                             data=np.dot(x.data(), self.data()))
+
+        # Input is rotation matrix
+        elif x.shape == (3, 3):
+            R = x
+            T_x = np.block([[R, np.zeros((3, 1))], [0.0, 0.0, 0.0, 1.0]])
+            return np.dot(T, T_x)[0:3, 0:3]
+
         # Input is vector (not in homogeneous coordinates)
-        if len(x) != 4:
+        elif len(x) != 4 and len(x) == 3:
             x = x.ravel()
             x = np.array([[x[0]], [x[1]], [x[2]], [1.0]])
             return np.dot(T, x)[0:3]
@@ -118,6 +134,14 @@ class Transform:
             return np.dot(T, x)
 
 
-T_rdf_flu = Transform("rdf",
-                      "flu",
-                      R=np.dot(rotx(deg2rad(-90.0)), rotz(deg2rad(-90.0))))
+# Useful default transforms
+T_camera_global = Transform(
+    "camera",
+    "global",
+    R=np.dot(rotx(deg2rad(-90.0)), rotz(deg2rad(-90.0)))
+)
+T_global_camera = Transform(
+    "global",
+    "camera",
+    data=np.linalg.inv(T_camera_global.data())
+)

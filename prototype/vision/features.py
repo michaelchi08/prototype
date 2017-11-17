@@ -547,16 +547,6 @@ class FeatureTracker:
         matches = self.matcher.match(des1, des0)
         matches = sorted(matches, key=lambda x: x.distance)
 
-        # # Perform RANSAC (by utilizing findFundamentalMat()) on matches
-        # # This acts as a stage 2 filter where outliers are rejected
-        # src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
-        # dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
-        # src_pts = src_pts.reshape(-1, 1, 2)
-        # dst_pts = dst_pts.reshape(-1, 1, 2)
-        # M, mask = cv2.findFundamentalMat(
-        #     src_pts, dst_pts, cv2.FM_RANSAC, 1, 0.99)
-        # match_mask = mask.ravel().tolist()
-
         # Perform RANSAC (by utilizing findFundamentalMat()) on matches
         # This acts as a stage 2 filter where outliers are rejected
         src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
