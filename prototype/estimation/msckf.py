@@ -10,7 +10,6 @@ from numpy.linalg import inv
 from numpy.matlib import repmat
 
 from prototype.utils.transform import T_camera_global
-from prototype.utils.transform import T_global_camera
 from prototype.utils.utils import rotnormalize
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import skewsq
@@ -429,8 +428,8 @@ class MSCKF:
 
         # Camera settings
         # -- Camera noise
-        self.n_u = 0.01
-        self.n_v = 0.01
+        self.n_u = 0.1
+        self.n_v = 0.1
         # -- Camera states
         self.cam_states = [CameraState(np.array([0.0, 0.0, 0.0, 1.0]),
                                        np.array([0.0, 0.0, 0.0]))]
@@ -445,7 +444,7 @@ class MSCKF:
         self.enable_qr_trick = kwargs.get("enable_qr_trick", True)
 
         # Feature track settings
-        self.min_track_length = 2
+        self.min_track_length = 8
 
         # Covariance matrices
         x_imu_size = self.imu_state.size      # Size of imu state
@@ -722,7 +721,7 @@ class MSCKF:
                 t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
 
                 # Project estimated feature location to image plane
-                h = dot(C_Ci_C0, np.array([[alpha], [beta], [1]])) + dot(rho, t_Ci_CiC0)  # noqa
+                h = dot(C_Ci_C0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0  # noqa
 
                 # Calculate reprojection error
                 # -- Convert measurment to normalized pixel coordinates
@@ -742,19 +741,19 @@ class MSCKF:
                     -C_CiG[1, 1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiG[2, 1]   # noqa
                 ])
                 drdrho = np.array([
-                    -t_Ci_CiC0[0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * t_Ci_CiC0[2],  # noqa
-                    -t_Ci_CiC0[1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * t_Ci_CiC0[2]   # noqa
+                    -t_Ci_CiC0[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * t_Ci_CiC0[2, 0],  # noqa
+                    -t_Ci_CiC0[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * t_Ci_CiC0[2, 0]   # noqa
                 ])
                 J[2 * i:(2 * (i + 1)), 0] = drdalpha.ravel()
                 J[2 * i:(2 * (i + 1)), 1] = drdbeta.ravel()
                 J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
 
                 # Form the weight matrix
-                W[2 * i:(2 * (i + 1)), 2 * i:(2 * (i + 1))] = np.diag([0.001, 0.001]) # noqa
+                W[2 * i:(2 * (i + 1)), 2 * i:(2 * (i + 1))] = np.diag([0.00001, 0.00001]) # noqa
 
             # Check hessian if it is numerically ok
             H_approx = dot(J.T, J)
-            if np.linalg.cond(H_approx) > 1e5:
+            if np.linalg.cond(H_approx) > 1e3:
                 return None, None, None
 
             # Update estimate params using Gauss Newton
@@ -776,14 +775,13 @@ class MSCKF:
                 break
 
             # # Update params using Weighted Gauss Newton
-            # # J_new = 0.5 * dot(r.T, np.linalg.solve(W, r))
-            # EWE = dot(J.T, np.linalg.solve(W, J))
-            # delta = np.linalg.solve(EWE, dot(-J.T, np.linalg.solve(W, r)))
-            # theta_k = np.array([[alpha], [beta], [rho]]) - delta
+            # JWJ = dot(J.T, np.linalg.solve(W, J))
+            # delta = np.linalg.solve(JWJ, dot(-J.T, np.linalg.solve(W, r)))
+            # theta_k = np.array([[alpha], [beta], [rho]]) + delta
             # alpha = theta_k[0, 0]
             # beta = theta_k[1, 0]
             # rho = theta_k[2, 0]
-            #
+
             # # Check how fast the residuals are converging to 0
             # r_Jnew = float(0.5 * dot(r.T, r))
             # if r_Jnew < 0.0000001:
@@ -797,10 +795,13 @@ class MSCKF:
 
         # Debug
         if debug:
-            print(k)
-            print(alpha)
-            print(beta)
-            print(rho)
+            # print(k)
+            # print(alpha)
+            # print(beta)
+            # print(rho)
+            print("track_length: ", track.tracked_length())
+            print("iterations: ", k)
+            print("residual: ", r)
 
         # Convert estimated inverse depth params back to feature position in
         # global frame.  See (Eq.38, Mourikis2007 (A Multi-State Constraint
@@ -809,7 +810,7 @@ class MSCKF:
         X = np.array([[alpha], [beta], [1.0]])
         C_C0G = C(track_cam_states[0].q_CG)
         p_G_C0 = track_cam_states[0].p_G
-        p_G_f = dot(z, dot(C_C0G.T, X)) + p_G_C0
+        p_G_f = z * dot(C_C0G.T, X) + p_G_C0
 
         return (p_G_f, k, r)
 
