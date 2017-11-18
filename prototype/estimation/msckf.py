@@ -445,7 +445,7 @@ class MSCKF:
         self.enable_qr_trick = kwargs.get("enable_qr_trick", True)
 
         # Feature track settings
-        self.min_track_length = 5
+        self.min_track_length = 2
 
         # Covariance matrices
         x_imu_size = self.imu_state.size      # Size of imu state
@@ -616,26 +616,34 @@ class MSCKF:
         if self.record:
             self.record_state(w_m, dt)
 
-    def triangulate(self, cam_model, track, track_cam_states):
-        """Triangulate observed feature"""
-        # Calculate rotation and translation of first and last camera states
-        C_C0G = C(track_cam_states[0].q_CG)
-        C_C1G = C(track_cam_states[-1].q_CG)
-        p_G_C0 = track_cam_states[0].p_G
-        p_G_C1 = track_cam_states[-1].p_G
-        # -- Set camera 0 as origin, work out rotation and translation of
-        # -- camera 1 relative to to camera 0
-        C_C0C1 = dot(C_C0G, C_C1G.T)
-        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
-        # -- Convert from pixel coordinates to image coordinates
-        pt1 = cam_model.pixel2image(track.track[0].pt)
-        pt2 = cam_model.pixel2image(track.track[1].pt)
-        # -- Convert points to homogenous coordinates and normalize
-        pt1 = np.block([pt1, 1.0]).reshape((3, 1))
-        pt2 = np.block([pt2, 1.0]).reshape((3, 1))
+    def triangulate(self, pt1, pt2, C_C0C1, t_C0_C1C0):
+        """Triangulate feature observed from camera C0 and C1 and return the
+        position relative to camera C0
+
+        Parameters
+        ----------
+        pt1 : np.array - 2x1
+            Feature point 1 in pixel coordinates
+        pt2 : np.array - 2x1
+            Feature point 2 in pixel coordinates
+        C_C0C1 : np.array - 3x3
+            Rotation matrix from frame C1 to C0
+        t_C0_C0C1 : np.array - 3x3
+            Translation vector from frame C0 to C1 expressed in C0
+
+        Returns
+        -------
+        p_C0_f : np.array - 3x1
+            Returns feature point expressed in C0 in camera coordinates
+
+        """
+        # Convert points to homogenous coordinates and normalize
+        pt1 = np.block([[pt1], [1.0]])
+        pt2 = np.block([[pt2], [1.0]])
         pt1 = pt1 / np.linalg.norm(pt1)
         pt2 = pt2 / np.linalg.norm(pt2)
-        # -- Triangulate
+
+        # Triangulate
         A = np.block([pt1, -dot(C_C0C1, pt2)])
         b = t_C0_C1C0
         result = np.linalg.lstsq(A, b)
@@ -655,8 +663,7 @@ class MSCKF:
         track : FeatureTrack
             Feature track
         track_cam_states : list of CameraState
-            Camera states where feature
-            track was observed
+            Camera states where feature track was observed
         debug :
              (Default value = False)
 
@@ -670,8 +677,21 @@ class MSCKF:
             Residual np.array over all camera states
 
         """
+        # Calculate rotation and translation of first and last camera states
+        C_C0G = C(track_cam_states[0].q_CG)
+        C_C1G = C(track_cam_states[-1].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_G_C1 = track_cam_states[-1].p_G
+        # -- Set camera 0 as origin, work out rotation and translation of
+        # -- camera 1 relative to to camera 0
+        C_C0C1 = dot(C_C0G, C_C1G.T)
+        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
+        # -- Convert from pixel coordinates to image coordinates
+        pt1 = cam_model.pixel2image(track.track[0].pt).reshape((2, 1))
+        pt2 = cam_model.pixel2image(track.track[-1].pt).reshape((2, 1))
+
         # Calculate initial estimate of 3D position
-        X = self.triangulate(cam_model, track, track_cam_states)
+        X = self.triangulate(pt1, pt2, C_C0C1, t_C0_C1C0)
 
         # Create inverse depth params (these are to be optimized)
         alpha = X[0, 0] / X[2, 0]
@@ -688,6 +708,7 @@ class MSCKF:
             N = len(track_cam_states)
             r = zeros((2 * N, 1))
             J = zeros((2 * N, 3))
+            W = zeros((2 * N, 2 * N))
 
             # Calculate residuals
             for i in range(N):
@@ -728,21 +749,24 @@ class MSCKF:
                 J[2 * i:(2 * (i + 1)), 1] = drdbeta.ravel()
                 J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
 
+                # Form the weight matrix
+                W[2 * i:(2 * (i + 1)), 2 * i:(2 * (i + 1))] = np.diag([0.001, 0.001]) # noqa
+
             # Check hessian if it is numerically ok
             H_approx = dot(J.T, J)
-            if np.linalg.cond(H_approx) > 1e2:
+            if np.linalg.cond(H_approx) > 1e5:
                 return None, None, None
 
-            # Update esitmated params using Gauss Newton
+            # Update estimate params using Gauss Newton
             delta = dot(inv(H_approx), dot(J.T, r))
-            theta_k = np.array([[alpha], [beta], [rho]]) - delta
+            theta_k = np.array([[alpha], [beta], [rho]]) + delta
             alpha = theta_k[0, 0]
             beta = theta_k[1, 0]
             rho = theta_k[2, 0]
 
             # Check how fast the residuals are converging to 0
             r_Jnew = float(0.5 * dot(r.T, r))
-            if r_Jnew < 0.000001:
+            if r_Jnew < 0.0001:
                 break
             r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
             r_Jprev = r_Jnew
@@ -750,6 +774,26 @@ class MSCKF:
             # Break loop if not making any progress
             if r_J < 0.000001:
                 break
+
+            # # Update params using Weighted Gauss Newton
+            # # J_new = 0.5 * dot(r.T, np.linalg.solve(W, r))
+            # EWE = dot(J.T, np.linalg.solve(W, J))
+            # delta = np.linalg.solve(EWE, dot(-J.T, np.linalg.solve(W, r)))
+            # theta_k = np.array([[alpha], [beta], [rho]]) - delta
+            # alpha = theta_k[0, 0]
+            # beta = theta_k[1, 0]
+            # rho = theta_k[2, 0]
+            #
+            # # Check how fast the residuals are converging to 0
+            # r_Jnew = float(0.5 * dot(r.T, r))
+            # if r_Jnew < 0.0000001:
+            #     break
+            # r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
+            # r_Jprev = r_Jnew
+            #
+            # # Break loop if not making any progress
+            # if r_J < 0.000001:
+            #     break
 
         # Debug
         if debug:
@@ -993,13 +1037,15 @@ class MSCKF:
         if T_H is None and r_n is None and R_n is None:
             return
 
+        print(r_n.shape)
+
         # Calculate Kalman gain
         K = dot(self.P(), dot(T_H.T, inv(dot(T_H, dot(self.P(), T_H.T)) + R_n)))
 
         # Correct states
         dx = dot(K, r_n)
         self.correct_imu_state(dx)
-        # self.correct_cam_states(dx)
+        self.correct_cam_states(dx)
 
         # Correct covariance matrices
         x_imu_size = self.imu_state.size
