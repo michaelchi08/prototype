@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pylab as plt
 
 import prototype.tests as test
+from prototype.utils.utils import deg2rad
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.common import convert2homogeneous
@@ -84,18 +85,34 @@ class PinholeCameraModelTest(unittest.TestCase):
         camera_model = PinholeCameraModel(640, 640, K)
 
         # Setup random 3d features
-        nb_features = 100
-        feature_bounds = {
-            "x": {"min": -1.0, "max": 10.0},
-            "y": {"min": -1.0, "max": 1.0},
-            "z": {"min": -1.0, "max": 1.0}
-        }
-        features = rand3dfeatures(nb_features, feature_bounds)
+        feature = np.array([[0.0], [0.0], [10.0]])
 
         # Test
-        rpy = np.array([0.0, 0.0, 0.0])
+        rpy = np.array([deg2rad(0.0), deg2rad(-10.0), 0.0])
         t = np.array([0.0, 0.0, 0.0])
-        observed = camera_model.observed_features(features, rpy, t)
+        observed = camera_model.observed_features(feature, rpy, t)
 
         # Assert
         self.assertTrue(len(observed) > 0)
+
+    # def test_observed_features2(self):
+    #     # Setup camera model
+    #     K = camera_intrinsics(554.25, 554.25, 320.0, 320.0)
+    #     camera_model = PinholeCameraModel(640, 640, K)
+    #
+    #     # Setup random 3d features
+    #     nb_features = 100
+    #     feature_bounds = {
+    #         "x": {"min": -1.0, "max": 10.0},
+    #         "y": {"min": -1.0, "max": 1.0},
+    #         "z": {"min": -1.0, "max": 1.0}
+    #     }
+    #     features = rand3dfeatures(nb_features, feature_bounds)
+    #
+    #     # Test
+    #     rpy = np.array([0.0, 0.0, 0.0])
+    #     t = np.array([0.0, 0.0, 0.0])
+    #     observed = camera_model.observed_features(features, rpy, t)
+    #
+    #     # Assert
+    #     self.assertTrue(len(observed) > 0)

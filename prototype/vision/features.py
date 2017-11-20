@@ -73,21 +73,37 @@ class Feature:
 
 
 class FeatureTrack:
-    """Feature Track"""
+    """Feature Track
 
-    def __init__(self, track_id, frame_id, data0, data1=None):
-        """ Constructor
+    Attributes
+    ----------
+    track_id : int
+        Track id
+    frame_start : int
+        First frame where feature was observed
+    frame_end : int
+        Last frame where feature was observed
+    track : list of Feature
+        List of features representing the feature track
+    ground_truth : int or np.array - 3x1
+        Feature position ground truth
 
-        Parameters
-        ----------
-        frame_id : int
-            Frame id
-        track_id int
-            Track id
-        data : Keypoint or Feature
-            Keypoint or feature
+    Parameters
+    ----------
+    track_id : int
+        Track id
+    frame_id : int
+        Frame id
+    data0 : Keypoint or Feature
+        First Keypoint or feature
+    data1 : Keypoint or Feature
+        Second Keypoint or feature
+    ground_truth : int or np.array - 3x1
+        Feature position ground truth
 
-        """
+    """
+
+    def __init__(self, track_id, frame_id, data0, data1=None, **kwargs):
         self.track_id = track_id
 
         if data1 is None:
@@ -98,6 +114,8 @@ class FeatureTrack:
             self.frame_start = frame_id - 1
             self.frame_end = frame_id
             self.track = [data0, data1]
+
+        self.ground_truth = kwargs.get("ground_truth", None)
 
     def update(self, frame_id, data):
         """Update feature track
@@ -161,6 +179,10 @@ class FeatureTrack:
         s += "frame_start: %d\n" % self.frame_start
         s += "frame_end: %d\n" % self.frame_end
         s += "track: %s" % self.track
+        if self.ground_truth is not None:
+            s += "\n"
+            s += "ground_truth: " + str(self.ground_truth)
+            s += "\n"
         return s
 
 

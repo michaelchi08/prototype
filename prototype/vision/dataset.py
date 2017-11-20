@@ -2,9 +2,11 @@ import os
 import copy
 
 import numpy as np
+from numpy import dot
 
 # from prototype.utils.data import mat2csv
 from prototype.utils.utils import nwu2edn
+from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.models.husky import HuskyModel
 from prototype.control.utils import circle_trajectory
 from prototype.vision.common import camera_intrinsics
@@ -12,6 +14,52 @@ from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
+
+
+class DatasetFeatureEstimator:
+    def estimate(self, cam_model, track, track_cam_states):
+        # Get ground truth
+        p_G_f = track.ground_truth
+
+        # Convert ground truth expressed in global frame
+        # to be expressed in camera 0
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_C0_f = dot(C_C0G, (p_G_f - p_G_C0))
+
+        # Create inverse depth params (these are to be optimized)
+        alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
+        beta = p_C0_f[1, 0] / p_C0_f[2, 0]
+        rho = 1.0 / p_C0_f[2, 0]
+
+        # Setup residual calculation
+        N = len(track_cam_states)
+        r = np.zeros((2 * N, 1))
+
+        # Calculate residuals
+        for i in range(N):
+            # Get camera current rotation and translation
+            C_CiG = C(track_cam_states[i].q_CG)
+            p_G_Ci = track_cam_states[i].p_G
+
+            # Set camera 0 as origin, work out rotation and translation
+            # of camera i relative to to camera 0
+            C_CiC0 = dot(C_CiG, C_C0G.T)
+            t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
+
+            # Project estimated feature location to image plane
+            h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0  # noqa
+
+            # Calculate reprojection error
+            # -- Convert measurment to normalized pixel coordinates
+            z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
+            # -- Convert feature location to normalized pixel coordinates
+            x = np.array([h[0] / h[2], h[1] / h[2]])
+
+            # -- Reprojection error
+            r[2 * i:(2 * (i + 1))] = z - x
+
+        return (p_G_f, 0, r)
 
 
 class DatasetGenerator(object):
@@ -94,8 +142,8 @@ class DatasetGenerator(object):
         self.counter_track_id = 0
 
         # Feature tracks
-        self.landmarks_tracking = []
-        self.landmarks_buffer = {}
+        self.features_tracking = []
+        self.features_buffer = {}
         self.tracks_tracking = []
         self.tracks_lost = []
         self.tracks_buffer = {}
@@ -213,54 +261,58 @@ class DatasetGenerator(object):
             return
 
         # Remove lost feature tracks
-        landmark_ids_cur = [landmark_id for _, landmark_id in list(fea_cur)]
-        for landmark_id in list(self.landmarks_tracking):
-            if landmark_id not in landmark_ids_cur:
-                track_id = self.landmarks_buffer.pop(landmark_id)
+        feature_ids_cur = [feature_id for _, feature_id in list(fea_cur)]
+        for feature_id in list(self.features_tracking):
+            if feature_id not in feature_ids_cur:
+                track_id = self.features_buffer.pop(feature_id)
                 track = self.tracks_buffer.pop(track_id)
 
-                self.landmarks_tracking.remove(landmark_id)
+                self.features_tracking.remove(feature_id)
                 self.tracks_tracking.remove(track_id)
-                self.debug(
-                    "- [track_id: %d, landmark_id: %d]" %
-                    (track_id, landmark_id)
-                )
-
                 self.tracks_lost.append(track)
+
+                self.debug(
+                    "- [track_id: %d, feature_id: %d]" %
+                    (track_id, feature_id)
+                )
 
         # Add or update feature tracks
         for feature in fea_cur:
-            kp, landmark_id = feature
+            kp, feature_id = feature
             kp = Keypoint(kp, 0)
 
-            if landmark_id not in self.landmarks_tracking:
+            if feature_id not in self.features_tracking:
                 # Add track
                 frame_id = self.counter_frame_id
                 track_id = self.counter_track_id
-                track = FeatureTrack(track_id, frame_id, kp)
+                ground_truth = self.get_feature_position(feature_id)
+                track = FeatureTrack(track_id,
+                                     frame_id,
+                                     kp,
+                                     ground_truth=ground_truth)
                 self.debug(
-                    "+ [track_id: %d, landmark_id: %d]" %
-                    (track_id, landmark_id)
+                    "+ [track_id: %d, feature_id: %d]" %
+                    (track_id, feature_id)
                 )
 
-                self.landmarks_tracking.append(landmark_id)
-                self.landmarks_buffer[landmark_id] = track_id
+                self.features_tracking.append(feature_id)
+                self.features_buffer[feature_id] = track_id
                 self.tracks_tracking.append(track_id)
                 self.tracks_buffer[track_id] = track
                 self.counter_track_id += 1
 
             else:
                 # Update track
-                track_id = self.landmarks_buffer[landmark_id]
+                track_id = self.features_buffer[feature_id]
                 track = self.tracks_buffer[track_id]
                 track.update(self.counter_frame_id, kp)
                 self.debug(
-                    "Update [track_id: %d, landmark_id: %d]" %
-                    (track_id, landmark_id)
+                    "Update [track_id: %d, feature_id: %d]" %
+                    (track_id, feature_id)
                 )
 
         self.debug("tracks_tracking: {}".format(self.tracks_tracking))
-        self.debug("landmarks_tracking: {}\n".format(self.landmarks_tracking))
+        self.debug("features_tracking: {}\n".format(self.features_tracking))
         self.counter_frame_id += 1
 
     def remove_lost_tracks(self):
@@ -275,6 +327,10 @@ class DatasetGenerator(object):
         self.tracks_lost = []
 
         return lost_tracks
+
+    def get_feature_position(self, feature_id):
+        """Returns feature position"""
+        return self.features[:, feature_id].reshape((3, 1))
 
     def step(self):
         """Step
@@ -305,6 +361,9 @@ class DatasetGenerator(object):
         self.rpy_true = np.hstack((self.rpy_true, self.model.rpy_G))
 
         return (self.model.a_B, self.w_B)
+
+    def estimate(self):
+        pass
 
     def simulate_test_data(self):
         """Simulate test data"""

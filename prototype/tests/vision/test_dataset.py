@@ -3,9 +3,56 @@ import shutil
 import unittest
 
 import numpy as np
+from numpy import dot
 import matplotlib.pylab as plt
 
+from prototype.utils.utils import deg2rad
+from prototype.utils.quaternion.jpl import quat2rot as C
+from prototype.utils.quaternion.jpl import euler2quat
+from prototype.vision.common import focal_length
+from prototype.vision.common import camera_intrinsics
+from prototype.vision.camera_model import PinholeCameraModel
+from prototype.vision.features import Keypoint
+from prototype.vision.features import FeatureTrack
+from prototype.estimation.msckf import CameraState
 from prototype.vision.dataset import DatasetGenerator
+from prototype.vision.dataset import DatasetFeatureEstimator
+
+
+class DatasetFeatureEstimatorTest(unittest.TestCase):
+    def test_estimate(self):
+        estimator = DatasetFeatureEstimator()
+
+        # Pinhole Camera model
+        image_width = 640
+        image_height = 480
+        fov = 60
+        fx, fy = focal_length(image_width, image_height, fov)
+        cx, cy = (image_width / 2.0, image_height / 2.0)
+        K = camera_intrinsics(fx, fy, cx, cy)
+        cam_model = PinholeCameraModel(image_width, image_height, K)
+
+        # Camera states
+        track_cam_states = []
+        # -- Camera state 0
+        p_G_C0 = np.array([0.0, 0.0, 0.0])
+        rpy_C0G = np.array([deg2rad(0.0), deg2rad(0.0), deg2rad(0.0)])
+        q_C0G = euler2quat(rpy_C0G)
+        C_C0G = C(q_C0G)
+        track_cam_states.append(CameraState(q_C0G, p_G_C0))
+        # -- Camera state 1
+        p_G_C1 = np.array([0.0, 0.0, 1.0])
+        rpy_C1G = np.array([deg2rad(0.0), deg2rad(0.0), deg2rad(0.0)])
+        q_C1G = euler2quat(rpy_C1G)
+        C_C1G = C(q_C1G)
+        track_cam_states.append(CameraState(q_C1G, p_G_C1))
+
+        # Feature track
+        p_G_f = np.array([[0.0], [0.0], [10.0]])
+        kp0 = Keypoint(cam_model.project(p_G_f, C_C0G, p_G_C0)[0:2], 0)
+        kp1 = Keypoint(cam_model.project(p_G_f, C_C1G, p_G_C1)[0:2], 0)
+        track = FeatureTrack(0, 1, kp0, kp1, ground_truth=p_G_f)
+        p_G_f, k, r =  estimator.estimate(cam_model, track, track_cam_states)
 
 
 class DatasetGeneratorTest(unittest.TestCase):
@@ -99,6 +146,8 @@ class DatasetGeneratorTest(unittest.TestCase):
             plt.legend(loc=0)
             plt.show()
 
+    def test_estimate(self):
+        pass
 
     # def test_simulate_test_data(self):
     #     self.dataset.simulate_test_data()
