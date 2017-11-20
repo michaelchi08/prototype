@@ -61,6 +61,7 @@ class HuskyModel:
         v_kp1_G = np.dot(R_BG, v_B)
         # -- Acceleration
         a_kp1_G = v_kp1_G - self.v_G
+        a_kp1_G[2] = 9.81
         # -- Orientation
         rpy_kp1_G = self.rpy_G + w_B * dt
         # -- Finish up

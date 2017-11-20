@@ -205,6 +205,7 @@ def rand3dfeatures(nb_features, feature_bounds):
         x = randf(feature_bounds["x"]["min"], feature_bounds["x"]["max"])
         y = randf(feature_bounds["y"]["min"], feature_bounds["y"]["max"])
         z = randf(feature_bounds["z"]["min"], feature_bounds["z"]["max"])
-        features.append([x, y, z])
+        feature = np.array([[x], [y], [z]])
+        features.append(feature)
 
-    return features
+    return np.array(features).reshape((3, nb_features))

@@ -1,37 +1,48 @@
 import numpy as np
 
-# from prototype.utils.euler import euler2rot
+from prototype.utils.euler import euler2rot
 from prototype.vision.common import projection_matrix
 from prototype.vision.common import convert2homogeneous
 
 
-class PinholeCameraModel(object):
+
+
+class PinholeCameraModel:
     """ Pinhole camera model
+
+    Attributes
+    ----------
+    image_width: int
+        Image width
+    image_height: int
+        Image height
+    K : np.array - 3x3
+        Camera intrinsics
+
     Parameters
     ----------
     image_width : int
         Image width
     image_height : int
         Image height
-    K : np.array - size 3x3
+    K : np.array - 3x3
         Camera intrinsics
 
     """
 
-    def __init__(self, image_width, image_height, K, hz=None):
+    def __init__(self, image_width, image_height, K):
         self.image_width = image_width
         self.image_height = image_height
         self.K = K
 
     def P(self, R, t):
-        """P
+        """Return projection matrix
 
         Parameters
         ----------
-        R : np.array - size 3x3
+        R : np.array - 3x3
             Rotation matrix
-
-        t : np.array - size 3x1
+        t : np.array - 3x1
             Translation vector
 
         Returns
@@ -40,6 +51,7 @@ class PinholeCameraModel(object):
             Projection matrix
 
         """
+        t = t.reshape((3, 1))
         P = np.dot(self.K, np.block([R, np.dot(-R, t)]))
         return P
 
@@ -48,11 +60,11 @@ class PinholeCameraModel(object):
 
         Parameters
         ----------
-        X : np.array - size 3xN
+        X : np.array - 3xN
             3D features in camera coordinates
-        R : np.array - size 3x3
+        R : np.array - 3x3
             Rotation matrix
-        t : np.array - size 3x1
+        t : np.array - 3x1
             Translation vector
 
         Returns
@@ -99,89 +111,56 @@ class PinholeCameraModel(object):
         pt = np.array([(pixel[0] - cx) / fx, (pixel[1] - cy) / fy])
         return pt
 
-    # def update(self, dt):
-    #     """Update camera
-    #
-    #     Parameters
-    #     ----------
-    #     dt : float
-    #         Time difference
-    #
-    #     Returns
-    #     -------
-    #     result : bool
-    #         Boolean to denote whether model has been updated
-    #
-    #     """
-    #     self.dt += dt
-    #
-    #     if self.dt > (1.0 / self.hz):
-    #         self.dt = 0.0
-    #         self.frame += 1
-    #         return True
-    #
-    #     return False
-    #
-    # def check_features(self, dt, features, rpy, t):
-    #     """Check whether features are observable by camera
-    #
-    #     Parameters
-    #     ----------
-    #     dt : float
-    #         Time difference
-    #     features : np.array
-    #         Landmarks
-    #     rpy : np.array or list - size 3
-    #         Roll, pitch and yaw
-    #     t : np.array - size 3
-    #         Translation vector
-    #
-    #     Returns
-    #     -------
-    #     observed : list of [[np.array, int], ...]
-    #         List of observed 3D features as a tuple (pixel coordinates, landmark
-    #         id)
-    #
-    #     """
-    #     observed = []
-    #
-    #     # pre-check
-    #     if self.update(dt) == False:
-    #         return None
-    #
-    #     # rotation matrix
-    #     R = euler2rot(rpy, 123)
-    #
-    #     # projection matrix
-    #     P = projection_matrix(self.K, R, np.dot(-R, t))
-    #
-    #     # check which features are observable from camera
-    #     for i in range(len(features)):
-    #         # convert feature in NWU to EDN coordinate system
-    #         point = features[i]
-    #         point_edn = [0, 0, 0, 0]
-    #         point_edn[0] = -point[1]
-    #         point_edn[1] = -point[2]
-    #         point_edn[2] = point[0]
-    #         point_edn[3] = 1.0
-    #         point_edn = np.array(point_edn)
-    #
-    #         # project 3D world point to 2D image plane
-    #         img_pt = np.dot(P, point_edn)
-    #
-    #         # check to see if feature is valid and infront of camera
-    #         if img_pt[2] < 1.0:
-    #             continue  # skip this landmark! feature is not infront of camera
-    #
-    #         # normalize pixels
-    #         img_pt[0] = img_pt[0] / img_pt[2]
-    #         img_pt[1] = img_pt[1] / img_pt[2]
-    #         img_pt[2] = img_pt[2] / img_pt[2]
-    #
-    #         # check to see if feature observed is within image plane
-    #         x_ok = (img_pt[0] < self.image_width) and (img_pt[0] > 0.0)
-    #         y_ok = (img_pt[1] < self.image_height) and (img_pt[1] > 0.0)
-    #         if x_ok and y_ok:
-    #             observed.append((img_pt[0:2], i))
-    #
-    #     return observed
+    def observed_features(self, features, rpy, t):
+        """Return features are observed by camera
+
+        Parameters
+        ----------
+        features : np.array
+            Features
+        rpy : np.array or list - size 3
+            Roll, pitch and yaw
+        t : np.array - size 3
+            Translation vector
+
+        Returns
+        -------
+        observed : list of [[np.array - 1x2, int], ...]
+            List of observed 3D features as a tuple (pixel coordinates, feature
+            idx)
+
+        """
+        observed = []
+
+        # rotation matrix
+        R = euler2rot(rpy, 123)
+
+        # projection matrix
+        P = projection_matrix(self.K, R, np.dot(-R, t))
+
+        # check which features are observable from camera
+        feature_idx = 0
+        for f in features.T:
+            # project 3D world point to 2D image plane
+            point = np.array([f[0], f[1], f[2], 1.0])
+            img_pt = np.dot(P, point)
+
+            # check to see if feature is valid and infront of camera
+            if img_pt[2] < 1.0:
+                continue  # skip this feature! It is not infront of camera
+
+            # normalize pixels
+            img_pt[0] = img_pt[0] / img_pt[2]
+            img_pt[1] = img_pt[1] / img_pt[2]
+            img_pt[2] = img_pt[2] / img_pt[2]
+
+            # check to see if feature observed is within image plane
+            x_ok = (img_pt[0] < self.image_width) and (img_pt[0] > 0.0)
+            y_ok = (img_pt[1] < self.image_height) and (img_pt[1] > 0.0)
+            if x_ok and y_ok:
+                observed.append((img_pt[0:2], feature_idx))
+
+            # Update
+            feature_idx += 1
+
+        return observed

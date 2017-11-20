@@ -89,13 +89,15 @@ class FeatureTrack:
 
         """
         self.track_id = track_id
-        self.frame_start = frame_id - 1
-        self.frame_end = frame_id
 
-        if data1 is not None:
-            self.track = [data0, data1]
-        else:
+        if data1 is None:
+            self.frame_start = frame_id
+            self.frame_end = frame_id
             self.track = [data0]
+        else:
+            self.frame_start = frame_id - 1
+            self.frame_end = frame_id
+            self.track = [data0, data1]
 
     def update(self, frame_id, data):
         """Update feature track

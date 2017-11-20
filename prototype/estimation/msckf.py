@@ -1038,8 +1038,6 @@ class MSCKF:
         if T_H is None and r_n is None and R_n is None:
             return
 
-        print(r_n.shape)
-
         # Calculate Kalman gain
         K = dot(self.P(), dot(T_H.T, inv(dot(T_H, dot(self.P(), T_H.T)) + R_n)))
 
