@@ -39,20 +39,24 @@ class DatasetFeatureEstimatorTest(unittest.TestCase):
         rpy_C0G = np.array([deg2rad(0.0), deg2rad(0.0), deg2rad(0.0)])
         q_C0G = euler2quat(rpy_C0G)
         C_C0G = C(q_C0G)
-        track_cam_states.append(CameraState(q_C0G, p_G_C0))
+        track_cam_states.append(CameraState(0, q_C0G, p_G_C0))
+
         # -- Camera state 1
         p_G_C1 = np.array([0.0, 0.0, 1.0])
         rpy_C1G = np.array([deg2rad(0.0), deg2rad(0.0), deg2rad(0.0)])
         q_C1G = euler2quat(rpy_C1G)
         C_C1G = C(q_C1G)
-        track_cam_states.append(CameraState(q_C1G, p_G_C1))
+        track_cam_states.append(CameraState(1, q_C1G, p_G_C1))
 
         # Feature track
-        p_G_f = np.array([[0.0], [0.0], [10.0]])
+        p_G_f = np.array([[0.1], [0.0], [10.0]])
         kp0 = Keypoint(cam_model.project(p_G_f, C_C0G, p_G_C0)[0:2], 0)
         kp1 = Keypoint(cam_model.project(p_G_f, C_C1G, p_G_C1)[0:2], 0)
         track = FeatureTrack(0, 1, kp0, kp1, ground_truth=p_G_f)
-        p_G_f, k, r =  estimator.estimate(cam_model, track, track_cam_states)
+        estimate, k, r = estimator.estimate(cam_model, track, track_cam_states, True)
+
+        self.assertTrue(np.array_equal(p_G_f, estimate))
+        self.assertTrue(np.allclose(r, np.zeros((4, 1))))
 
 
 class DatasetGeneratorTest(unittest.TestCase):

@@ -7,6 +7,7 @@ from prototype.vision.common import projection_matrix
 from prototype.vision.common import factor_projection_matrix
 from prototype.vision.common import camera_center
 from prototype.vision.common import camera_intrinsics
+from prototype.vision.common import rand3dfeatures
 
 
 class CommonTest(unittest.TestCase):
@@ -79,3 +80,19 @@ class CommonTest(unittest.TestCase):
                           [0.0, 2.0, 4.0],
                           [0.0, 0.0, 1.0]])
         self.assertTrue((K == K_exp).all())
+
+    def test_rand3dfeatures(self):
+        bounds = {
+            "x": {"min": 1.0, "max": 2.0},
+            "y": {"min": 3.0, "max": 4.0},
+            "z": {"min": 5.0, "max": 6.0}
+        }
+        features = rand3dfeatures(10, bounds)
+
+        self.assertTrue(features.shape, (3, 10))
+        self.assertTrue(np.min(features[0, :]) >= bounds["x"]["min"])
+        self.assertTrue(np.max(features[0, :]) <= bounds["x"]["max"])
+        self.assertTrue(np.min(features[1, :]) >= bounds["y"]["min"])
+        self.assertTrue(np.max(features[1, :]) <= bounds["y"]["max"])
+        self.assertTrue(np.min(features[2, :]) >= bounds["z"]["min"])
+        self.assertTrue(np.max(features[2, :]) <= bounds["z"]["max"])

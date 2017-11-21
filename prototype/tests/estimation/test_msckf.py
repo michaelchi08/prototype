@@ -603,10 +603,10 @@ class MSCKFTest(unittest.TestCase):
         # Initialize MSCKF
         v0 = dataset.v_B
         q0 = euler2quat(np.zeros((3, 1)))
-        msckf = MSCKF(n_g=1e-6 * np.ones(3),
-                      n_a=1e-6 * np.ones(3),
-                      n_wg=1e-6 * np.ones(3),
-                      n_wa=1e-6 * np.ones(3),
+        msckf = MSCKF(n_g=0.01 * np.ones(3),
+                      n_a=0.01 * np.ones(3),
+                      n_wg=0.01 * np.ones(3),
+                      n_wa=0.01 * np.ones(3),
                       imu_q_IG=q0,
                       imu_v_G=v0,
                       cam_model=dataset.cam_model,
@@ -615,7 +615,9 @@ class MSCKFTest(unittest.TestCase):
                       feature_estimator=DatasetFeatureEstimator())
 
         # Loop through data
-        for i in range(1, 200):
+        for i in range(1, 100):
+            print("frame: %d" % i)
+
             # Prediction update
             a_m, w_m = dataset.step()
             dt = dataset.dt
@@ -624,8 +626,6 @@ class MSCKFTest(unittest.TestCase):
             # Measurement update
             tracks = dataset.remove_lost_tracks()
             msckf.measurement_update(tracks)
-
-            print("frame: %d" % i)
 
         # Plot
         debug = True

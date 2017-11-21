@@ -3,10 +3,12 @@ import copy
 
 import numpy as np
 from numpy import dot
+import matplotlib.pylab as plt
 
 # from prototype.utils.data import mat2csv
-from prototype.utils.utils import nwu2edn
 from prototype.utils.quaternion.jpl import quat2rot as C
+from prototype.utils.transform import T_global_camera
+from prototype.utils.transform import T_camera_global
 from prototype.models.husky import HuskyModel
 from prototype.control.utils import circle_trajectory
 from prototype.vision.common import camera_intrinsics
@@ -17,7 +19,32 @@ from prototype.vision.features import FeatureTrack
 
 
 class DatasetFeatureEstimator:
-    def estimate(self, cam_model, track, track_cam_states):
+    def plot(self, track, track_cam_states, estimates):
+        plt.figure()
+
+        # Feature
+        feature = T_global_camera * track.ground_truth
+        plt.plot(feature[0], feature[1],
+                 marker="o", color="red", label="feature")
+
+        # Camera states
+        for cam_state in track_cam_states:
+            pos = T_global_camera * cam_state.p_G
+            plt.plot(pos[0], pos[1],
+                     marker="o", color="blue", label="camera")
+
+        # Estimates
+        for i in range(len(estimates)):
+            cam_state = track_cam_states[i]
+            cam_pos = T_global_camera * cam_state.p_G
+            estimate = (T_global_camera * estimates[i]) + cam_pos
+            plt.plot(estimate[0], estimate[1],
+                     marker="o", color="green")
+
+        plt.legend(loc=0)
+        plt.show()
+
+    def estimate(self, cam_model, track, track_cam_states, plot=False):
         # Get ground truth
         p_G_f = track.ground_truth
 
@@ -37,6 +64,7 @@ class DatasetFeatureEstimator:
         r = np.zeros((2 * N, 1))
 
         # Calculate residuals
+        estimates = []
         for i in range(N):
             # Get camera current rotation and translation
             C_CiG = C(track_cam_states[i].q_CG)
@@ -48,16 +76,22 @@ class DatasetFeatureEstimator:
             t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
 
             # Project estimated feature location to image plane
-            h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0  # noqa
+            h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0
+            estimates.append(h)
+            # -- Convert feature location to normalized pixel coordinates
+            x = np.array([h[0] / h[2], h[1] / h[2]])
 
             # Calculate reprojection error
             # -- Convert measurment to normalized pixel coordinates
             z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
-            # -- Convert feature location to normalized pixel coordinates
-            x = np.array([h[0] / h[2], h[1] / h[2]])
-
             # -- Reprojection error
-            r[2 * i:(2 * (i + 1))] = z - x
+            reprojection_error = z - x
+            r[2 * i:(2 * (i + 1))] = reprojection_error
+
+        # Plot
+        if plot:
+            estimates = np.array(estimates)
+            self.plot(track, track_cam_states, estimates)
 
         return (p_G_f, 0, r)
 
@@ -114,7 +148,7 @@ class DatasetGenerator(object):
         self.feature_bounds = {
             "x": {"min": -10.0, "max": 10.0},
             "y": {"min": -10.0, "max": 10.0},
-            "z": {"min": -10.0, "max": 10.0}
+            "z": {"min": 5.0, "max": 10.0}
         }
         self.features = rand3dfeatures(self.nb_features, self.feature_bounds)
 
@@ -252,8 +286,8 @@ class DatasetGenerator(object):
         # Convert both euler angles and translation from NWU to EDN
         # Note: We assume here that we are using a robot model
         # where x = [pos_x, pos_y, theta] in world frame
-        rpy = nwu2edn(rpy)  # Motion model only modelled yaw
-        t = nwu2edn(pos)  # Translation
+        rpy = T_camera_global * rpy  # Motion model only modelled yaw
+        t = T_camera_global * pos  # Translation
 
         # Obtain list of features observed at this time step
         fea_cur = self.cam_model.observed_features(self.features, rpy, t)

@@ -199,13 +199,13 @@ def rand3dfeatures(nb_features, feature_bounds):
         list of 3D features
 
     """
-    features = []
+    features = np.zeros((3, nb_features))
 
     for i in range(nb_features):
         x = randf(feature_bounds["x"]["min"], feature_bounds["x"]["max"])
         y = randf(feature_bounds["y"]["min"], feature_bounds["y"]["max"])
         z = randf(feature_bounds["z"]["min"], feature_bounds["z"]["max"])
-        feature = np.array([[x], [y], [z]])
-        features.append(feature)
+        point = np.array([x, y, z])
+        features[:, i] = point
 
-    return np.array(features).reshape((3, nb_features))
+    return features
