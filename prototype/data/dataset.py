@@ -56,3 +56,15 @@ def download_kitti_vo_dataset(output_dir):
         print()
         download(url, output_dir)
         print()
+
+
+def download_kitti_raw_dataset(output_dir):
+    """Download KITTI RAW dataset
+
+    Parameters
+    ----------
+    output_dir : str
+        Output directory
+
+    """
+    pass

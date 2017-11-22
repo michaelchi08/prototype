@@ -93,6 +93,13 @@ class DatasetFeatureEstimator:
             estimates = np.array(estimates)
             self.plot(track, track_cam_states, estimates)
 
+        # Convert estimated inverse depth params back to feature position in
+        # global frame.  See (Eq.38, Mourikis2007 (A Multi-State Constraint
+        # Kalman Filter for Vision-aided Inertial Navigation)
+        z = 1 / rho
+        X = np.array([[alpha], [beta], [1.0]])
+        p_G_f = z * dot(C_C0G.T, X) + p_G_C0
+
         return (p_G_f, 0, r)
 
 
@@ -153,7 +160,7 @@ class DatasetGenerator(object):
         self.features = rand3dfeatures(self.nb_features, self.feature_bounds)
 
         # Simulation settings
-        self.dt = 0.01
+        self.dt = kwargs.get("dt", 0.01)
         self.t = 0.0
 
         # Calculate desired inputs for a circle trajectory
@@ -319,7 +326,7 @@ class DatasetGenerator(object):
                 # Add track
                 frame_id = self.counter_frame_id
                 track_id = self.counter_track_id
-                ground_truth = self.get_feature_position(feature_id)
+                ground_truth = T_global_camera * self.get_feature_position(feature_id)
                 track = FeatureTrack(track_id,
                                      frame_id,
                                      kp,

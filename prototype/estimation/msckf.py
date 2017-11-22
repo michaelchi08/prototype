@@ -9,8 +9,6 @@ from numpy import diag
 from numpy.linalg import inv
 from numpy.matlib import repmat
 
-from prototype.utils.transform import T_camera_global
-from prototype.utils.transform import T_global_camera
 from prototype.utils.utils import rotnormalize
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import skewsq
@@ -255,11 +253,11 @@ class IMUState:
 
         """
         # Split dx into its own components
-        dtheta_IG = T_global_camera * dx[0:3].reshape((3, 1))
-        db_g = T_global_camera * dx[3:6].reshape((3, 1))
-        dv_G = T_global_camera * dx[6:9].reshape((3, 1))
-        db_a = T_global_camera * dx[9:12].reshape((3, 1))
-        dp_G = T_global_camera * dx[12:15].reshape((3, 1))
+        dtheta_IG = dx[0:3].reshape((3, 1))
+        db_g = dx[3:6].reshape((3, 1))
+        dv_G = dx[6:9].reshape((3, 1))
+        db_a = dx[9:12].reshape((3, 1))
+        dp_G = dx[12:15].reshape((3, 1))
 
         # Time derivative of quaternion (small angle approx)
         dq_IG = 0.5 * dtheta_IG
@@ -419,7 +417,8 @@ class FeatureEstimator:
         k : int
             Optimized over k iterations
         r : np.array - 2Nx1
-            Residual np.array over all camera states
+            Residual over camera states where feature was tracked, where N is
+            the length of the feature track
 
         """
         # Calculate rotation and translation of first and last camera states
@@ -508,16 +507,16 @@ class FeatureEstimator:
             beta = theta_k[1, 0]
             rho = theta_k[2, 0]
 
-            # Check how fast the residuals are converging to 0
-            r_Jnew = float(0.5 * dot(r.T, r))
-            if r_Jnew < 0.0001:
-                break
-            r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
-            r_Jprev = r_Jnew
-
-            # Break loop if not making any progress
-            if r_J < 0.000001:
-                break
+            # # Check how fast the residuals are converging to 0
+            # r_Jnew = float(0.5 * dot(r.T, r))
+            # if r_Jnew < 0.0001:
+            #     break
+            # r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
+            # r_Jprev = r_Jnew
+            #
+            # # Break loop if not making any progress
+            # if r_J < 0.0001:
+            #     break
 
             # # Update params using Weighted Gauss Newton
             # JWJ = dot(J.T, np.linalg.solve(W, J))
@@ -526,7 +525,7 @@ class FeatureEstimator:
             # alpha = theta_k[0, 0]
             # beta = theta_k[1, 0]
             # rho = theta_k[2, 0]
-
+            #
             # # Check how fast the residuals are converging to 0
             # r_Jnew = float(0.5 * dot(r.T, r))
             # if r_Jnew < 0.0000001:
@@ -655,21 +654,22 @@ class MSCKF:
                                   n_imu)
 
         # Camera settings
-        # -- Camera noise
-        self.n_u = 0.05
-        self.n_v = 0.05
-        # -- Camera states
-        self.counter_frame_id = 0
-        self.cam_states = [CameraState(self.counter_frame_id,
-                                       T_camera_global * imu_q_IG,
-                                       T_camera_global * imu_p_G)]
-        self.counter_frame_id += 1
-
         # -- Camera intrinsics
         self.cam_model = kwargs["cam_model"]
         # -- Camera extrinsics
         self.ext_p_IC = kwargs["ext_p_IC"].reshape((3, 1))
         self.ext_q_CI = kwargs["ext_q_CI"].reshape((4, 1))
+        # -- Camera noise
+        self.n_u = 0.01
+        self.n_v = 0.01
+        # -- Camera states
+        self.counter_frame_id = 0
+        cam_q_CG = dot(quatlcomp(self.ext_q_CI), self.imu_state.q_IG)
+        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC)  # noqa
+        self.cam_states = [CameraState(self.counter_frame_id,
+                                       cam_q_CG,
+                                       cam_p_G)]
+        self.counter_frame_id += 1
 
         # Filter settings
         self.enable_ns_trick = kwargs.get("enable_ns_trick", True)
@@ -683,7 +683,7 @@ class MSCKF:
         # Covariance matrices
         x_imu_size = self.imu_state.size      # Size of imu state
         x_cam_size = self.cam_states[0].size  # Size of cam state
-        self.P_cam = I(x_cam_size)
+        self.P_cam = I(x_cam_size) * 0.01
         self.P_imu_cam = zeros((x_imu_size, x_cam_size))
 
         # History
@@ -877,15 +877,56 @@ class MSCKF:
         # Add new camera state to sliding window by using current IMU pose
         # estimate to calculate camera pose
         # -- Create camera state in global frame
-        cam_q_CG = dot(quatlcomp(self.ext_q_CI), self.imu_state.q_IG)
-        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC)  # noqa
-        # -- Transform camera state from global frame to camera frame
-        cam_q_CG = T_camera_global * cam_q_CG
-        cam_p_G = T_camera_global * cam_p_G
+        imu_q_IG = self.imu_state.q_IG
+        imu_p_G = self.imu_state.p_G
+        cam_q_CG = dot(quatlcomp(self.ext_q_CI), imu_q_IG)
+        cam_p_G = imu_p_G + dot(C(imu_q_IG).T, self.ext_p_IC)
         # -- Add camera state to sliding window
         cam_state = CameraState(self.counter_frame_id, cam_q_CG, cam_p_G)
         self.cam_states.append(cam_state)
         self.counter_frame_id += 1
+
+    def track_residuals(self, cam_model, track, track_cam_states, p_f_G):
+        """Calculate track residual
+
+        Parameters
+        ----------
+        cam_model : CameraModel
+            Camera model
+        track : FeatureTrack
+            Feature track
+        track_cam_states : list of CameraState
+            Camera states where feature track was observed
+        p_G_f : np.array - 3x1
+            Estimated feature position in global frame
+
+        Returns
+        -------
+        r : np.array - 2Nx1
+            Residual over camera states where feature was tracked, where N is
+            the length of the feature track
+
+        """
+        N = len(track_cam_states)
+        r_j = np.zeros((2 * N, 1))
+
+        for i in range(N):
+            # Transform feature from global frame to i-th camera frame
+            C_CG = C(track_cam_states[i].q_CG)
+            p_C_f = dot(C_CG, (p_f_G - track_cam_states[i].p_G))
+            cu = p_C_f[0, 0] / p_C_f[2, 0]
+            cv = p_C_f[1, 0] / p_C_f[2, 0]
+            z_hat = np.array([[cu], [cv]])
+
+            # Transform idealized measurement
+            z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
+
+            # Calculate reprojection error and add it to the residual vector
+            rs = 2 * i
+            re = 2 * i + 2
+            r_j[rs:re, 0] = (z - z_hat).ravel()
+
+        return r_j
 
     def residualize_track(self, track):
         """Residualize feature track
@@ -925,6 +966,12 @@ class MSCKF:
                                                         track_cam_states)
         if p_G_f is None:
             return (None, None, None)
+
+        # Calculate residuals
+        r_j = self.track_residuals(self.cam_model,
+                                   track,
+                                   track_cam_states,
+                                   p_G_f)
 
         # Form jacobian of measurement w.r.t both state and feature
         H_f_j, H_x_j = self.H(track, track_cam_states, p_G_f)
@@ -1085,7 +1132,7 @@ class MSCKF:
         if T_H is None and r_n is None and R_n is None:
             return
 
-        # print("residual: ", np.max(r_n))
+        print("residual: ", np.max(r_n))
 
         # Calculate Kalman gain
         K = dot(dot(self.P(), T_H.T), inv(dot(dot(T_H, self.P()), T_H.T) + R_n))

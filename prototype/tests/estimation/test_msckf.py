@@ -18,6 +18,7 @@ from prototype.utils.linalg import skew
 from prototype.utils.linalg import skewsq
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import euler2quat
+from prototype.utils.quaternion.jpl import quat2euler
 from prototype.utils.transform import T_camera_global
 from prototype.utils.transform import T_global_camera
 from prototype.vision.common import focal_length
@@ -278,7 +279,7 @@ class MSCKFTest(unittest.TestCase):
                            ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]),
                            cam_model=self.cam_model)
 
-    def plot_position(self, pos_true, pos_est, cam_states, yaw0):
+    def plot_position(self, pos_true, pos_est, cam_states):
         N = pos_est.shape[1]
         pos_true = pos_true[:, :N]
         pos_est = pos_est[:, :N]
@@ -293,15 +294,15 @@ class MSCKFTest(unittest.TestCase):
 
         # Estimated
         plt.plot(pos_est[0, :], pos_est[1, :],
-                 color="green", marker="o", label="Estimated")
+                 color="blue", marker="o", label="Estimated")
 
         # Sliding window
         cam_pos = []
         for cam_state in cam_states:
-            cam_pos.append(T_global_camera * cam_state.p_G)
+            cam_pos.append(cam_state.p_G)
         cam_pos = np.array(cam_pos).reshape((len(cam_pos), 3)).T
         plt.plot(cam_pos[0, :], cam_pos[1, :],
-                 color="blue", marker="o", label="Camera Poses")
+                 color="green", marker="o", label="Camera Poses")
 
         # Plot labels and legends
         plt.xlabel("East (m)")
@@ -350,6 +351,7 @@ class MSCKFTest(unittest.TestCase):
         plt.legend(loc=0)
 
     def plot_attitude(self, timestamps, att_true, att_est):
+        # Setup
         N = att_est.shape[1]
         t = timestamps[:N]
         att_true = att_true[:, :N]
@@ -432,7 +434,7 @@ class MSCKFTest(unittest.TestCase):
                       imu_v_G=v0,
                       cam_model=cam_model,
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
-                      ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]))
+                      ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
 
         # Loop through data
         for i in range(1, len(data.oxts)):
@@ -443,14 +445,13 @@ class MSCKFTest(unittest.TestCase):
             msckf.augment_state()
 
         # Plot
-        # debug = True
-        debug = False
+        debug = True
+        # debug = False
         if debug:
             # Position
             self.plot_position(data.get_local_position(),
                                msckf.pos_est,
-                               msckf.cam_states,
-                               data.oxts[0]["yaw"])
+                               msckf.cam_states)
 
             # Velocity
             self.plot_velocity(data.get_timestamps(),
@@ -497,8 +498,7 @@ class MSCKFTest(unittest.TestCase):
             # Position
             self.plot_position(dataset.pos_true,
                                msckf.pos_est,
-                               msckf.cam_states,
-                               dataset.rpy_true[0][2])
+                               msckf.cam_states)
 
             # Velocity
             self.plot_velocity(dataset.time_true,
@@ -527,6 +527,7 @@ class MSCKFTest(unittest.TestCase):
 
     def test_measurement_update(self):
         # Setup
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
         data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
@@ -543,9 +544,10 @@ class MSCKFTest(unittest.TestCase):
                       imu_q_IG=q0,
                       imu_v_G=v0,
                       cam_model=cam_model,
-                      ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]),
-                      # ext_p_IC=np.array([1.08, -0.32, 0.0]),
-                      ext_p_IC=np.zeros((3, 1)),
+                      # ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]),
+                      # ext_p_IC=np.zeros((3, 1)),
+                      ext_q_CI=np.array([0.49921, -0.49657, 0.50291, -0.50129]),
+                      ext_p_IC=np.array([1.08, -0.32, 0.0]),
                       # plot_covar=True)
                       plot_covar=False)
 
@@ -555,8 +557,9 @@ class MSCKFTest(unittest.TestCase):
         tracker.update(img)
 
         # Loop through data
-        for i in range(1, len(data.oxts)):
-        # for i in range(1, 30):
+        # for i in range(1, len(data.oxts)):
+        for i in range(1, 30):
+            print("frame %d" % i)
             # Track features
             img = cv2.imread(data.image_00_files[i])
             # tracker.update(img, True)
@@ -579,8 +582,7 @@ class MSCKFTest(unittest.TestCase):
             # Position
             self.plot_position(data.get_local_position(),
                                msckf.pos_est,
-                               msckf.cam_states,
-                               data.oxts[0]["yaw"])
+                               msckf.cam_states)
 
             # Velocity
             self.plot_velocity(data.get_timestamps(),
@@ -598,7 +600,7 @@ class MSCKFTest(unittest.TestCase):
 
     def test_measurement_update2(self):
         # Setup
-        dataset = DatasetGenerator()
+        dataset = DatasetGenerator(dt=0.1)
 
         # Initialize MSCKF
         v0 = dataset.v_B
@@ -611,11 +613,11 @@ class MSCKFTest(unittest.TestCase):
                       imu_v_G=v0,
                       cam_model=dataset.cam_model,
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
-                      ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]),
+                      ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]),
                       feature_estimator=DatasetFeatureEstimator())
 
         # Loop through data
-        for i in range(1, 30):
+        for i in range(1, 20):
             print("frame: %d" % i)
 
             # Prediction update
@@ -634,8 +636,7 @@ class MSCKFTest(unittest.TestCase):
             # Position
             self.plot_position(dataset.pos_true,
                                msckf.pos_est,
-                               msckf.cam_states,
-                               dataset.rpy_true[0][2])
+                               msckf.cam_states)
 
             # Velocity
             self.plot_velocity(dataset.time_true,
