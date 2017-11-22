@@ -720,7 +720,7 @@ class MSCKF:
             #     show=True
             # )
 
-    def record_state(self, w_m, dt):
+    def record_state(self):
         # Position
         pos = self.imu_state.p_G
 
@@ -851,7 +851,7 @@ class MSCKF:
         self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
         if self.record:
-            self.record_state(w_m, dt)
+            self.record_state()
 
     def augment_state(self):
         """Augment state

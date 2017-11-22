@@ -615,7 +615,7 @@ class MSCKFTest(unittest.TestCase):
                       feature_estimator=DatasetFeatureEstimator())
 
         # Loop through data
-        for i in range(1, 100):
+        for i in range(1, 30):
             print("frame: %d" % i)
 
             # Prediction update
