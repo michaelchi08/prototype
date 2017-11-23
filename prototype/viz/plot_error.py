@@ -9,18 +9,16 @@ from numpy.linalg import eig
 import matplotlib.pylab as plt
 
 
-def plot_error_ellipse(mean, cov):
-    """
+def plot_error_ellipse(mean, cov, ax=None):
+    """Plot error ellipse
 
     Parameters
     ----------
-    mean :
+    mean : np.array
+        Array of mean values
 
-    cov :
-
-
-    Returns
-    -------
+    cov : np.array
+        Covariance matrix
 
     """
     # Get eigenvalues and eigenvectors
@@ -72,5 +70,9 @@ def plot_error_ellipse(mean, cov):
         y = np.ravel(r_ellipse[1, :])
         X0, Y0 = mean
 
-        plt.plot(r_ellipse[0, :] + X0, r_ellipse[1, :] + Y0)
-        plt.plot(x + X0, y + Y0)
+        if ax is None:
+            plt.plot(r_ellipse[0, :] + X0, r_ellipse[1, :] + Y0)
+            plt.plot(x + X0, y + Y0)
+        else:
+            ax.plot(r_ellipse[0, :] + X0, r_ellipse[1, :] + Y0)
+            ax.plot(x + X0, y + Y0)

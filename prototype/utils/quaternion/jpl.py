@@ -5,8 +5,10 @@ from math import atan2
 from math import asin
 
 import numpy as np
+from numpy import dot
 
 from prototype.utils.linalg import skew
+from prototype.utils.utils import rotnormalize
 
 
 def quatnorm(q):
@@ -148,6 +150,13 @@ def quat2rot(q):
     return np.array([[R11, R12, R13],
                      [R21, R22, R23],
                      [R31, R32, R33]])
+
+
+def C(q):
+    q = q.reshape((4, 1))
+    R = dot(quatrcomp(q).T, quatlcomp(q))
+    R = rotnormalize(R[0:3, 0:3])
+    return R
 
 
 def Omega(w):
