@@ -72,7 +72,7 @@ class FeatureEstimator:
         track_cam_states : list of CameraState
             Camera states where feature track was observed
         debug :
-             (Default value = False)
+            Debug mode (default: False)
 
         Returns
         -------
@@ -90,16 +90,16 @@ class FeatureEstimator:
         C_C1G = C(track_cam_states[-1].q_CG)
         p_G_C0 = track_cam_states[0].p_G
         p_G_C1 = track_cam_states[-1].p_G
-        # -- Set camera 0 as origin, work out rotation and translation of
-        # -- camera 1 relative to to camera 0
+        # -- Obtain rotation and translation from camera 0 to camera 1
         C_C0C1 = dot(C_C0G, C_C1G.T)
-        t_C0_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
+        t_C1_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
         # -- Convert from pixel coordinates to image coordinates
         pt1 = cam_model.pixel2image(track.track[0].pt).reshape((2, 1))
         pt2 = cam_model.pixel2image(track.track[-1].pt).reshape((2, 1))
 
         # Calculate initial estimate of 3D position
-        p_C0_f = self.triangulate(pt1, pt2, C_C0C1, t_C0_C1C0)
+        p_C0_f = self.triangulate(pt1, pt2, C_C0C1, t_C1_C1C0)
+        print("p_C0_f: ", p_C0_f)
 
         # Create inverse depth params (these are to be optimized)
         alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
@@ -107,8 +107,6 @@ class FeatureEstimator:
         rho = 1.0 / p_C0_f[2, 0]
 
         # Gauss Newton optimization
-        C_C0G = C(track_cam_states[0].q_CG)
-        p_G_C0 = track_cam_states[0].p_G
         r_Jprev = float("inf")  # residual jacobian
 
         for k in range(self.max_iter):
@@ -141,12 +139,12 @@ class FeatureEstimator:
 
                 # Form the Jacobian
                 drdalpha = np.array([
-                    -C_CiG[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiG[2, 0],  # noqa
-                    -C_CiG[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiG[2, 0]   # noqa
+                    -C_CiC0[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiC0[2, 0],  # noqa
+                    -C_CiC0[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiC0[2, 0]   # noqa
                 ])
                 drdbeta = np.array([
-                    -C_CiG[0, 1] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiG[2, 1],  # noqa
-                    -C_CiG[1, 1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiG[2, 1]   # noqa
+                    -C_CiC0[0, 1] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiC0[2, 1],  # noqa
+                    -C_CiC0[1, 1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiC0[2, 1]   # noqa
                 ])
                 drdrho = np.array([
                     -t_Ci_CiC0[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * t_Ci_CiC0[2, 0],  # noqa
@@ -161,12 +159,12 @@ class FeatureEstimator:
 
             # Check hessian if it is numerically ok
             H_approx = dot(J.T, J)
-            if np.linalg.cond(H_approx) > 1e3:
-                return None, None, None
+            if np.linalg.cond(H_approx) > 1e4:
+                return None
 
             # Update estimate params using Gauss Newton
             delta = dot(inv(H_approx), dot(J.T, r))
-            theta_k = np.array([[alpha], [beta], [rho]]) + delta
+            theta_k = np.array([[alpha], [beta], [rho]]) - delta
             alpha = theta_k[0, 0]
             beta = theta_k[1, 0]
             rho = theta_k[2, 0]
@@ -218,4 +216,4 @@ class FeatureEstimator:
         X = np.array([[alpha], [beta], [1.0]])
         p_G_f = z * dot(C_C0G.T, X) + p_G_C0
 
-        return (p_G_f, k, r)
+        return p_G_f

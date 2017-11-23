@@ -135,10 +135,12 @@ class Transform:
 
 
 # Useful default transforms
+R_camera_global = np.dot(rotx(deg2rad(-90.0)), rotz(deg2rad(-90.0)))
+R_global_camera = np.dot(rotz(deg2rad(90.0)), rotx(deg2rad(90.0)))
 T_camera_global = Transform(
     "camera",
     "global",
-    R=np.dot(rotx(deg2rad(-90.0)), rotz(deg2rad(-90.0)))
+    R=R_camera_global
 )
 T_global_camera = Transform(
     "global",
