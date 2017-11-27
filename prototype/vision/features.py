@@ -68,6 +68,11 @@ class Feature:
         self.size = size
         self.des = des
 
+        self.track_id = None
+
+    def set_track_id(self, track_id):
+        self.track_id = track_id
+
     def __str__(self):
         return str(self.pt)
 
@@ -477,9 +482,14 @@ class FeatureTracker:
 
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self.debug_mode = kwargs.get("debug_mode", False)
+        self.nb_features = kwargs.get("nb_features", 300)
+        self.nb_levels = kwargs.get("nb_levels", 3)
+
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=300, nlevels=3)
+        self.detector = ORBDetector(nfeatures=self.nb_features,
+                                    nlevels=self.nb_levels)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         self.ransac = None
 
@@ -494,10 +504,13 @@ class FeatureTracker:
         self.max_buffer_size = 5000
 
         # Image, feature, unmatched features references
-        self.features_tracking = []
         self.img_ref = None
         self.fea_ref = None
         self.unmatched = []
+
+    def debug(self, s):
+        if self.debug_mode:
+            print(s)
 
     def initialize(self, frame):
         """Initialize feature tracker
@@ -530,11 +543,10 @@ class FeatureTracker:
 
         """
         features = self.detector.detect(frame)
-        self.tracks_tracking += [None for f in features]
         self.counter_frame_id += 1
         return features
 
-    def match(self, f0, f1):
+    def match(self, f1):
         """Match features to feature tracks
 
         The idea is that with the current features, we want to match it against
@@ -542,8 +554,6 @@ class FeatureTracker:
 
         Parameters
         ----------
-        f0 : List of Feature
-            Reference features
         f1 : List of Feature
             Current features
 
@@ -554,9 +564,7 @@ class FeatureTracker:
 
         """
         # Stack previously unmatched features with tracked features
-        if len(self.unmatched):
-            self.tracks_tracking += [None for i in range(len(self.unmatched))]
-            f0 += self.unmatched
+        f0 = self.fea_ref + self.unmatched
 
         # Convert Features to cv2.KeyPoint and descriptors (np.array)
         kps0 = [cv2.KeyPoint(f.pt[0], f.pt[1], f.size) for f in f0]
@@ -584,23 +592,17 @@ class FeatureTracker:
             if match_mask[i] is True:
                 final_matches.append(matches[i])
 
-        # # Convert matches to the form of (f0 index, f1 index)
-        # result = []
-        # matched_indicies = {}
-        # for m in final_matches:
-        #     f0_idx = m.trainIdx
-        #     f1_idx = m.queryIdx
-        #     result.append((f0[f0_idx], f1[f1_idx]))
-        #     matched_indicies[m.queryIdx] = True
-
-        # Convert matches in the form of (feature track id, f0 index, f1 index)
+        # Convert matches to the form of (f0 index, f1 index) and update
+        # feature references
         result = []
+        self.fea_ref = []
         matched_indicies = {}
         for m in final_matches:
             f0_idx = m.trainIdx
             f1_idx = m.queryIdx
-            result.append((self.tracks_tracking[f0_idx], f0_idx, f1_idx))
+            result.append((f0_idx, f1_idx))
             matched_indicies[m.queryIdx] = True
+            self.fea_ref.append(f1[f1_idx])
 
         # Update list of unmatched features
         self.unmatched.clear()
@@ -608,10 +610,67 @@ class FeatureTracker:
             if i not in matched_indicies:
                 self.unmatched.append(f1[i])
 
-        return result
+        return result, f0, f1
 
-    def update_feature_tracks(self, matches, f0, f1):
-        """Update feature tracks
+    def add_track(self, feature1, feature2):
+        """Add feature track
+
+        Parameters
+        ----------
+        feature1 : Feature
+            First feature
+        feature2 : Feature
+            Second feature
+
+        """
+        self.counter_track_id += 1
+        track_id = self.counter_track_id
+        frame_id = self.counter_frame_id
+
+        feature1.set_track_id(track_id)
+        feature2.set_track_id(track_id)
+
+        track = FeatureTrack(track_id, frame_id, feature1, feature2)
+        self.tracks_tracking.append(track_id)
+        self.tracks_buffer[track_id] = track
+
+    def remove_track(self, track_id, lost=False):
+        """Remove feature track
+
+        Important! Marking the track as lost does not remove the track from
+        the feature track buffer.
+
+        Parameters
+        ----------
+        track_id : int
+            Feature track id
+        lost : bool
+            Mark feature track as lost
+
+        """
+        self.tracks_tracking.remove(track_id)
+        if lost:
+            self.tracks_lost.append(track_id)
+        else:
+            del self.tracks_buffer[track_id]
+
+    def update_track(self, track_id, feature):
+        """Update feature track
+
+        Parameters
+        ----------
+        track_id : int
+            Feature track id
+        feature : Feature
+            Latest feature
+
+        """
+        feature.set_track_id(track_id)
+        track = self.tracks_buffer[track_id]
+        track.update(self.counter_frame_id, feature)
+
+    def process_matches(self, matches, f0, f1):
+        """Process matches
 
         Parameters
         ----------
@@ -624,50 +683,36 @@ class FeatureTracker:
 
         """
         tracks_updated = {}
-        matched_features = []
 
-        # for i in range(self.features_tracking):
-        #     print(i)
+        # Update or add feature track
+        for i in range(len(matches)):
+            f0_idx, f1_idx = matches[i]
+            feature0 = f0[f0_idx]
+            feature1 = f1[f1_idx]
 
-        # Create or update feature tracks
-        for m in matches:
-            track_id, f0_idx, f1_idx = m
-
-            # Create new feature track
-            if track_id is None:
-                self.counter_track_id += 1
-                track_id = self.counter_track_id
-                track = FeatureTrack(track_id, self.counter_frame_id,
-                                     f0[f0_idx], f1[f1_idx])
-                self.tracks_buffer[track_id] = track
-                self.tracks_tracking.append(track_id)
-
-            # Update existing feature track
+            if feature0.track_id is not None:
+                self.update_track(feature0.track_id, feature1)
+                self.debug("Update track [%d]" % feature0.track_id)
             else:
-                track = self.tracks_buffer[track_id]
-                feature = f1[f1_idx]
-                track.update(self.counter_frame_id, feature)
+                self.add_track(feature0, feature1)
+                self.debug("Add track [%d]" % feature0.track_id)
 
-            # Update current track ids
-            tracks_updated[track_id] = 1
-            matched_features.append(f1[f1_idx])
+            tracks_updated[feature0.track_id] = 1
 
-        # Drop dead feature tracks and reference features
-        tracks_tracking = []
-        self.fea_ref.clear()
+        # Drop dead feature tracks
+        tracks_tracking = list(self.tracks_tracking)
+        for i in range(len(self.tracks_tracking)):
+            track_id = tracks_tracking[i]
+            if track_id not in tracks_updated:
+                self.remove_track(track_id, True)
 
-        # Reference features should correspond to current tracks
-        for track_id in self.tracks_tracking:
-            if track_id is not None and track_id in tracks_updated:
-                tracks_tracking.append(track_id)
-                track = self.tracks_buffer[track_id]
-                self.fea_ref.append(track.last())
+        self.debug("Tracking: " + str(self.tracks_tracking))
+        self.debug("Lost: " + str(self.tracks_lost))
+        self.debug("Buffer: " + str(self.tracks_buffer))
+        self.debug("")
 
-            elif track_id is not None:
-                self.tracks_lost.append(track_id)
-
-        self.tracks_tracking = list(tracks_tracking)
-
+    def clear_old_tracks(self):
+        """Clear old feature tracks"""
         # Clear feature tracks that are too old
         if len(self.tracks_buffer) > self.max_buffer_size:
             trim = len(self.tracks_buffer) - self.max_buffer_size
@@ -702,19 +747,40 @@ class FeatureTracker:
 
         # Draw matches
         for m in matches:
-            track_id, f0_idx, f1_idx = m
+            f0_idx, f1_idx = m
+            track_id = f0[f0_idx].track_id
             kp1 = f0[f0_idx].pt
             kp2 = f1[f1_idx].pt
 
             # Point 1
             p1 = np.array(kp1)
-            p1[1] += match_img.shape[0] / 2.0
+            img_height = match_img.shape[0]
+            p1[1] += img_height / 2.0
             p1 = (int(p1[0]), int(p1[1]))
 
             # Point 2
             p2 = np.array(kp2)
             p2 = (int(p2[0]), int(p2[1]))
 
+            # Draw track id
+            if track_id is not None:
+                font = cv2.FONT_HERSHEY_DUPLEX
+                font_scale = 0.4
+                font_color = (0, 255, 0)
+
+                x = p1[0] + 10
+                padding = np.random.randint(-100, 100)
+                y = int(p1[1] - img_height / 4.0 + padding)
+                pos = (x, y)
+
+                cv2.putText(match_img,
+                            str(track_id),
+                            pos,
+                            font,
+                            font_scale,
+                            font_color)
+
+            # Draw line
             cv2.line(match_img, p2, p1, (0, 255, 0), 1)
 
         return match_img
@@ -734,7 +800,7 @@ class FeatureTracker:
 
         return lost_tracks
 
-    def update(self, img_cur, debug=False):
+    def update(self, img_cur):
         """Update tracker with current image
 
         Parameters
@@ -754,16 +820,16 @@ class FeatureTracker:
         fea_cur = self.detect(img_cur)
 
         # Match features
-        matches = self.match(self.fea_ref, fea_cur)
+        matches, fea_ref, fea_cur = self.match(fea_cur)
+
+        # Update
+        self.process_matches(matches, fea_ref, fea_cur)
+        self.img_ref = img_cur
 
         # Draw matches
-        if debug:
+        if self.debug_mode:
             img = self.draw_matches(self.img_ref, img_cur,
-                                    self.fea_ref, fea_cur,
+                                    fea_ref, fea_cur,
                                     matches)
             cv2.imshow("Matches", img)
             cv2.waitKey(0)
-
-        # Update
-        self.update_feature_tracks(matches, self.fea_ref, fea_cur)
-        self.img_ref = img_cur
