@@ -479,9 +479,8 @@ class FeatureTracker:
 
     def __init__(self):
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=100, nlevels=3)
+        self.detector = ORBDetector(nfeatures=300, nlevels=3)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-
         self.ransac = None
 
         # Counters
@@ -495,6 +494,7 @@ class FeatureTracker:
         self.max_buffer_size = 5000
 
         # Image, feature, unmatched features references
+        self.features_tracking = []
         self.img_ref = None
         self.fea_ref = None
         self.unmatched = []
@@ -510,7 +510,6 @@ class FeatureTracker:
         """
         self.img_ref = frame
         self.fea_ref = self.detect(frame)
-        self.tracks_tracking = [None for f in self.fea_ref]
 
         if self.ransac is None:
             self.ransac = VerticalRANSAC(frame.shape[1])
@@ -531,6 +530,7 @@ class FeatureTracker:
 
         """
         features = self.detector.detect(frame)
+        self.tracks_tracking += [None for f in features]
         self.counter_frame_id += 1
         return features
 
@@ -584,6 +584,15 @@ class FeatureTracker:
             if match_mask[i] is True:
                 final_matches.append(matches[i])
 
+        # # Convert matches to the form of (f0 index, f1 index)
+        # result = []
+        # matched_indicies = {}
+        # for m in final_matches:
+        #     f0_idx = m.trainIdx
+        #     f1_idx = m.queryIdx
+        #     result.append((f0[f0_idx], f1[f1_idx]))
+        #     matched_indicies[m.queryIdx] = True
+
         # Convert matches in the form of (feature track id, f0 index, f1 index)
         result = []
         matched_indicies = {}
@@ -594,9 +603,8 @@ class FeatureTracker:
             matched_indicies[m.queryIdx] = True
 
         # Update list of unmatched features
-        nb_unmatched = len(f1)
         self.unmatched.clear()
-        for i in range(nb_unmatched):
+        for i in range(len(f1)):
             if i not in matched_indicies:
                 self.unmatched.append(f1[i])
 
@@ -617,6 +625,9 @@ class FeatureTracker:
         """
         tracks_updated = {}
         matched_features = []
+
+        # for i in range(self.features_tracking):
+        #     print(i)
 
         # Create or update feature tracks
         for m in matches:
@@ -644,8 +655,8 @@ class FeatureTracker:
         # Drop dead feature tracks and reference features
         tracks_tracking = []
         self.fea_ref.clear()
-        # Reference features should correspond to current tracks
 
+        # Reference features should correspond to current tracks
         for track_id in self.tracks_tracking:
             if track_id is not None and track_id in tracks_updated:
                 tracks_tracking.append(track_id)

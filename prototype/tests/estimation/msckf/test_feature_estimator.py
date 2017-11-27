@@ -1,26 +1,30 @@
-import random
 import unittest
 
+import cv2
 import numpy as np
 from numpy import dot
 
 from prototype.utils.utils import deg2rad
-from prototype.utils.euler import rotx
-from prototype.utils.euler import rotz
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import euler2quat
 from prototype.utils.transform import T_camera_global
 from prototype.utils.transform import T_global_camera
 from prototype.utils.transform import R_global_camera
+from prototype.data.kitti import RawSequence
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
+from prototype.vision.features import FeatureTracker
 
 from prototype.estimation.msckf.camera_state import CameraState
 from prototype.estimation.msckf.feature_estimator import FeatureEstimator
+
+
+# GLOBAL VARIABLE
+RAW_DATASET = "/data/raw"
 
 
 class FeatureEstimatorTest(unittest.TestCase):
@@ -69,7 +73,7 @@ class FeatureEstimatorTest(unittest.TestCase):
         # Assert
         self.assertTrue(np.allclose(p_C0_C1C0.ravel(), landmark))
 
-    def test_estimate_feature(self):
+    def test_estimate(self):
         nb_features = 100
         bounds = {
             "x": {"min": 5.0, "max": 10.0},
@@ -131,3 +135,46 @@ class FeatureEstimatorTest(unittest.TestCase):
         self.assertTrue(abs(p_G_f[0, 0] - feature_G[0]) < 0.1)
         self.assertTrue(abs(p_G_f[1, 0] - feature_G[1]) < 0.1)
         self.assertTrue(abs(p_G_f[2, 0] - feature_G[2]) < 0.1)
+
+    def test_estimate2(self):
+        # Load RAW KITTI dataset
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
+        K = data.calib_cam2cam["K_00"].reshape((3, 3))
+        cam_model = PinholeCameraModel(1242, 375, K)
+
+        # Initialize feature tracker
+        img = cv2.imread(data.image_00_files[0])
+        tracker = FeatureTracker()
+        tracker.update(img)
+
+        # Setup feature tracks
+        tracks = []
+        for i in range(1, 30):
+            # Track features
+            img = cv2.imread(data.image_00_files[i])
+            tracker.update(img)
+            tracks = tracker.remove_lost_tracks()
+
+            # Loop feature tracks
+            for track in tracks:
+                if track.tracked_length() < 8:
+                    continue
+
+                # Setup feature track camera states
+                track_cam_states = []
+                for i in range(track.tracked_length()):
+                    frame_id = track.frame_start + i
+                    cam_state = CameraState(
+                        frame_id,
+                        euler2quat(data.get_attitude(frame_id)),
+                        data.get_local_position(frame_id)
+                    )
+
+                    # print("rpy: ", data.get_attitude(frame_id))
+                    # print("pos: ", data.get_local_position(frame_id))
+                    track_cam_states.append(cam_state)
+
+                # Estimate feature track
+                self.estimator.estimate(cam_model, track, track_cam_states)
+                print()
+                print()

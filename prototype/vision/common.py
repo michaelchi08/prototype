@@ -176,7 +176,7 @@ def camera_intrinsics(fx, fy, cx, cy):
     return K
 
 
-def rand3dfeatures(nb_features, feature_bounds):
+def rand3dfeatures(nb_features, bounds):
     """Generate random 3D features
 
     Parameters
@@ -184,7 +184,7 @@ def rand3dfeatures(nb_features, feature_bounds):
     nb_features : int
         number of 3D features to generate
 
-    feature_bounds :
+    bounds : dict
         3D feature bounds, for example
 
         bounds = {
@@ -201,10 +201,14 @@ def rand3dfeatures(nb_features, feature_bounds):
     """
     features = np.zeros((3, nb_features))
 
+    x_min, x_max = bounds["x"]["min"], bounds["x"]["max"]
+    y_min, y_max = bounds["y"]["min"], bounds["y"]["max"]
+    z_min, z_max = bounds["z"]["min"], bounds["z"]["max"]
+
     for i in range(nb_features):
-        x = randf(feature_bounds["x"]["min"], feature_bounds["x"]["max"])
-        y = randf(feature_bounds["y"]["min"], feature_bounds["y"]["max"])
-        z = randf(feature_bounds["z"]["min"], feature_bounds["z"]["max"])
+        x = np.random.uniform(x_min, x_max)
+        y = np.random.uniform(y_min, y_max)
+        z = np.random.uniform(z_min, z_max)
         point = np.array([x, y, z])
         features[:, i] = point
 

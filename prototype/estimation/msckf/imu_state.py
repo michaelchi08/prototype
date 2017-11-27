@@ -66,8 +66,8 @@ class IMUState:
         self.G_g = np.array([[0.0], [0.0], [-9.81]])
 
         # Covariance matrix
+        self.P = I(self.size) * 0.0001
         self.Q = I(12) * n_imu
-        self.P = I(self.size)
 
     def F(self, w_hat, q_hat, a_hat, w_G):
         """Transition Jacobian F matrix
@@ -98,7 +98,7 @@ class IMUState:
         F[0:3, 3:6] = -ones((3, 3))
         # -- Third Row --
         F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
-        F[6:9, 6:9] = -2.0 * skew(w_G)
+        F[6:9, 6:9] = dot(-2.0, skew(w_G))
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skewsq(w_G)
         # -- Fifth Row --
@@ -191,28 +191,25 @@ class IMUState:
 
         """
         # Calculate new accel and gyro estimates
-        a_hat = (a_m - self.b_a) * dt
-        w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
+        # a_hat = (a_m - self.b_a) * dt
+        # w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
+        a_hat = a_m
+        w_hat = w_m
 
         # Propagate IMU states
         # -- Orientation
-        q_kp1_IG = self.q_IG + dot(0.5 * Omega(w_hat), self.q_IG)
-        q_kp1_IG = quatnormalize(q_kp1_IG)
+        self.q_IG = self.q_IG + dot(0.5 * Omega(w_hat), self.q_IG) * dt
+        self.q_IG = quatnormalize(self.q_IG)
         # -- Gyro bias
-        b_kp1_g = self.b_g + zeros((3, 1))
+        self.b_g = self.b_g + zeros((3, 1))
         # -- Velocity
-        v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) * dt - dot(skewsq(self.w_G), self.p_G) * dt + self.G_g * dt  # noqa
+        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
+        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.G_g) * dt
+        # v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) * dt - dot(skewsq(self.w_G), self.p_G) * dt + self.G_g * dt  # noqa
         # -- Accel bias
-        b_kp1_a = self.b_a + zeros((3, 1))
+        self.b_a = self.b_a + zeros((3, 1))
         # -- Position
-        p_kp1_G = self.p_G + self.v_G * dt
-
-        # Update states
-        self.q_IG = q_kp1_IG
-        self.b_g = b_kp1_g
-        self.v_G = v_kp1_G
-        self.b_a = b_kp1_a
-        self.p_G = p_kp1_G
+        self.p_G = self.p_G + self.v_G * dt
 
         # Build the jacobians F and G
         F = self.F(w_hat, self.q_IG, a_hat, self.w_G)

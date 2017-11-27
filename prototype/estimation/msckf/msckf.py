@@ -89,19 +89,19 @@ class MSCKF:
     """
 
     def __init__(self, **kwargs):
+        # Covariance matrices
+        self.P_cam = None
+        self.P_imu_cam = None
+
         # IMU settings
         # -- IMU noise vector
-        n_g = kwargs["n_g"]    # Gyro Noise
-        n_a = kwargs["n_a"]    # Accel Noise
-        n_wg = kwargs["n_wg"]  # Gyro Random Walk Noise
-        n_wa = kwargs["n_wa"]  # Accel Random Walk Noise
-        n_imu = np.block([n_g.ravel(),
-                          n_wg.ravel(),
-                          n_a.ravel(),
-                          n_wa.ravel()]).reshape((12, 1))
+        n_g = kwargs["n_g"].reshape((3, 1))    # Gyro Noise
+        n_a = kwargs["n_a"].reshape((3, 1))    # Accel Noise
+        n_wg = kwargs["n_wg"].reshape((3, 1))  # Gyro Random Walk Noise
+        n_wa = kwargs["n_wa"].reshape((3, 1))  # Accel Random Walk Noise
+        n_imu = np.block([[n_g], [n_wg], [n_a], [n_wa]])
         # -- IMU state vector
-        imu_q_IG = kwargs.get("imu_q_IG",
-                              np.array([[0.0], [0.0], [0.0], [1.0]]))
+        imu_q_IG = kwargs.get("imu_q_IG", np.array([0.0, 0.0, 0.0, 1.0]))
         imu_b_g = kwargs.get("imu_b_g", np.zeros((3, 1)))
         imu_v_G = kwargs.get("imu_v_G", np.zeros((3, 1)))
         imu_b_a = kwargs.get("imu_b_a", np.zeros((3, 1)))
@@ -120,16 +120,12 @@ class MSCKF:
         self.ext_p_IC = kwargs["ext_p_IC"].reshape((3, 1))
         self.ext_q_CI = kwargs["ext_q_CI"].reshape((4, 1))
         # -- Camera noise
-        self.n_u = 0.01
-        self.n_v = 0.01
+        self.n_u = 1.0e-4
+        self.n_v = 1.0e-4
         # -- Camera states
         self.counter_frame_id = 0
-        cam_q_CG = dot(quatlcomp(self.ext_q_CI), self.imu_state.q_IG)
-        cam_p_G = self.imu_state.p_G + dot(C(self.imu_state.q_IG).T, self.ext_p_IC)  # noqa
-        self.cam_states = [CameraState(self.counter_frame_id,
-                                       cam_q_CG,
-                                       cam_p_G)]
-        self.counter_frame_id += 1
+        self.cam_states = []
+        self.augment_state()
 
         # Filter settings
         self.enable_ns_trick = kwargs.get("enable_ns_trick", True)
@@ -140,81 +136,76 @@ class MSCKF:
                                             FeatureEstimator())
         self.min_track_length = kwargs.get("min_track_length", 8)
 
-        # Covariance matrices
-        x_imu_size = self.imu_state.size      # Size of imu state
-        x_cam_size = self.cam_states[0].size  # Size of cam state
-        self.P_cam = I(x_cam_size) * 0.01
-        self.P_imu_cam = zeros((x_imu_size, x_cam_size))
+    def augment_state(self):
+        """Augment state
 
-        # History
-        self.record = kwargs.get("record", True)
-        self.pos_est = self.imu_state.p_G
-        self.vel_est = self.imu_state.v_G
-        self.att_est = quat2euler(self.imu_state.q_IG)
+        Augment state and covariance matrix with a copy of the current camera
+        pose estimate when a new image is recorded
 
-        # Plots
-        self.labels_cov = ["theta_x", "theta_y", "theta_z",
-                           "bx_g", "by_g", "bz_g",
-                           "vx", "vy", "vz",
-                           "bx_a", "by_a", "bz_a",
-                           "px", "py", "pz"]
-        self.P_plot = None
-        self.P_imu_plot = None
-        self.P_cam_plot = None
-        self.P_imu_cam_plot = None
-        if kwargs.get("plot_covar", False):
-            self.P_plot = PlotMatrix(self.P(), show=True)
-            # self.P_imu_plot = PlotMatrix(
-            #     self.imu_state.P,
-            #     labels=self.labels_cov,
-            #     show=True,
-            #     show_ticks=True,
-            #     show_values=True
-            # )
-            # self.P_cam_plot = PlotMatrix(
-            #     self.P_cam,
-            #     show=True
-            # )
-            # self.P_imu_cam_plot = PlotMatrix(
-            #     self.P_imu_cam,
-            #     show=True
-            # )
+        """
+        x_imu_size = self.imu_state.size
+        x_cam_size = self.cam_states[0].size if self.N() else 0
 
-    def record_state(self):
-        # Position
-        pos = self.imu_state.p_G
+        # Camera pose Jacobian
+        J = self.imu_state.J(self.ext_q_CI, self.ext_p_IC,
+                             self.imu_state.q_IG, self.N())
 
-        # Velocity
-        vel = self.imu_state.v_G
+        # Augment MSCKF covariance matrix (with new camera state)
+        X = np.block([[I(x_imu_size + x_cam_size * self.N())], [J]])
+        P = dot(X, dot(self.P(), X.T))
+        self.imu_state.P = P[0:x_imu_size, 0:x_imu_size]
+        self.P_cam = P[x_imu_size:, x_imu_size:]
+        self.P_imu_cam = P[0:x_imu_size, x_imu_size:]
 
-        # Attitude
-        att = quat2euler(self.imu_state.q_IG)
+        # Add new camera state to sliding window by using current IMU pose
+        # estimate to calculate camera pose
+        # -- Create camera state in global frame
+        imu_q_IG = self.imu_state.q_IG
+        imu_p_G = self.imu_state.p_G
+        cam_q_CG = dot(quatlcomp(self.ext_q_CI), imu_q_IG)
+        cam_p_G = imu_p_G + dot(C(imu_q_IG).T, self.ext_p_IC)
+        # -- Add camera state to sliding window
+        cam_state = CameraState(self.counter_frame_id, cam_q_CG, cam_p_G)
+        self.cam_states.append(cam_state)
+        self.counter_frame_id += 1
 
-        # Store history
-        self.pos_est = np.hstack((self.pos_est, pos))
-        self.vel_est = np.hstack((self.vel_est, vel))
-        self.att_est = np.hstack((self.att_est, att))
+    def track_cam_states(self, track):
+        """Return camera states where feature track was observed
 
-    def update_plots(self):
-        """Update plots"""
-        if self.P_plot:
-            self.P_plot.update(self.P())
-        if self.P_imu_plot:
-            self.P_imu_plot.update(self.imu_state.P)
-        if self.P_cam_plot:
-            self.P_cam_plot.update(self.P_cam)
-        if self.P_imu_cam_plot:
-            self.P_imu_cam_plot.update(self.P_imu_cam)
+        Parameters
+        ----------
+        track : FeatureTrack
+            Feature track observed
+
+        Returns
+        ----------
+        track_cam_states : list of CameraState
+            M Camera states where feature track of length M was observed
+
+        """
+        frame_start = track.frame_start
+        frame_end = track.frame_end
+        index_start = frame_start - self.cam_states[0].frame_id
+        index_end = self.N() - (self.cam_states[-1].frame_id - frame_end)
+
+        track_cam_states = self.cam_states[index_start:index_end]
+        assert track_cam_states[0].frame_id == track.frame_start
+        assert track_cam_states[-1].frame_id == track.frame_end
+
+        return track_cam_states
 
     def P(self):
-        """Covariance matrix"""
-        P = np.block([[self.imu_state.P, self.P_imu_cam],
-                      [self.P_imu_cam.T, self.P_cam]])
+        """Return covariance matrix"""
+        if self.N():
+            P = np.block([[self.imu_state.P, self.P_imu_cam],
+                          [self.P_imu_cam.T, self.P_cam]])
+        else:
+            P = self.imu_state.P
 
         return P
 
     def N(self):
-        """Number of camera states"""
+        """Return number of camera states"""
         return len(self.cam_states)
 
     def H(self, track, track_cam_states, p_G_f):
@@ -310,42 +301,6 @@ class MSCKF:
         self.P_cam = self.P_cam
         self.P_imu_cam = dot(Phi, self.P_imu_cam)
 
-        if self.record:
-            self.record_state()
-
-    def augment_state(self):
-        """Augment state
-
-        Augment state and covariance matrix with a copy of the current camera
-        pose estimate when a new image is recorded
-
-        """
-        x_imu_size = self.imu_state.size
-        x_cam_size = self.cam_states[0].size
-
-        # Camera pose Jacobian
-        J = self.imu_state.J(self.ext_q_CI, self.ext_p_IC,
-                             self.imu_state.q_IG, self.N())
-
-        # Augment MSCKF covariance matrix (with new camera state)
-        X = np.block([[I(x_imu_size + x_cam_size * self.N())], [J]])
-        P = dot(X, dot(self.P(), X.T))
-        self.imu_state.P = P[0:x_imu_size, 0:x_imu_size]
-        self.P_cam = P[x_imu_size:, x_imu_size:]
-        self.P_imu_cam = P[0:x_imu_size, x_imu_size:]
-
-        # Add new camera state to sliding window by using current IMU pose
-        # estimate to calculate camera pose
-        # -- Create camera state in global frame
-        imu_q_IG = self.imu_state.q_IG
-        imu_p_G = self.imu_state.p_G
-        cam_q_CG = dot(quatlcomp(self.ext_q_CI), imu_q_IG)
-        cam_p_G = imu_p_G + dot(C(imu_q_IG).T, self.ext_p_IC)
-        # -- Add camera state to sliding window
-        cam_state = CameraState(self.counter_frame_id, cam_q_CG, cam_p_G)
-        self.cam_states.append(cam_state)
-        self.counter_frame_id += 1
-
     def track_residuals(self, cam_model, track, track_cam_states, p_f_G):
         """Calculate track residual
 
@@ -411,19 +366,12 @@ class MSCKF:
             return (None, None, None)
 
         # Get M camera states where feature track was tracked
-        frame_start = track.frame_start
-        frame_end = track.frame_end
-        index_start = frame_start - self.cam_states[0].frame_id
-        index_end = self.N() - (self.cam_states[-1].frame_id - frame_end)
-
-        track_cam_states = self.cam_states[index_start:index_end]
-        assert track_cam_states[0].frame_id == track.frame_start
-        assert track_cam_states[-1].frame_id == track.frame_end
+        track_cam_states = self.track_cam_states(track)
 
         # Estimate j-th feature position in global frame
-        p_G_f, k, r_j = self.feature_estimator.estimate(self.cam_model,
-                                                        track,
-                                                        track_cam_states)
+        p_G_f = self.feature_estimator.estimate(self.cam_model,
+                                                track,
+                                                track_cam_states)
         if p_G_f is None:
             return (None, None, None)
 
@@ -592,10 +540,9 @@ class MSCKF:
         if T_H is None and r_n is None and R_n is None:
             return
 
-        print("residual: ", np.max(r_n))
-
         # Calculate Kalman gain
-        K = dot(dot(self.P(), T_H.T), inv(dot(dot(T_H, self.P()), T_H.T) + R_n))
+        P = self.P()
+        K = dot(dot(P, T_H.T), inv(dot(dot(T_H, P), T_H.T) + R_n))
 
         # Correct states
         dx = dot(K, r_n)
@@ -605,9 +552,10 @@ class MSCKF:
         # Correct covariance matrices
         x_imu_size = self.imu_state.size
         x_cam_size = self.cam_states[0].size
+        N = self.N()
 
-        A = I(x_imu_size + x_cam_size * self.N()) - dot(K, T_H)
-        P_corrected = dot(A, dot(self.P(), A.T)) + dot(K, dot(R_n, K.T))
+        A = I(x_imu_size + x_cam_size * N) - dot(K, T_H)
+        P_corrected = dot(A, dot(P, A.T)) + dot(K, dot(R_n, K.T))
 
         self.imu_state.P = P_corrected[0:x_imu_size, 0:x_imu_size]
         self.P_cam = P_corrected[x_imu_size:, x_imu_size:]

@@ -3,6 +3,8 @@ from numpy import dot
 from numpy import eye as I
 from numpy.linalg import norm
 
+import scipy
+
 
 def skew(w):
     """Skew symmetric matrix
@@ -48,16 +50,17 @@ def nullspace(A, atol=1e-13, rtol=0):
 
     Parameters
     ----------
-    A :
-
-    atol :
+    A : np.array
+        Matrix to form null space from
+    atol : float
          (Default value = 1e-13)
-    rtol :
+    rtol : float
          (Default value = 0)
 
     Returns
     -------
-
+    ns : np.array
+        Nullspace of A
 
     """
 

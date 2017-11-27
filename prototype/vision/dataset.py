@@ -6,11 +6,12 @@ from numpy import dot
 import matplotlib.pylab as plt
 
 # from prototype.utils.data import mat2csv
+from prototype.utils.euler import euler2rot as R
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.transform import T_global_camera
 from prototype.utils.transform import T_camera_global
-from prototype.models.husky import HuskyModel
-from prototype.control.utils import circle_trajectory
+# from prototype.models.husky import HuskyModel
+# from prototype.control.utils import circle_trajectory
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
@@ -89,6 +90,7 @@ class DatasetFeatureEstimator:
             r[2 * i:(2 * (i + 1))] = reprojection_error
 
         # Plot
+        # plot=True
         if plot:
             estimates = np.array(estimates)
             self.plot(track, track_cam_states, estimates)
@@ -100,7 +102,7 @@ class DatasetFeatureEstimator:
         X = np.array([[alpha], [beta], [1.0]])
         p_G_f = z * dot(C_C0G.T, X) + p_G_C0
 
-        return (p_G_f, 0, r)
+        return p_G_f
 
 
 class DatasetGenerator(object):
@@ -151,32 +153,33 @@ class DatasetGenerator(object):
         self.cam_model = PinholeCameraModel(640, 640, K)
 
         # Features
-        self.nb_features = kwargs.get("nb_features", 10000)
-        self.feature_bounds = {
-            "x": {"min": -10.0, "max": 10.0},
-            "y": {"min": -10.0, "max": 10.0},
-            "z": {"min": 5.0, "max": 10.0}
-        }
+        self.nb_features = kwargs.get("nb_features", 1000)
+        self.feature_bounds = {"x": {"min": -10.0, "max": 10.0},
+                               "y": {"min": -10.0, "max": 10.0},
+                               "z": {"min": 5.0, "max": 10.0}}
         self.features = rand3dfeatures(self.nb_features, self.feature_bounds)
 
         # Simulation settings
         self.dt = kwargs.get("dt", 0.01)
         self.t = 0.0
 
-        # Calculate desired inputs for a circle trajectory
-        circle_r = 10.0
-        circle_vel = 1.0
-        circle_w = circle_trajectory(circle_r, circle_vel)
-        self.v_B = np.array([[circle_vel], [0.0], [0.0]])
-        self.w_B = np.array([[0.0], [0.0], [circle_w]])
+        # Linear model
+        self.a_B = np.array([[0.01], [0.0], [0.0]])
+        self.w_B = np.array([[0.0], [0.0], [0.0]])
 
-        # Motion model and history
-        self.model = HuskyModel(vel=self.v_B)
+        self.pos = np.zeros((3, 1))
+        self.vel = np.zeros((3, 1))
+        self.acc = self.a_B
+
+        self.att = np.zeros((3, 1))
+        self.avel = np.zeros((3, 1))
+
+        # State history
         self.time_true = np.array([0.0])
         self.pos_true = np.zeros((3, 1))
-        self.vel_true = self.v_B
-        self.acc_true = (self.v_B + self.v_B * self.dt) - (self.v_B)
-        self.rpy_true = np.zeros((3, 1))
+        self.vel_true = np.zeros((3, 1))
+        self.acc_true = self.a_B
+        self.att_true = np.zeros((3, 1))
 
         # Counters
         self.counter_frame_id = 0
@@ -278,6 +281,67 @@ class DatasetGenerator(object):
     #     """
     #     mat2csv(os.path.join(save_dir, "features.dat"), self.features)
 
+    def add_feature_track(self, feature_id, kp):
+        """Add feature track
+
+        Parameters
+        ----------
+        feature_id : int
+            Feature id
+        kp : Keypoint
+            Keypoint
+
+        """
+        frame_id = self.counter_frame_id
+        track_id = self.counter_track_id
+
+        ground_truth = self.get_feature_position(feature_id)
+        ground_truth = T_global_camera * ground_truth
+        track = FeatureTrack(track_id, frame_id, kp, ground_truth=ground_truth)
+
+        self.features_tracking.append(feature_id)
+        self.features_buffer[feature_id] = track_id
+        self.tracks_tracking.append(track_id)
+        self.tracks_buffer[track_id] = track
+        self.counter_track_id += 1
+
+        self.debug("+ [track_id: %d, feature_id: %d]" % (track_id, feature_id))
+
+    def remove_feature_track(self, feature_id):
+        """Remove feature track
+
+        Parameters
+        ----------
+        feature_id : int
+            Feature id
+
+        """
+        track_id = self.features_buffer.pop(feature_id)
+        track = self.tracks_buffer.pop(track_id)
+
+        self.features_tracking.remove(feature_id)
+        self.tracks_tracking.remove(track_id)
+        self.tracks_lost.append(track)
+
+        self.debug("- [track_id: %d, feature_id: %d]" % (track_id, feature_id))
+
+    def update_feature_track(self, feature_id, kp):
+        """Update feature track
+
+        Parameters
+        ----------
+        feature_id : int
+            Feature id
+        kp : Keypoint
+            Keypoint
+
+        """
+        track_id = self.features_buffer[feature_id]
+        track = self.tracks_buffer[track_id]
+        track.update(self.counter_frame_id, kp)
+        self.debug("Update [track_id: %d, feature_id: %d]" %
+                   (track_id, feature_id))
+
     def detect(self, pos, rpy):
         """Update tracker with current image
 
@@ -305,17 +369,7 @@ class DatasetGenerator(object):
         feature_ids_cur = [feature_id for _, feature_id in list(fea_cur)]
         for feature_id in list(self.features_tracking):
             if feature_id not in feature_ids_cur:
-                track_id = self.features_buffer.pop(feature_id)
-                track = self.tracks_buffer.pop(track_id)
-
-                self.features_tracking.remove(feature_id)
-                self.tracks_tracking.remove(track_id)
-                self.tracks_lost.append(track)
-
-                self.debug(
-                    "- [track_id: %d, feature_id: %d]" %
-                    (track_id, feature_id)
-                )
+                self.remove_feature_track(feature_id)
 
         # Add or update feature tracks
         for feature in fea_cur:
@@ -323,34 +377,9 @@ class DatasetGenerator(object):
             kp = Keypoint(kp, 0)
 
             if feature_id not in self.features_tracking:
-                # Add track
-                frame_id = self.counter_frame_id
-                track_id = self.counter_track_id
-                ground_truth = T_global_camera * self.get_feature_position(feature_id)
-                track = FeatureTrack(track_id,
-                                     frame_id,
-                                     kp,
-                                     ground_truth=ground_truth)
-                self.debug(
-                    "+ [track_id: %d, feature_id: %d]" %
-                    (track_id, feature_id)
-                )
-
-                self.features_tracking.append(feature_id)
-                self.features_buffer[feature_id] = track_id
-                self.tracks_tracking.append(track_id)
-                self.tracks_buffer[track_id] = track
-                self.counter_track_id += 1
-
+                self.add_feature_track(feature_id, kp)
             else:
-                # Update track
-                track_id = self.features_buffer[feature_id]
-                track = self.tracks_buffer[track_id]
-                track.update(self.counter_frame_id, kp)
-                self.debug(
-                    "Update [track_id: %d, feature_id: %d]" %
-                    (track_id, feature_id)
-                )
+                self.update_feature_track(feature_id, kp)
 
         self.debug("tracks_tracking: {}".format(self.tracks_tracking))
         self.debug("features_tracking: {}\n".format(self.features_tracking))
@@ -384,24 +413,31 @@ class DatasetGenerator(object):
 
         """
         # Update motion model
-        self.model.update(self.v_B, self.w_B, self.dt)
-        pos = self.model.p_G
-        rpy = self.model.rpy_G
+        # self.model.update(self.v_B, self.w_B, self.dt)
+        # pos = self.model.p_G
+        # rpy = self.model.rpy_G
+
+        self.pos = self.pos + self.vel * self.dt
+        self.vel = self.vel + self.acc * self.dt
+        self.acc = dot(R(self.att, 321), self.a_B)
+        self.a_B = self.a_B + np.random.normal(0.0, 0.001)
+        self.att = self.att + dot(R(self.att, 321), self.w_B) * self.dt
+        self.w_B = self.w_B + np.random.normal(0.0, 0.001)
 
         # Check feature
-        self.detect(pos, rpy)
+        self.detect(self.pos, self.att)
 
         # Update
         self.t += self.dt
 
         # Keep track
         self.time_true = np.hstack((self.time_true, self.t))
-        self.pos_true = np.hstack((self.pos_true, self.model.p_G))
-        self.vel_true = np.hstack((self.vel_true, self.model.v_G))
-        self.acc_true = np.hstack((self.acc_true, self.model.a_G))
-        self.rpy_true = np.hstack((self.rpy_true, self.model.rpy_G))
+        self.pos_true = np.hstack((self.pos_true, self.pos))
+        self.vel_true = np.hstack((self.vel_true, self.vel))
+        self.acc_true = np.hstack((self.acc_true, self.a_B))
+        self.att_true = np.hstack((self.att_true, self.att))
 
-        return (self.model.a_B, self.w_B)
+        return (self.a_B + np.random.normal(0.0, 0.05), self.w_B + np.random.normal(0.0, 0.05))
 
     def estimate(self):
         pass

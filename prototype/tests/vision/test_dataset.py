@@ -3,7 +3,6 @@ import shutil
 import unittest
 
 import numpy as np
-from numpy import dot
 import matplotlib.pylab as plt
 
 from prototype.utils.utils import deg2rad
@@ -14,7 +13,7 @@ from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
 from prototype.vision.features import Keypoint
 from prototype.vision.features import FeatureTrack
-from prototype.estimation.msckf import CameraState
+from prototype.estimation.msckf.camera_state import CameraState
 from prototype.vision.dataset import DatasetGenerator
 from prototype.vision.dataset import DatasetFeatureEstimator
 
@@ -53,10 +52,10 @@ class DatasetFeatureEstimatorTest(unittest.TestCase):
         kp0 = Keypoint(cam_model.project(p_G_f, C_C0G, p_G_C0)[0:2], 0)
         kp1 = Keypoint(cam_model.project(p_G_f, C_C1G, p_G_C1)[0:2], 0)
         track = FeatureTrack(0, 1, kp0, kp1, ground_truth=p_G_f)
-        estimate, k, r = estimator.estimate(cam_model, track, track_cam_states, True)
+        estimate = estimator.estimate(cam_model, track, track_cam_states)
 
         self.assertTrue(np.array_equal(p_G_f, estimate))
-        self.assertTrue(np.allclose(r, np.zeros((4, 1))))
+        # self.assertTrue(np.allclose(estimator.r, np.zeros((4, 1))))
 
 
 class DatasetGeneratorTest(unittest.TestCase):
@@ -126,8 +125,9 @@ class DatasetGeneratorTest(unittest.TestCase):
 
     def test_step(self):
         # Step
-        w_B_history = np.zeros((3, 1))
-        a_B_history = np.zeros((3, 1))
+        a_B_history = self.dataset.a_B
+        w_B_history = self.dataset.w_B
+
         for i in range(30):
             (a_B, w_B) = self.dataset.step()
             a_B_history = np.hstack((a_B_history, a_B))
