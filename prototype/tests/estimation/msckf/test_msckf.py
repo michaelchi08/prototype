@@ -479,8 +479,8 @@ class MSCKFTest(unittest.TestCase):
     def test_measurement_update2(self):
         # Setup
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
-        # data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
-        data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
         K = data.calib_cam2cam["P_rect_00"].reshape((3, 4))[0:3, 0:3]
         cam_model = PinholeCameraModel(1242, 375, K)
@@ -511,7 +511,7 @@ class MSCKFTest(unittest.TestCase):
         att_est = quat2euler(msckf.imu_state.q_IG)
 
         # Loop through data
-        # for i in range(1, 100):
+        # for i in range(1, 20):
         for i in range(1, len(data.oxts)):
             print("frame %d" % i)
             # Track features
@@ -559,4 +559,3 @@ class MSCKFTest(unittest.TestCase):
             # data.plot_accelerometer()
             # data.plot_gyroscope()
             plt.show()
-

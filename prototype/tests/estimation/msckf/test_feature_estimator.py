@@ -130,9 +130,15 @@ class FeatureEstimatorTest(unittest.TestCase):
                 track.update(i, kp)
 
             # Estimate feature
-            p_G_f = self.estimator.estimate(self.cam_model,
-                                            track,
-                                            track_cam_states)
+            # p_G_f = self.estimator.estimate(self.cam_model,
+            #                                  track,
+            #                                  track_cam_states)
+            # print("estimation1: ", p_G_f.ravel())
+
+            p_G_f = self.estimator.estimate2(self.cam_model,
+                                             track,
+                                             track_cam_states)
+            print("estimation2: ", p_G_f.ravel())
 
             # Debug
             # debug = False
@@ -142,8 +148,8 @@ class FeatureEstimatorTest(unittest.TestCase):
                 p_G_C = track_cam_states[-1].p_G
                 p_C_f = dot(C_CG, (p_G_f - p_G_C))
 
-                print("p_G_f: ", p_G_f.ravel())
-                print("p_C_f: ", p_C_f.ravel())
+                # print("p_G_f: ", p_G_f.ravel())
+                # print("p_C_f: ", p_C_f.ravel())
             print()
 
             # Assert
@@ -154,8 +160,9 @@ class FeatureEstimatorTest(unittest.TestCase):
 
     def test_estimate2(self):
         # Load RAW KITTI dataset
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
         # data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
-        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
         K = data.calib_cam2cam["P_rect_00"].reshape((3, 4))[0:3, 0:3]
         cam_model = PinholeCameraModel(1242, 375, K)
 
@@ -215,11 +222,16 @@ class FeatureEstimatorTest(unittest.TestCase):
                     track_cam_states.append(cam_state)
 
                 # Estimate feature track
-                p_G_f = self.estimator.estimate(cam_model,
-                                                track,
-                                                track_cam_states)
-                if p_G_f is not None:
+                # p_G_f = self.estimator.estimate(cam_model,
+                #                                 track,
+                #                                 track_cam_states)
 
+                p_G_f = self.estimator.estimate2(self.cam_model,
+                                                 track,
+                                                 track_cam_states)
+                print("estimation2: ", p_G_f.ravel())
+
+                if p_G_f is None:
                     C_CG = C(track_cam_states[-1].q_CG)
                     p_G_C = track_cam_states[-1].p_G
                     p_C_f = dot(C_CG, (p_G_f - p_G_C))

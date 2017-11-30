@@ -475,7 +475,7 @@ class FeatureTracker:
     def __init__(self, **kwargs):
         self.debug_mode = kwargs.get("debug_mode", False)
         self.nb_features = kwargs.get("nb_features", 300)
-        self.nb_levels = kwargs.get("nb_levels", 3)
+        self.nb_levels = kwargs.get("nb_levels", 2)
 
         # Detector and matcher
         self.detector = ORBDetector(nfeatures=self.nb_features,
