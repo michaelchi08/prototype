@@ -150,20 +150,6 @@ class FeatureTrack:
         """
         return self.track[-1]
 
-    def last_descriptor(self):
-        """Return last descriptor
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        type
-            Last descriptor (Descriptor)
-
-        """
-        return self.descriptor[-1]
-
     def tracked_length(self):
         """Return number of frames tracked
 
@@ -183,7 +169,11 @@ class FeatureTrack:
         s += "track_id: %d\n" % self.track_id
         s += "frame_start: %d\n" % self.frame_start
         s += "frame_end: %d\n" % self.frame_end
-        s += "track: %s" % self.track
+        s += "track: \n"
+        for t in self.track:
+            s += "\t%.2f, %.2f" % (np.round(t.pt[0], 2), np.round(t.pt[1], 2))
+            s += "\n"
+        s += "\n"
         if self.ground_truth is not None:
             s += "\n"
             s += "ground_truth: " + str(self.ground_truth)
@@ -800,7 +790,7 @@ class FeatureTracker:
 
         return lost_tracks
 
-    def update(self, img_cur):
+    def update(self, img_cur, show_matches=False):
         """Update tracker with current image
 
         Parameters
@@ -827,9 +817,8 @@ class FeatureTracker:
         self.img_ref = img_cur
 
         # Draw matches
-        if self.debug_mode:
+        if show_matches:
             img = self.draw_matches(self.img_ref, img_cur,
                                     fea_ref, fea_cur,
                                     matches)
             cv2.imshow("Matches", img)
-            cv2.waitKey(0)

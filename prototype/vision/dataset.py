@@ -80,13 +80,13 @@ class DatasetFeatureEstimator:
             h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0
             estimates.append(h)
             # -- Convert feature location to normalized pixel coordinates
-            x = np.array([h[0] / h[2], h[1] / h[2]])
+            z_hat = np.array([h[0] / h[2], h[1] / h[2]])
 
             # Calculate reprojection error
             # -- Convert measurment to normalized pixel coordinates
             z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
             # -- Reprojection error
-            reprojection_error = z - x
+            reprojection_error = z - z_hat
             r[2 * i:(2 * (i + 1))] = reprojection_error
 
         # Plot
@@ -101,6 +101,9 @@ class DatasetFeatureEstimator:
         z = 1 / rho
         X = np.array([[alpha], [beta], [1.0]])
         p_G_f = z * dot(C_C0G.T, X) + p_G_C0
+        p_G_f[0] += np.random.normal(0.0, 0.01)
+        p_G_f[1] += np.random.normal(0.0, 0.01)
+        p_G_f[2] += np.random.normal(0.0, 0.01)
 
         return p_G_f
 
@@ -153,10 +156,10 @@ class DatasetGenerator(object):
         self.cam_model = PinholeCameraModel(640, 640, K)
 
         # Features
-        self.nb_features = kwargs.get("nb_features", 1000)
+        self.nb_features = kwargs.get("nb_features", 500)
         self.feature_bounds = {"x": {"min": -10.0, "max": 10.0},
                                "y": {"min": -10.0, "max": 10.0},
-                               "z": {"min": 5.0, "max": 10.0}}
+                               "z": {"min": 5.0, "max": 20.0}}
         self.features = rand3dfeatures(self.nb_features, self.feature_bounds)
 
         # Simulation settings
@@ -437,7 +440,10 @@ class DatasetGenerator(object):
         self.acc_true = np.hstack((self.acc_true, self.a_B))
         self.att_true = np.hstack((self.att_true, self.att))
 
-        return (self.a_B + np.random.normal(0.0, 0.05), self.w_B + np.random.normal(0.0, 0.05))
+        imu_accel = self.a_B + np.random.normal(0.0, 0.05)
+        imu_gyro = self.w_B + np.random.normal(0.0, 0.05)
+
+        return (imu_accel, imu_gyro)
 
     def estimate(self):
         pass

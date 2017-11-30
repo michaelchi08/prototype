@@ -46,7 +46,7 @@ class IMUState:
         Position of IMU in Global frame
     w_G : np.array - 3x1
         Gravitational angular velocity
-    G_g : np.array - 3x1
+    g_G : np.array - 3x1
         Gravitational acceleration
 
     """
@@ -63,10 +63,10 @@ class IMUState:
 
         # Constants
         self.w_G = np.array([[0.0], [0.0], [0.0]])
-        self.G_g = np.array([[0.0], [0.0], [-9.81]])
+        self.g_G = np.array([[0.0], [0.0], [-9.81]])
 
         # Covariance matrix
-        self.P = I(self.size) * 0.0001
+        self.P = I(self.size) * 1e-6
         self.Q = I(12) * n_imu
 
     def F(self, w_hat, q_hat, a_hat, w_G):
@@ -204,8 +204,7 @@ class IMUState:
         self.b_g = self.b_g + zeros((3, 1))
         # -- Velocity
         # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
-        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.G_g) * dt
-        # v_kp1_G = self.v_G + dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) * dt - dot(skewsq(self.w_G), self.p_G) * dt + self.G_g * dt  # noqa
+        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # noqa
         # -- Accel bias
         self.b_a = self.b_a + zeros((3, 1))
         # -- Position

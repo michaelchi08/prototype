@@ -120,8 +120,8 @@ class MSCKF:
         self.ext_p_IC = kwargs["ext_p_IC"].reshape((3, 1))
         self.ext_q_CI = kwargs["ext_q_CI"].reshape((4, 1))
         # -- Camera noise
-        self.n_u = 1.0e-4
-        self.n_v = 1.0e-4
+        self.n_u = 2.0
+        self.n_v = 2.0
         # -- Camera states
         self.counter_frame_id = 0
         self.cam_states = []
@@ -134,7 +134,7 @@ class MSCKF:
         # Feature track estimator and settings
         self.feature_estimator = kwargs.get("feature_estimator",
                                             FeatureEstimator())
-        self.min_track_length = kwargs.get("min_track_length", 8)
+        self.min_track_length = kwargs.get("min_track_length", 3)
 
     def augment_state(self):
         """Augment state
@@ -450,6 +450,10 @@ class MSCKF:
         H_o = None
         r_o = None
         R_o = None
+
+        # Limit number of tracks
+        if len(tracks) > 10:
+            tracks = tracks[0:10]
 
         # Residualize feature tracks
         for track in tracks:

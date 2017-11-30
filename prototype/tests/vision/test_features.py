@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pylab as plt
 
 import prototype.tests as test
-from prototype.data.kitti import VOSequence
 from prototype.vision.features import Keypoint
 from prototype.vision.features import Keyframe
 from prototype.vision.features import Feature
@@ -66,46 +65,43 @@ class LKFeatureTrackerTest(unittest.TestCase):
     def setUp(self):
         detector = FASTDetector(threshold=150)
         self.tracker = LKFeatureTracker(detector)
-        self.data = VOSequence(VO_DATA_PATH, "00")
+
+        data_path = join(test.TEST_DATA_PATH, "vo")
+        self.img = []
+        for i in range(10):
+            img_filename = "%d.png" % i
+            self.img.append(cv2.imread(join(data_path, img_filename)))
 
     def test_detect(self):
-        img = cv2.imread(self.data.image_0_files[0])
-        self.tracker.detect(img)
+        self.tracker.detect(self.img[0])
 
-        self.assertTrue(len(self.tracker.tracks) > 10)
+        self.assertTrue(len(self.tracker.tracks) > 0)
         self.assertEqual(self.tracker.track_id,
                          len(self.tracker.tracks))
         self.assertEqual(self.tracker.track_id,
                          len(self.tracker.tracks_tracking))
 
     def test_last_keypoints(self):
-        img = cv2.imread(self.data.image_0_files[0])
-        self.tracker.detect(img)
+        self.tracker.detect(self.img[0])
         keypoints = self.tracker.last_keypoints()
 
         self.assertEqual(len(self.tracker.tracks_tracking), keypoints.shape[0])
         self.assertEqual(2, keypoints.shape[1])
 
     def test_track_features(self):
-        img1 = cv2.imread(self.data.image_0_files[0])
-        img2 = cv2.imread(self.data.image_0_files[1])
-
-        self.tracker.detect(img1)
+        self.tracker.detect(self.img[0])
         tracks_tracking_before = len(self.tracker.tracks_tracking)
 
-        self.tracker.track_features(img1, img2)
+        self.tracker.track_features(self.img[0], self.img[1])
         tracks_tracking_after = len(self.tracker.tracks_tracking)
 
-        self.assertTrue(tracks_tracking_after < tracks_tracking_before)
+        self.assertTrue(tracks_tracking_after <= tracks_tracking_before)
 
     def test_draw_tracks(self):
         debug = False
-        img1 = cv2.imread(self.data.image_0_files[0])
-        img2 = cv2.imread(self.data.image_0_files[1])
-
-        self.tracker.detect(img1)
-        self.tracker.track_features(img1, img2)
-        self.tracker.draw_tracks(img2, debug)
+        self.tracker.detect(self.img[0])
+        self.tracker.track_features(self.img[0], self.img[1])
+        self.tracker.draw_tracks(self.img[1], debug)
 
         if debug:
             cv2.waitKey(1000000)
@@ -116,18 +112,17 @@ class LKFeatureTrackerTest(unittest.TestCase):
 
         # Loop through images
         index = 0
-        while index <= len(self.data.image_0_files[:100]):
+        while index < len(self.img):
             # Index out of bounds guard
             index = 0 if index < 0 else index
 
             # Feature tracker update
-            img = cv2.imread(self.data.image_0_files[index])
-            self.tracker.update(img, debug)
+            self.tracker.update(self.img[index], debug)
             tracks_tracked.append(len(self.tracker.tracks_tracking))
 
             # Display image
             if debug:
-                cv2.imshow("VO Sequence " + self.data.sequence, img)
+                cv2.imshow("VO Sequence " + self.data.sequence, self.img[index])
                 key = cv2.waitKey(0)
                 if key == ord('q'):  # Quit
                     sys.exit(1)
@@ -418,7 +413,7 @@ class FeatureTrackerTest(unittest.TestCase):
         nb_images = len(self.img)
         time_start = time.time()
         # tracker.debug_mode = True
-        tracker.debug_mode = False
+        # tracker.debug_mode = False
 
         while index < nb_images:
             # Index out of bounds guard

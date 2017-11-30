@@ -23,7 +23,7 @@ class FeatureEstimator:
     def __init__(self, **kwargs):
         self.max_iter = kwargs.get("max_iter", 100)
 
-    def triangulate(self, pt1, pt2, C_C0C1, t_C0_C1C0):
+    def triangulate(self, pt1, pt2, C_C0C1, t_C0_C0C1):
         """Triangulate feature observed from camera C0 and C1 and return the
         position relative to camera C0
 
@@ -51,13 +51,13 @@ class FeatureEstimator:
         pt2 = pt2 / np.linalg.norm(pt2)
 
         # Triangulate
-        A = np.block([pt1, -dot(C_C0C1, pt2)])
-        b = t_C0_C1C0
+        A = np.block([pt1, dot(-C_C0C1, pt2)])
+        b = t_C0_C0C1
         result = np.linalg.lstsq(A, b)
         x, residual, rank, s = result
         p_C0_f = x[0] * pt1
 
-        return p_C0_f
+        return p_C0_f, residual
 
     def form_jacobian(self, J, i, h, C_CiC0, t_Ci_CiC0):
         """Form Jacobian
@@ -125,15 +125,23 @@ class FeatureEstimator:
         p_G_C1 = track_cam_states[1].p_G
         # -- Obtain rotation and translation from camera 0 to camera 1
         C_C0C1 = dot(C_C0G, C_C1G.T)
-        t_C1_C1C0 = dot(C_C0G, (p_G_C1 - p_G_C0))
+        t_C1_C0C1 = dot(C_C0G, (p_G_C1 - p_G_C0))
         # -- Convert from pixel coordinates to image coordinates
         pt1 = cam_model.pixel2image(track.track[0].pt).reshape((2, 1))
         pt2 = cam_model.pixel2image(track.track[1].pt).reshape((2, 1))
 
-        # Calculate initial estimate of 3D position
-        p_C0_f = self.triangulate(pt1, pt2, C_C0C1, t_C1_C1C0)
+        # print("p_G_C0", p_G_C0.ravel())
+        # print("p_G_C1", p_G_C1.ravel())
+        # print("t_C1_C0C1", t_C1_C0C1.ravel())
 
-        return p_C0_f
+        # Calculate initial estimate of 3D position
+        p_C0_f, residual = self.triangulate(pt1, pt2, C_C0C1, t_C1_C0C1)
+
+        # print(pt1.T)
+        # print(p_C0_f.T)
+        # print()
+
+        return p_C0_f, residual
 
     def estimate(self, cam_model, track, track_cam_states, debug=False):
         """Estimate feature 3D location by optimizing over inverse depth
@@ -157,15 +165,24 @@ class FeatureEstimator:
 
         """
         # Calculate initial estimate of 3D position
-        p_C0_f = self.initial_estimate(cam_model, track, track_cam_states)
+        p_C0_f, residual = self.initial_estimate(cam_model, track,
+                                                 track_cam_states)
+        # if p_C0_f[2, 0] > 200.0 or p_C0_f[2, 0] < 2.0:
+        #     print("BAD Initialization!")
+        #     return None
+        #
+        # if residual > 0.01:
+        #     print("BAD Initialization!")
+        #     return None
 
         # Create inverse depth params (these are to be optimized)
         alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
         beta = p_C0_f[1, 0] / p_C0_f[2, 0]
         rho = 1.0 / p_C0_f[2, 0]
+        theta_k = np.array([[alpha], [beta], [rho]])
 
         # Gauss Newton optimization
-        # r_Jprev = float("inf")  # residual jacobian
+        Jprev = float("inf")  # residual jacobian
         C_C0G = C(track_cam_states[0].q_CG)
         p_G_C0 = track_cam_states[0].p_G
 
@@ -193,7 +210,7 @@ class FeatureEstimator:
                 # -- Convert measurment to image coordinates
                 z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
                 # -- Convert feature location to normalized coordinates
-                z_hat = np.array([h[0] / h[2], h[1] / h[2]])
+                z_hat = np.array([[h[0, 0] / h[2, 0]], [h[1, 0] / h[2, 0]]])
                 # -- Reprojcetion error
                 r[2 * i:(2 * (i + 1))] = z - z_hat
 
@@ -201,46 +218,41 @@ class FeatureEstimator:
                 J = self.form_jacobian(J, i, h, C_CiC0, t_Ci_CiC0)
 
                 # Form the weight matrix
-                W[2 * i:(2 * (i + 1)), 2 * i:(2 * (i + 1))] = np.diag([0.0001, 0.0001]) # noqa
+                W[2 * i:(2 * (i + 1)), 2 * i:(2 * (i + 1))] = np.diag([2.0e-4, 2.0e-4])  # noqa
 
-            # Check hessian if it is numerically ok
+            # # Update params
+            # JWJ = dot(J.T, np.linalg.solve(W, J))
+            # delta = np.linalg.solve(JWJ, dot(-J.T, np.linalg.solve(W, r)))
+            # theta_k = theta_k + delta
+            #
+            # Jnew = 0.5 * dot(r.T, np.linalg.solve(W, r))
+            # Jderiv = abs((Jnew - Jprev) / Jnew)
+            # Jprev = Jnew
+            # if Jderiv < 0.01:
+            #     break
+
+            # Update estimate params using Gauss Newton
             H_approx = dot(J.T, J)
             if np.linalg.cond(H_approx) > 1e4:
                 print("bad feature!")
                 return None
 
-            # # Update estimate params using Gauss Newton
-            # delta = dot(inv(H_approx), dot(J.T, r))
-            # theta_k = np.array([[alpha], [beta], [rho]]) - delta
-            # alpha = theta_k[0, 0]
-            # beta = theta_k[1, 0]
-            # rho = theta_k[2, 0]
-
-            # # Check how fast the residuals are converging to 0
-            # r_Jnew = float(0.5 * dot(r.T, r))
-            # if r_Jnew < 0.0000001:
-            #     break
-            # r_J = abs((r_Jnew - r_Jprev) / r_Jnew)
-            # r_Jprev = r_Jnew
-            #
-            # # Break loop if not making any progress
-            # if r_J < 0.000001:
-            #     break
-
-            # Update params using Weighted Gauss Newton
-            JWJ = dot(J.T, np.linalg.solve(W, J))
-            delta = np.linalg.solve(JWJ, dot(-J.T, np.linalg.solve(W, r)))
-            theta_k = np.array([[alpha], [beta], [rho]]) + delta
+            delta = dot(inv(H_approx), dot(J.T, r))
+            theta_k = np.array([[alpha], [beta], [rho]]) - delta
             alpha = theta_k[0, 0]
             beta = theta_k[1, 0]
             rho = theta_k[2, 0]
 
+            alpha = theta_k[0, 0]
+            beta = theta_k[1, 0]
+            rho = theta_k[2, 0]
+            z = 1 / rho
+            X = np.array([[alpha], [beta], [1.0]])
+            p_G_f = z * dot(C_C0G.T, X) + p_G_C0
+            # print("estimate: ", p_G_f.ravel())
+
         # Debug
         if debug:
-            # print(k)
-            # print(alpha)
-            # print(beta)
-            # print(rho)
             print("track_length: ", track.tracked_length())
             print("iterations: ", k)
             print("residual: ", r)
@@ -251,15 +263,12 @@ class FeatureEstimator:
         z = 1 / rho
         X = np.array([[alpha], [beta], [1.0]])
         p_G_f = z * dot(C_C0G.T, X) + p_G_C0
-        # print(alpha, beta, rho)
-        # print(p_G_C0.ravel())
 
-        J_cost = 0.5 * dot(r.T, np.linalg.solve(W, r))
-        J_cost_norm = J_cost / track.tracked_length()**2
-        if J_cost_norm > 1e-1:
-            print("bad feature!")
-            return None
-        else:
-            print("good feature!")
+        # p_C_f = dot(C_C0G, (p_G_f - p_G_C0))
+        # if p_C_f[2, 0] > 400.0 or p_C_f[2, 0] < 2.0:
+        #     return None
+        # print("p_C_f: ", p_C_f.ravel())
+        # print("iterations: ", k)
+        # print("residual: ", r)
 
         return p_G_f
