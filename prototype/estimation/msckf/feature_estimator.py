@@ -2,6 +2,7 @@ import numpy as np
 from numpy import zeros
 from numpy import dot
 from numpy.linalg import inv
+from scipy.optimize import least_squares
 
 from prototype.utils.quaternion.jpl import C
 
@@ -182,7 +183,7 @@ class FeatureEstimator:
         theta_k = np.array([[alpha], [beta], [rho]])
 
         # Gauss Newton optimization
-        Jprev = float("inf")  # residual jacobian
+        # Jprev = float("inf")  # residual jacobian
         C_C0G = C(track_cam_states[0].q_CG)
         p_G_C0 = track_cam_states[0].p_G
 
@@ -271,4 +272,141 @@ class FeatureEstimator:
         # print("iterations: ", k)
         # print("residual: ", r)
 
+        return p_G_f
+
+    def jacobian(self, x, *args, **kwargs):
+        track_cam_states = kwargs["track_cam_states"]
+
+        N = len(track_cam_states)
+        J = zeros((2 * N, 3))
+
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        alpha, beta, rho = x.ravel()
+
+        # Form the Jacobian
+        for i in range(N):
+            # Get camera current rotation and translation
+            C_CiG = C(track_cam_states[i].q_CG)
+            p_G_Ci = track_cam_states[i].p_G
+
+            # Set camera 0 as origin, work out rotation and translation
+            # of camera i relative to to camera 0
+            C_CiC0 = dot(C_CiG, C_C0G.T)
+            t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
+
+            # Project estimated feature location to image plane
+            h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0  # noqa
+
+            drdalpha = np.array([
+                -C_CiC0[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiC0[2, 0],  # noqa
+                -C_CiC0[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiC0[2, 0]   # noqa
+            ])
+            drdbeta = np.array([
+                -C_CiC0[0, 1] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * C_CiC0[2, 1],  # noqa
+                -C_CiC0[1, 1] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * C_CiC0[2, 1]   # noqa
+            ])
+            drdrho = np.array([
+                -t_Ci_CiC0[0, 0] / h[2, 0] + (h[0, 0] / h[2, 0]**2) * t_Ci_CiC0[2, 0],  # noqa
+                -t_Ci_CiC0[1, 0] / h[2, 0] + (h[1, 0] / h[2, 0]**2) * t_Ci_CiC0[2, 0]   # noqa
+            ])
+            J[2 * i:(2 * (i + 1)), 0] = drdalpha.ravel()
+            J[2 * i:(2 * (i + 1)), 1] = drdbeta.ravel()
+            J[2 * i:(2 * (i + 1)), 2] = drdrho.ravel()
+
+        return J
+
+    def reprojection_error(self, x, *args, **kwargs):
+        cam_model = kwargs["cam_model"]
+        track = kwargs["track"]
+        track_cam_states = kwargs["track_cam_states"]
+
+        # Calculate residuals
+        N = len(track_cam_states)
+        r = zeros((2 * N, 1))
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+
+        alpha, beta, rho = x.ravel()
+
+        for i in range(N):
+            # Get camera current rotation and translation
+            C_CiG = C(track_cam_states[i].q_CG)
+            p_G_Ci = track_cam_states[i].p_G
+
+            # Set camera 0 as origin, work out rotation and translation
+            # of camera i relative to to camera 0
+            C_CiC0 = dot(C_CiG, C_C0G.T)
+            t_Ci_CiC0 = dot(C_CiG, (p_G_C0 - p_G_Ci))
+
+            # Project estimated feature location to image plane
+            h = dot(C_CiC0, np.array([[alpha], [beta], [1]])) + rho * t_Ci_CiC0  # noqa
+
+            # Calculate reprojection error
+            # -- Convert measurment to image coordinates
+            z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
+            # -- Convert feature location to normalized coordinates
+            z_hat = np.array([[h[0, 0] / h[2, 0]], [h[1, 0] / h[2, 0]]])
+            # -- Reprojcetion error
+            r[2 * i:(2 * (i + 1))] = z - z_hat
+
+        return r.ravel()
+
+    def estimate2(self, cam_model, track, track_cam_states, debug=False):
+        """Estimate feature 3D location by optimizing over inverse depth
+        parameterization using Gauss Newton Optimization
+
+        Parameters
+        ----------
+        cam_model : CameraModel
+            Camera model
+        track : FeatureTrack
+            Feature track
+        track_cam_states : list of CameraState
+            Camera states where feature track was observed
+        debug :
+            Debug mode (default: False)
+
+        Returns
+        -------
+        p_G_f : np.array - 3x1
+            Estimated feature position in global frame
+
+        """
+        # Calculate initial estimate of 3D position
+        p_C0_f, residual = self.initial_estimate(cam_model, track,
+                                                 track_cam_states)
+
+        # Create inverse depth params (these are to be optimized)
+        alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
+        beta = p_C0_f[1, 0] / p_C0_f[2, 0]
+        rho = 1.0 / p_C0_f[2, 0]
+        theta_k = np.array([alpha, beta, rho])
+
+        kwargs = {"cam_model": cam_model,
+                  "track": track,
+                  "track_cam_states": track_cam_states}
+        result = least_squares(self.reprojection_error,
+                               theta_k,
+                               jac=self.jacobian,
+                               method="lm",
+                               kwargs=kwargs)
+
+        if result.cost > 1e-4:
+            return None
+
+        alpha, beta, rho = result.x.ravel()
+        z = 1 / rho
+        X = np.array([[alpha], [beta], [1.0]])
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_G_f = z * dot(C_C0G.T, X) + p_G_C0
+        p_C_f = dot(C_C0G, (p_G_f - p_G_C0))
+
+        if p_C_f[2, 0] < 2.0:
+            return None
+        # if p_C_f[2, 0] > 200.0:
+        #     return None
+
+        # print("p_C_f: ", p_C_f.ravel())
         return p_G_f
