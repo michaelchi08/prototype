@@ -369,9 +369,9 @@ class MSCKF:
         track_cam_states = self.track_cam_states(track)
 
         # Estimate j-th feature position in global frame
-        p_G_f = self.feature_estimator.estimate(self.cam_model,
-                                                track,
-                                                track_cam_states)
+        p_G_f = self.feature_estimator.estimate2(self.cam_model,
+                                                 track,
+                                                 track_cam_states)
         if p_G_f is None:
             return (None, None, None)
 

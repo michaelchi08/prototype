@@ -1,7 +1,6 @@
 import numpy as np
 from numpy import zeros
 from numpy import dot
-from numpy.linalg import inv
 from scipy.optimize import least_squares
 
 from prototype.utils.quaternion.jpl import C
