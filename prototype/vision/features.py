@@ -474,8 +474,8 @@ class FeatureTracker:
 
     def __init__(self, **kwargs):
         self.debug_mode = kwargs.get("debug_mode", False)
-        self.nb_features = kwargs.get("nb_features", 300)
-        self.nb_levels = kwargs.get("nb_levels", 2)
+        self.nb_features = kwargs.get("nb_features", 500)
+        self.nb_levels = kwargs.get("nb_levels", 4)
 
         # Detector and matcher
         self.detector = ORBDetector(nfeatures=self.nb_features,
@@ -501,6 +501,63 @@ class FeatureTracker:
     def debug(self, s):
         if self.debug_mode:
             print(s)
+
+    def add_track(self, feature1, feature2):
+        """Add feature track
+
+        Parameters
+        ----------
+        feature1 : Feature
+            First feature
+        feature2 : Feature
+            Second feature
+
+        """
+        self.counter_track_id += 1
+        track_id = self.counter_track_id
+        frame_id = self.counter_frame_id
+
+        feature1.set_track_id(track_id)
+        feature2.set_track_id(track_id)
+
+        track = FeatureTrack(track_id, frame_id, feature1, feature2)
+        self.tracks_tracking.append(track_id)
+        self.tracks_buffer[track_id] = track
+
+    def remove_track(self, track_id, lost=False):
+        """Remove feature track
+
+        Important! Marking the track as lost does not remove the track from
+        the feature track buffer.
+
+        Parameters
+        ----------
+        track_id : int
+            Feature track id
+        lost : bool
+            Mark feature track as lost
+
+        """
+        self.tracks_tracking.remove(track_id)
+        if lost:
+            self.tracks_lost.append(track_id)
+        else:
+            del self.tracks_buffer[track_id]
+
+    def update_track(self, track_id, feature):
+        """Update feature track
+
+        Parameters
+        ----------
+        track_id : int
+            Feature track id
+        feature : Feature
+            Latest feature
+
+        """
+        feature.set_track_id(track_id)
+        track = self.tracks_buffer[track_id]
+        track.update(self.counter_frame_id, feature)
 
     def initialize(self, frame):
         """Initialize feature tracker
@@ -573,12 +630,20 @@ class FeatureTracker:
         # This acts as a stage 2 filter where outliers are rejected
         src_pts = np.float32([kps0[m.trainIdx].pt for m in matches])
         dst_pts = np.float32([kps1[m.queryIdx].pt for m in matches])
+
+        # src_pts = src_pts.reshape(-1, 1, 2)
+        # dst_pts = dst_pts.reshape(-1, 1, 2)
+        # M, mask = cv2.findFundamentalMat(src_pts, dst_pts,
+        #                                  cv2.FM_RANSAC, 1, 0.99)
+        # match_mask = mask.ravel().tolist()
+
         mask = self.ransac.match(src_pts, dst_pts)
         match_mask = mask.ravel().tolist()
 
         # Remove outliers
         final_matches = []
         for i in range(len(match_mask)):
+            # if match_mask[i] == 1:
             if match_mask[i] is True:
                 final_matches.append(matches[i])
 
@@ -601,63 +666,6 @@ class FeatureTracker:
                 self.unmatched.append(f1[i])
 
         return result, f0, f1
-
-    def add_track(self, feature1, feature2):
-        """Add feature track
-
-        Parameters
-        ----------
-        feature1 : Feature
-            First feature
-        feature2 : Feature
-            Second feature
-
-        """
-        self.counter_track_id += 1
-        track_id = self.counter_track_id
-        frame_id = self.counter_frame_id
-
-        feature1.set_track_id(track_id)
-        feature2.set_track_id(track_id)
-
-        track = FeatureTrack(track_id, frame_id, feature1, feature2)
-        self.tracks_tracking.append(track_id)
-        self.tracks_buffer[track_id] = track
-
-    def remove_track(self, track_id, lost=False):
-        """Remove feature track
-
-        Important! Marking the track as lost does not remove the track from
-        the feature track buffer.
-
-        Parameters
-        ----------
-        track_id : int
-            Feature track id
-        lost : bool
-            Mark feature track as lost
-
-        """
-        self.tracks_tracking.remove(track_id)
-        if lost:
-            self.tracks_lost.append(track_id)
-        else:
-            del self.tracks_buffer[track_id]
-
-    def update_track(self, track_id, feature):
-        """Update feature track
-
-        Parameters
-        ----------
-        track_id : int
-            Feature track id
-        feature : Feature
-            Latest feature
-
-        """
-        feature.set_track_id(track_id)
-        track = self.tracks_buffer[track_id]
-        track.update(self.counter_frame_id, feature)
 
     def process_matches(self, matches, f0, f1):
         """Process matches
@@ -739,18 +747,23 @@ class FeatureTracker:
         for m in matches:
             f0_idx, f1_idx = m
             track_id = f0[f0_idx].track_id
-            kp1 = f0[f0_idx].pt
-            kp2 = f1[f1_idx].pt
+            kp0 = f0[f0_idx].pt
+            kp1 = f1[f1_idx].pt
 
             # Point 1
-            p1 = np.array(kp1)
+            p1 = np.array(kp0)
             img_height = match_img.shape[0]
             p1[1] += img_height / 2.0
             p1 = (int(p1[0]), int(p1[1]))
+            match_img = cv2.circle(match_img, p1, 2, (0, 255, 0), -1)
 
             # Point 2
-            p2 = np.array(kp2)
+            p2 = np.array(kp1)
             p2 = (int(p2[0]), int(p2[1]))
+            match_img = cv2.circle(match_img, p2, 2, (0, 255, 0), -1)
+
+            # Draw line
+            cv2.line(match_img, p2, p1, (0, 255, 0), 1)
 
             # Draw track id
             if track_id is not None:
@@ -769,9 +782,6 @@ class FeatureTracker:
                             font,
                             font_scale,
                             font_color)
-
-            # Draw line
-            cv2.line(match_img, p2, p1, (0, 255, 0), 1)
 
         return match_img
 
@@ -811,10 +821,7 @@ class FeatureTracker:
 
         # Match features
         matches, fea_ref, fea_cur = self.match(fea_cur)
-
-        # Update
         self.process_matches(matches, fea_ref, fea_cur)
-        self.img_ref = img_cur
 
         # Draw matches
         if show_matches:
@@ -822,3 +829,6 @@ class FeatureTracker:
                                     fea_ref, fea_cur,
                                     matches)
             cv2.imshow("Matches", img)
+
+        # Update
+        self.img_ref = img_cur

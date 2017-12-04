@@ -5,13 +5,10 @@ import numpy as np
 from numpy import dot
 import matplotlib.pylab as plt
 
-# from prototype.utils.data import mat2csv
 from prototype.utils.euler import euler2rot as R
 from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.transform import T_global_camera
 from prototype.utils.transform import T_camera_global
-# from prototype.models.husky import HuskyModel
-# from prototype.control.utils import circle_trajectory
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
@@ -341,6 +338,7 @@ class DatasetGenerator(object):
         """
         track_id = self.features_buffer[feature_id]
         track = self.tracks_buffer[track_id]
+
         track.update(self.counter_frame_id, kp)
         self.debug("Update [track_id: %d, feature_id: %d]" %
                    (track_id, feature_id))
@@ -416,10 +414,6 @@ class DatasetGenerator(object):
 
         """
         # Update motion model
-        # self.model.update(self.v_B, self.w_B, self.dt)
-        # pos = self.model.p_G
-        # rpy = self.model.rpy_G
-
         self.pos = self.pos + self.vel * self.dt
         self.vel = self.vel + self.acc * self.dt
         self.acc = dot(R(self.att, 321), self.a_B)

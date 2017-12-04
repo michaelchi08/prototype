@@ -8,5 +8,17 @@ setup(
     description="Robotics Prototype Library",
     author="Chris Choi",
     author_email="chutsu@gmail.com",
-    packages=find_packages()
+    packages=find_packages(),
+    install_requires=[
+        "numpy"
+        "scipy"
+        "jinja2"
+        "Pillow"
+        "matplotlib"
+        "sympy"
+        "pygame"
+        "PyOpenGL"
+        "opencv-python"
+        "autopep8"
+    ]
 )

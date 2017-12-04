@@ -119,6 +119,7 @@ class FeatureEstimatorTest(unittest.TestCase):
             kp1 = Keypoint(kp1.ravel()[:2], 21)
             kp2 = Keypoint(kp2.ravel()[:2], 21)
             track = FeatureTrack(start, end, kp1, kp2)
+            track.ground_truth = T_global_camera * feature
 
             for i in range(2, track_length):
                 R_CG = dot(R_global_camera, C(track_cam_states[i].q_CG))
@@ -130,27 +131,19 @@ class FeatureEstimatorTest(unittest.TestCase):
                 track.update(i, kp)
 
             # Estimate feature
-            # p_G_f = self.estimator.estimate(self.cam_model,
-            #                                  track,
-            #                                  track_cam_states)
-            # print("estimation1: ", p_G_f.ravel())
-
-            p_G_f = self.estimator.estimate2(self.cam_model,
-                                             track,
-                                             track_cam_states)
-            print("estimation2: ", p_G_f.ravel())
+            p_G_f = self.estimator.estimate(self.cam_model,
+                                            track,
+                                            track_cam_states)
+            print("estimation: ", p_G_f.ravel())
+            print()
 
             # Debug
             # debug = False
-            debug = True
-            if debug:
-                C_CG = C(track_cam_states[-1].q_CG)
-                p_G_C = track_cam_states[-1].p_G
-                p_C_f = dot(C_CG, (p_G_f - p_G_C))
-
-                # print("p_G_f: ", p_G_f.ravel())
-                # print("p_C_f: ", p_C_f.ravel())
-            print()
+            # debug = True
+            # if debug:
+            #     C_CG = C(track_cam_states[-1].q_CG)
+            #     p_G_C = track_cam_states[-1].p_G
+            #     p_C_f = dot(C_CG, (p_G_f - p_G_C))
 
             # Assert
             feature_G = T_global_camera * feature
@@ -222,14 +215,10 @@ class FeatureEstimatorTest(unittest.TestCase):
                     track_cam_states.append(cam_state)
 
                 # Estimate feature track
-                # p_G_f = self.estimator.estimate(cam_model,
-                #                                 track,
-                #                                 track_cam_states)
-
-                p_G_f = self.estimator.estimate2(self.cam_model,
-                                                 track,
-                                                 track_cam_states)
-                print("estimation2: ", p_G_f.ravel())
+                p_G_f = self.estimator.estimate(cam_model,
+                                                track,
+                                                track_cam_states)
+                print("estimation: ", p_G_f.ravel())
 
                 if p_G_f is None:
                     C_CG = C(track_cam_states[-1].q_CG)

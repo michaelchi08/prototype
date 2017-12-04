@@ -9,9 +9,7 @@ from numpy.matlib import repmat
 from prototype.utils.linalg import skew
 from prototype.utils.linalg import nullspace
 from prototype.utils.quaternion.jpl import quatlcomp
-from prototype.utils.quaternion.jpl import quat2euler
 from prototype.utils.quaternion.jpl import C
-from prototype.viz.plot_matrix import PlotMatrix
 from prototype.estimation.msckf.imu_state import IMUState
 from prototype.estimation.msckf.camera_state import CameraState
 from prototype.estimation.msckf.feature_estimator import FeatureEstimator
@@ -24,8 +22,7 @@ class MSCKF:
 
         Mourikis, Anastasios I., and Stergios I. Roumeliotis. "A multi-state
         constraint Kalman filter for vision-aided inertial navigation." Robotics
-        and automation, 2007 IEEE international conference on. IEEE, 2007.
-        APA
+        and automation, 2007 IEEE international conference on. IEEE, 2007.  APA
 
         A.I. Mourikis, S.I. Roumeliotis: "A Multi-state Kalman Filter for
         Vision-Aided Inertial Navigation," Technical Report, September 2006
@@ -369,9 +366,9 @@ class MSCKF:
         track_cam_states = self.track_cam_states(track)
 
         # Estimate j-th feature position in global frame
-        p_G_f = self.feature_estimator.estimate2(self.cam_model,
-                                                 track,
-                                                 track_cam_states)
+        p_G_f = self.feature_estimator.estimate(self.cam_model,
+                                                track,
+                                                track_cam_states)
         if p_G_f is None:
             return (None, None, None)
 

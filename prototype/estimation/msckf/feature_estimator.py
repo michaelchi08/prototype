@@ -20,8 +20,6 @@ class FeatureEstimator:
         Maximum iterations (default: 30)
 
     """
-    def __init__(self, **kwargs):
-        self.max_iter = kwargs.get("max_iter", 100)
 
     def triangulate(self, pt1, pt2, C_C0C1, t_C0_C0C1):
         """Triangulate feature observed from camera C0 and C1 and return the
@@ -47,8 +45,8 @@ class FeatureEstimator:
         # Convert points to homogenous coordinates and normalize
         pt1 = np.block([[pt1], [1.0]])
         pt2 = np.block([[pt2], [1.0]])
-        pt1 = pt1 / np.linalg.norm(pt1)
-        pt2 = pt2 / np.linalg.norm(pt2)
+        # pt1 = pt1 / np.linalg.norm(pt1)
+        # pt2 = pt2 / np.linalg.norm(pt2)
 
         # Triangulate
         A = np.block([pt1, dot(-C_C0C1, pt2)])
@@ -80,31 +78,24 @@ class FeatureEstimator:
 
         """
         # Calculate rotation and translation of first and last camera states
+        # -- Get rotation and translation of camera 0 and camera 1
         C_C0G = C(track_cam_states[0].q_CG)
-        p_G_C0 = track_cam_states[0].p_G
         C_C1G = C(track_cam_states[1].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
         p_G_C1 = track_cam_states[1].p_G
-        # -- Obtain rotation and translation from camera 0 to camera 1
+        # -- Calculate rotation and translation from camera 0 to camera 1
         C_C0C1 = dot(C_C0G, C_C1G.T)
         t_C1_C0C1 = dot(C_C0G, (p_G_C1 - p_G_C0))
         # -- Convert from pixel coordinates to image coordinates
         pt1 = cam_model.pixel2image(track.track[0].pt).reshape((2, 1))
         pt2 = cam_model.pixel2image(track.track[1].pt).reshape((2, 1))
 
-        # print("p_G_C0", p_G_C0.ravel())
-        # print("p_G_C1", p_G_C1.ravel())
-        # print("t_C1_C0C1", t_C1_C0C1.ravel())
-
         # Calculate initial estimate of 3D position
         p_C0_f, residual = self.triangulate(pt1, pt2, C_C0C1, t_C1_C0C1)
 
-        # print(pt1.T)
-        # print(p_C0_f.T)
-        # print()
-
         return p_C0_f, residual
 
-    def jacobian(self, x, *args, **kwargs):
+    def jacobian(self, x, *args):
         """Jacobian
 
         Parameters
@@ -120,8 +111,9 @@ class FeatureEstimator:
         -------
         J : np.array
             Jacobian
+
         """
-        track_cam_states = kwargs["track_cam_states"]
+        cam_model, track, track_cam_states = args
 
         N = len(track_cam_states)
         J = zeros((2 * N, 3))
@@ -162,7 +154,7 @@ class FeatureEstimator:
 
         return J
 
-    def reprojection_error(self, x, *args, **kwargs):
+    def reprojection_error(self, x, *args):
         """Reprojection error
 
         Parameters
@@ -180,9 +172,7 @@ class FeatureEstimator:
             Residual
 
         """
-        cam_model = kwargs["cam_model"]
-        track = kwargs["track"]
-        track_cam_states = kwargs["track_cam_states"]
+        cam_model, track, track_cam_states = args
 
         # Calculate residuals
         N = len(track_cam_states)
@@ -236,9 +226,22 @@ class FeatureEstimator:
             Estimated feature position in global frame
 
         """
-        # Calculate initial estimate of 3D position
+        # # Calculate initial estimate of 3D position
         p_C0_f, residual = self.initial_estimate(cam_model, track,
                                                  track_cam_states)
+
+        print("init: ", p_C0_f.ravel())
+
+        # Get ground truth
+        p_G_f = track.ground_truth
+
+        # Convert ground truth expressed in global frame
+        # to be expressed in camera 0
+        C_C0G = C(track_cam_states[0].q_CG)
+        p_G_C0 = track_cam_states[0].p_G
+        p_C0_f = dot(C_C0G, (p_G_f - p_G_C0))
+
+        print("true: ", p_C0_f.ravel())
 
         # Create inverse depth params (these are to be optimized)
         alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
@@ -246,18 +249,23 @@ class FeatureEstimator:
         rho = 1.0 / p_C0_f[2, 0]
         theta_k = np.array([alpha, beta, rho])
 
+        # z = 1 / rho
+        # X = np.array([[alpha], [beta], [1.0]])
+        # C_C0G = C(track_cam_states[0].q_CG)
+        # p_G_C0 = track_cam_states[0].p_G
+        # init = z * dot(C_C0G.T, X) + p_G_C0
+
         # Optimize feature location
-        kwargs = {"cam_model": cam_model,
-                  "track": track,
-                  "track_cam_states": track_cam_states}
+        args = (cam_model, track, track_cam_states)
         result = least_squares(self.reprojection_error,
                                theta_k,
+                               args=args,
                                jac=self.jacobian,
-                               method="lm",
-                               kwargs=kwargs)
+                               verbose=1,
+                               method="lm")
 
-        if result.cost > 1e-4:
-            return None
+        # if result.cost > 1e-4:
+        #     return None
 
         # Calculate feature position in global frame
         alpha, beta, rho = result.x.ravel()
@@ -266,10 +274,16 @@ class FeatureEstimator:
         C_C0G = C(track_cam_states[0].q_CG)
         p_G_C0 = track_cam_states[0].p_G
         p_G_f = z * dot(C_C0G.T, X) + p_G_C0
-        p_C_f = dot(C_C0G, (p_G_f - p_G_C0))
 
-        if p_C_f[2, 0] < 2.0:
-            return None
+        # print("ground truth: ", track.ground_truth.ravel())
+        # print("cost: ", result.cost)
+        print()
+        # print("initial: ", init.ravel())
+        # print("final: ", p_G_f.ravel())
+
+        # p_C_f = dot(C_C0G, (p_G_f - p_G_C0))
+        # if p_C_f[2, 0] < 2.0:
+        #     return None
         # if p_C_f[2, 0] > 200.0:
         #     return None
 

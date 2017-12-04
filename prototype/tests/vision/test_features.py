@@ -394,7 +394,7 @@ class FeatureTrackerTest(unittest.TestCase):
                 fig.canvas.draw()
 
     def test_update(self):
-        tracker = FeatureTracker(nb_features=100)
+        tracker = FeatureTracker(nb_features=10000)
 
         # Stats
         tracked = []
@@ -413,14 +413,13 @@ class FeatureTrackerTest(unittest.TestCase):
         nb_images = len(self.img)
         time_start = time.time()
         # tracker.debug_mode = True
-        # tracker.debug_mode = False
 
         while index < nb_images:
             # Index out of bounds guard
             index = 0 if index < 0 else index
 
             # Feature tracker update
-            tracker.update(self.img[index])
+            tracker.update(self.img[index], True)
             tracks_lost = tracker.remove_lost_tracks()
             # self.plot_tracks(fig, ax)
 
