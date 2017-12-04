@@ -84,7 +84,6 @@ class ApriltagTest(unittest.TestCase):
         while cv2.waitKey(1) != 113:
             img = camera.update()
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            cv2.imshow("Image", img)
             assert len(img.shape) == 2
             assert img.dtype == np.uint8
 
@@ -102,4 +101,23 @@ class ApriltagTest(unittest.TestCase):
                 center = np.ctypeslib.as_array(tag.c, shape=(2,)).copy()
                 corners = np.ctypeslib.as_array(tag.p, shape=(4, 2)).copy()
 
-                print(homography)
+                # Draw corners
+                for corner in corners:
+                    pt = (int(corner[0]), int(corner[1]))
+                    img = cv2.circle(img, pt, 10, (0, 255, 0), -1)
+
+                # Detection
+                # detection = Detection(tag.family.contents.name,
+                #                       tag.id,
+                #                       tag.hamming,
+                #                       tag.goodness,
+                #                       tag.decision_margin,
+                #                       homography,
+                #                       center,
+                #                       corners)
+
+            # Clean up
+            self.lib.apriltag_detections_destroy(results)
+            self.lib.image_u8_destroy(c_img)
+
+            cv2.imshow("Image", img)
