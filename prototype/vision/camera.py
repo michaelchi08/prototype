@@ -21,9 +21,9 @@ class Camera(object):
         # self.capture.set(cv2.CAP_PROP_EXPOSURE, 0)
         # self.capture.set(cv2.CAP_PROP_GAIN, 0)
 
-        # define codec and create VideoWriter object
-        fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-        self.out = cv2.VideoWriter('output.avi', fourcc, 120.0, (640, 480))
+        # Define codec and create VideoWriter object
+        # fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+        # self.out = cv2.VideoWriter('output.avi', fourcc, 120.0, (640, 480))
 
     def update(self):
         """Update camera
