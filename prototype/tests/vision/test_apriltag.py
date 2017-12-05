@@ -3,7 +3,7 @@ import unittest
 import cv2
 
 from prototype.vision.camera import Camera
-from prototype.apriltag.apriltag import AprilTagDetector
+from prototype.vision.apriltag import AprilTagDetector
 
 
 class ApriltagTest(unittest.TestCase):
