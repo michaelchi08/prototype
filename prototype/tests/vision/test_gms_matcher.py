@@ -22,15 +22,12 @@ class GMSMatcherTest(unittest.TestCase):
 
         orb = cv2.ORB_create(10000)
         orb.setFastThreshold(0)
-        if cv2.__version__.startswith('3'):
-            matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-        else:
-            matcher = cv2.BFMatcher_create(cv2.NORM_HAMMING)
-        gms = GmsMatcher(orb, matcher)
+        matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+        gms = GmsMatcher()
 
         kp0, des0 = orb.detectAndCompute(self.img0, np.array([]))
         kp1, des1 = orb.detectAndCompute(self.img1, np.array([]))
-        # all_matches = self.matcher.match(descriptors_image1, descriptors_image2)
+        matches = matcher.match(des0, des1)
 
-        matches = gms.compute_matches(kp0, kp1, des0, des1, self.img0, self.img1)
+        matches = gms.compute_matches(kp0, kp1, des0, des1, matches, self.img0)
         draw_matches(self.img0, self.img1, kp0, kp1, matches)

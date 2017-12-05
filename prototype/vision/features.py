@@ -4,8 +4,8 @@ import numpy as np
 from prototype.vision.ransac import VerticalRANSAC
 
 
-class Keypoint:
-    """Keypoint"""
+class KeyPoint:
+    """KeyPoint"""
 
     def __init__(self, pt, size):
         self.pt = np.array(pt)
@@ -99,10 +99,10 @@ class FeatureTrack:
         Track id
     frame_id : int
         Frame id
-    data0 : Keypoint or Feature
-        First Keypoint or feature
-    data1 : Keypoint or Feature
-        Second Keypoint or feature
+    data0 : KeyPoint or Feature
+        First KeyPoint or feature
+    data1 : KeyPoint or Feature
+        Second KeyPoint or feature
     ground_truth : int or np.array - 3x1
         Feature position ground truth
 
@@ -129,7 +129,7 @@ class FeatureTrack:
         ----------
         frame_id : int
             Frame id
-        data : Keypoint or Feature
+        data : KeyPoint or Feature
             data
 
         """
@@ -145,7 +145,7 @@ class FeatureTrack:
         Returns
         -------
         type
-            Last keypoint (Keypoint)
+            Last keypoint (KeyPoint)
 
         """
         return self.track[-1]
@@ -181,21 +181,23 @@ class FeatureTrack:
         return s
 
 
-class FASTDetector:
-    """Fast Detector"""
+class FAST:
+    """FAST Detector
+
+    Parameters
+    ----------
+    threshold : float
+        Threshold
+
+    nonmax_suppression : bool
+        Nonmax supression
+
+    """
 
     def __init__(self, **kwargs):
-        """ Constructor
-
-        Args:
-
-            threshold (float): Threshold
-            nonmax_supression (bool): Nonmax supression
-
-        """
         self.detector = cv2.FastFeatureDetector_create(
             threshold=kwargs.get("threshold", 25),
-            nonmaxSuppression=kwargs.get("nonmax_supression", True)
+            nonmaxSuppression=kwargs.get("nonmax_suppression", True)
         )
 
     def detect(self, frame, debug=False):
@@ -210,8 +212,8 @@ class FASTDetector:
 
         Returns
         -------
-
-            List of Keypoints
+        results : list of KeyPoint
+            List of KeyPoints
 
         """
         # Detect
@@ -220,14 +222,16 @@ class FASTDetector:
         # Show debug image
         if debug is True:
             image = None
-            image = cv2.drawKeypoints(frame, keypoints, None)
-            cv2.imshow("Keypoints", image)
+            image = cv2.drawKeyPoints(frame, keypoints, None)
+            cv2.imshow("KeyPoints", image)
 
-        return [Keypoint(kp.pt, kp.size) for kp in keypoints]
+        results = [KeyPoint(kp.pt, kp.size) for kp in keypoints]
+
+        return results
 
 
-class ORBDetector:
-    """ORB Detector"""
+class ORB:
+    """ORB"""
 
     def __init__(self, **kwargs):
         """ Constructor """
@@ -273,9 +277,9 @@ class ORBDetector:
         # Show debug image
         if debug is True:
             image = None
-            image = cv2.drawKeypoints(
+            image = cv2.drawKeyPoints(
                 frame, keypoints, None, color=(0, 255, 0))
-            cv2.imshow("Keypoints", image)
+            cv2.imshow("KeyPoints", image)
 
         return features
 
@@ -288,7 +292,8 @@ class LKFeatureTracker:
 
         Args:
 
-            detector (FASTDetector): Feature detector
+            detector : FAST
+                Feature detector
 
         """
         self.frame_id = 0
@@ -331,7 +336,7 @@ class LKFeatureTracker:
         Returns
         -------
 
-            Keypoints as a numpy array of shape (N, 2), where N is the number of
+            KeyPoints as a numpy array of shape (N, 2), where N is the number of
             keypoints
 
         """
@@ -382,7 +387,7 @@ class LKFeatureTracker:
             if status[i] == 1:
                 track_id = self.tracks_tracking[i]
                 still_alive.append(track_id)
-                kp = Keypoint(self.kp_cur[i], 0)
+                kp = KeyPoint(self.kp_cur[i], 0)
                 self.tracks[track_id].update(self.frame_id, kp)
 
         self.tracks_tracking = still_alive
@@ -478,8 +483,8 @@ class FeatureTracker:
         self.nb_levels = kwargs.get("nb_levels", 4)
 
         # Detector and matcher
-        self.detector = ORBDetector(nfeatures=self.nb_features,
-                                    nlevels=self.nb_levels)
+        self.detector = ORB(nfeatures=self.nb_features,
+                            nlevels=self.nb_levels)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         self.ransac = None
 

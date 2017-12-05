@@ -110,7 +110,7 @@ def draw_matches(img0, img1, kp0, kp1, matches, display_type=0):
 
 
 class GmsMatcher:
-    def __init__(self, descriptor, matcher):
+    def __init__(self):
         self.scale_ratios = [1.0, 1.0 / 2,
                              1.0 / math.sqrt(2.0),
                              math.sqrt(2.0), 2.0]
@@ -124,8 +124,8 @@ class GmsMatcher:
         self.matches_number = 0
 
         # Grid Size
-        self.grid_size_right = Size(0, 0)
-        self.grid_number_right = 0
+        self.grid_sz_right = Size(0, 0)
+        self.grid_nb_right = 0
         # x      : left grid idx
         # y      :  right grid idx
         # value  : how many matches from idx_left to idx_right
@@ -146,23 +146,11 @@ class GmsMatcher:
         self.grid_neighbor_right = []
 
         # Grid initialize
-        self.grid_size_left = Size(20, 20)
-        self.grid_number_left = self.grid_size_left.width * self.grid_size_left.height
+        self.grid_sz_left = Size(20, 20)
+        self.grid_nb_left = self.grid_sz_left.width * self.grid_sz_left.height
 
         # Initialize the neihbor of left grid
-        self.grid_neighbor_left = np.zeros((self.grid_number_left, 9))
-
-        self.descriptor = descriptor
-        self.matcher = matcher
-        self.gms_matches = []
-        self.keypoints_image1 = []
-        self.keypoints_image2 = []
-
-    def empty_matches(self):
-        self.normalized_points1 = []
-        self.normalized_points2 = []
-        self.matches = []
-        self.gms_matches = []
+        self.grid_neighbor_left = np.zeros((self.grid_nb_left, 9))
 
     # Normalize key points to range (0-1)
     def normalize_points(self, kp, size):
@@ -178,23 +166,23 @@ class GmsMatcher:
         for match in vd_matches:
             v_matches.append((match.queryIdx, match.trainIdx))
 
-    def initialize_neighbours(self, neighbor, grid_size):
+    def initialize_neighbours(self, neighbor, grid_sz):
         for i in range(neighbor.shape[0]):
-            neighbor[i] = self.get_nb9(i, grid_size)
+            neighbor[i] = self.get_nb9(i, grid_sz)
 
-    def get_nb9(self, idx, grid_size):
+    def get_nb9(self, idx, grid_sz):
         nb9 = [-1 for _ in range(9)]
-        idx_x = idx % grid_size.width
-        idx_y = idx // grid_size.width
+        idx_x = idx % grid_sz.width
+        idx_y = idx // grid_sz.width
 
         for yi in range(-1, 2):
             for xi in range(-1, 2):
                 idx_xx = idx_x + xi
                 idx_yy = idx_y + yi
 
-                if idx_xx < 0 or idx_xx >= grid_size.width or idx_yy < 0 or idx_yy >= grid_size.height:
+                if idx_xx < 0 or idx_xx >= grid_sz.width or idx_yy < 0 or idx_yy >= grid_sz.height:
                     continue
-                nb9[xi + 4 + yi * 3] = idx_xx + idx_yy * grid_size.width
+                nb9[xi + 4 + yi * 3] = idx_xx + idx_yy * grid_sz.width
 
         return nb9
 
@@ -246,25 +234,25 @@ class GmsMatcher:
                 return self.inlier_mask, max_inlier
 
     def set_scale(self, scale):
-        self.grid_size_right.width = self.grid_size_left.width * self.scale_ratios[scale]
-        self.grid_size_right.height = self.grid_size_left.height * self.scale_ratios[scale]
-        self.grid_number_right = self.grid_size_right.width * self.grid_size_right.height
+        self.grid_sz_right.width = self.grid_sz_left.width * self.scale_ratios[scale]
+        self.grid_sz_right.height = self.grid_sz_left.height * self.scale_ratios[scale]
+        self.grid_nb_right = self.grid_sz_right.width * self.grid_sz_right.height
 
         # Initialize the neighbour of right grid
-        self.grid_neighbor_right = np.zeros((int(self.grid_number_right), 9))
-        self.initialize_neighbours(self.grid_neighbor_right, self.grid_size_right)
+        self.grid_neighbor_right = np.zeros((int(self.grid_nb_right), 9))
+        self.initialize_neighbours(self.grid_neighbor_right, self.grid_sz_right)
 
     def run(self, rotation_type, npts0, npts1):
         self.inlier_mask = [False for _ in range(self.matches_number)]
 
         # Initialize motion statistics
-        self.motion_statistics = np.zeros((int(self.grid_number_left), int(self.grid_number_right)))
+        # self.motion_statistics = np.zeros((int(self.grid_nb_left), int(self.grid_nb_right)))
         self.match_pairs = [[0, 0] for _ in range(self.matches_number)]
 
         for GridType in range(1, 5):
-            self.motion_statistics = np.zeros((int(self.grid_number_left), int(self.grid_number_right)))
-            self.cell_pairs = [-1 for _ in range(self.grid_number_left)]
-            self.number_of_points_per_cell_left = [0 for _ in range(self.grid_number_left)]
+            self.motion_statistics = np.zeros((int(self.grid_nb_left), int(self.grid_nb_right)))
+            self.cell_pairs = [-1 for _ in range(self.grid_nb_left)]
+            self.number_of_points_per_cell_left = [0 for _ in range(self.grid_nb_left)]
 
             self.assign_match_pairs(GridType, npts0, npts1)
             self.verify_cell_pairs(rotation_type)
@@ -293,8 +281,8 @@ class GmsMatcher:
             self.number_of_points_per_cell_left[int(lgidx)] += 1
 
     def get_grid_index_left(self, pt, type_of_grid):
-        x = pt[0] * self.grid_size_left.width
-        y = pt[1] * self.grid_size_left.height
+        x = pt[0] * self.grid_sz_left.width
+        y = pt[1] * self.grid_sz_left.height
 
         if type_of_grid == 2:
             x += 0.5
@@ -307,24 +295,24 @@ class GmsMatcher:
         x = math.floor(x)
         y = math.floor(y)
 
-        if x >= self.grid_size_left.width or y >= self.grid_size_left.height:
+        if x >= self.grid_sz_left.width or y >= self.grid_sz_left.height:
             return -1
-        return x + y * self.grid_size_left.width
+        return x + y * self.grid_sz_left.width
 
     def get_grid_index_right(self, pt):
-        x = int(math.floor(pt[0] * self.grid_size_right.width))
-        y = int(math.floor(pt[1] * self.grid_size_right.height))
-        return x + y * self.grid_size_right.width
+        x = int(math.floor(pt[0] * self.grid_sz_right.width))
+        y = int(math.floor(pt[1] * self.grid_sz_right.height))
+        return x + y * self.grid_sz_right.width
 
     def verify_cell_pairs(self, rotation_type):
         current_rotation_pattern = ROTATION_PATTERNS[rotation_type - 1]
 
-        for i in range(self.grid_number_left):
+        for i in range(self.grid_nb_left):
             if sum(self.motion_statistics[i]) == 0:
                 self.cell_pairs[i] = -1
                 continue
             max_number = 0
-            for j in range(int(self.grid_number_right)):
+            for j in range(int(self.grid_nb_right)):
                 value = self.motion_statistics[i]
                 if value[j] > max_number:
                     self.cell_pairs[i] = j
@@ -351,23 +339,24 @@ class GmsMatcher:
             if score < thresh:
                 self.cell_pairs[i] = -2
 
-    def compute_matches(self, kp0, kp1, des0, des1, img0, img1):
+    def compute_matches(self, kp0, kp1, des0, des1, matches, img0, img1=None):
+        # Obtain image sizes
         size0 = Size(img0.shape[1], img0.shape[0])
-        size1 = Size(img1.shape[1], img1.shape[0])
+        size1 = size0
+        if img1 is not None:
+            size1 = Size(img1.shape[1], img1.shape[0])
 
-        all_matches = self.matcher.match(des0, des1)
         npts0 = self.normalize_points(kp0, size0)
         npts1 = self.normalize_points(kp1, size1)
-        self.matches_number = len(all_matches)
-        self.convert_matches(all_matches, self.matches)
-        self.initialize_neighbours(self.grid_neighbor_left, self.grid_size_left)
+        self.matches_number = len(matches)
+        self.convert_matches(matches, self.matches)
+        self.initialize_neighbours(self.grid_neighbor_left, self.grid_sz_left)
 
         mask, num_inliers = self.get_inlier_mask(False, False, npts0, npts1)
-        print('Found', num_inliers, 'matches')
 
         final_matches = []
         for i in range(len(mask)):
             if mask[i]:
-                final_matches.append(all_matches[i])
+                final_matches.append(matches[i])
 
         return final_matches

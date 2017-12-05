@@ -8,11 +8,11 @@ import numpy as np
 import matplotlib.pylab as plt
 
 import prototype.tests as test
-from prototype.vision.features import Keypoint
+from prototype.vision.features import KeyPoint
 from prototype.vision.features import Keyframe
 from prototype.vision.features import Feature
-from prototype.vision.features import FASTDetector
-from prototype.vision.features import ORBDetector
+from prototype.vision.features import FAST
+from prototype.vision.features import ORB
 from prototype.vision.features import LKFeatureTracker
 from prototype.vision.features import FeatureTracker
 
@@ -20,9 +20,9 @@ from prototype.vision.features import FeatureTracker
 VO_DATA_PATH = "/data/vo"
 
 
-class KeypointTest(unittest.TestCase):
+class KeyPointTest(unittest.TestCase):
     def test_init(self):
-        kp = Keypoint([1, 2], 31)
+        kp = KeyPoint([1, 2], 31)
         self.assertEqual(kp.pt[0], 1)
         self.assertEqual(kp.pt[1], 2)
         self.assertEqual(kp.size, 31)
@@ -35,9 +35,9 @@ class KeyframeTest(unittest.TestCase):
         self.assertTrue(np.array_equiv(kf.features, np.ones((2, 100))))
 
 
-class FASTDetectorTest(unittest.TestCase):
+class FASTTest(unittest.TestCase):
     def test_detect(self):
-        detector = FASTDetector()
+        detector = FAST()
         img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
 
         debug = False
@@ -48,9 +48,9 @@ class FASTDetectorTest(unittest.TestCase):
         self.assertTrue(len(keypoints) >= 3800)
 
 
-class ORBDetectorTest(unittest.TestCase):
+class ORBTest(unittest.TestCase):
     def test_detect(self):
-        detector = ORBDetector()
+        detector = ORB()
         img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
 
         debug = False
@@ -63,7 +63,7 @@ class ORBDetectorTest(unittest.TestCase):
 
 class LKFeatureTrackerTest(unittest.TestCase):
     def setUp(self):
-        detector = FASTDetector(threshold=150)
+        detector = FAST(threshold=150)
         self.tracker = LKFeatureTracker(detector)
 
         data_path = join(test.TEST_DATA_PATH, "vo")
