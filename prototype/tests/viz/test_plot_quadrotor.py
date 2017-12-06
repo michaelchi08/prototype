@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
-from prototype.viz.quadrotor import QuadPlot
+from prototype.viz.plot_quadrotor import QuadPlot
 
 
 def axis_equal_3dplot(ax):

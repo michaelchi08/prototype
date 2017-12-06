@@ -3,10 +3,10 @@ import unittest
 import numpy as np
 import matplotlib.pylab as plt
 
-from prototype.viz.common import plot_error_ellipse
+from prototype.viz.plot_error import plot_error_ellipse
 
 
-class CommonTests(unittest.TestCase):
+class PlotErrorTests(unittest.TestCase):
     def test_plot_error_ellipse(self):
         # Generate random data
         x = np.random.normal(0, 1, 300)

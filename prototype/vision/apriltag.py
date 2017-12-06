@@ -189,6 +189,21 @@ class AprilTag:
         self.c = np.ctypeslib.as_array(kwargs["c"], shape=(2,)).copy()
         self.p = np.ctypeslib.as_array(kwargs["p"], shape=(4, 2)).copy()
 
+    def draw_corners(self, img):
+        for corner in self.p:
+            pt = (int(corner[0]), int(corner[1]))
+            img = cv2.circle(img, pt, 10, (0, 255, 0), -1)
+
+    def draw_id(self, img):
+        # tag_width_px = self.p[0][0] - self.p[1][0]
+
+        text = str(self.id)
+        center = (int(self.c[0] - 15), int(self.c[1]))
+        font = cv2.FONT_HERSHEY_DUPLEX
+        color = (0, 255, 0)
+        thickness = 2
+        cv2.putText(img, text, center, font, 0.7, color, thickness)
+
 
 class AprilTagDetector:
     """Custom AprilTag library wrapper"""

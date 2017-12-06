@@ -18,33 +18,33 @@ class KeyPoint:
         return str(self.pt)
 
 
-class Keyframe:
-    """Keyframe"""
+class KeyFrame:
+    """KeyFrame
+
+    Parameters
+    ----------
+    image : np.array
+        Image
+
+    features : list of Features
+        Features
+
+    """
 
     def __init__(self, image, features):
-        """ Constructor
-
-        Args:
-
-            image (np.array): Image
-            features (List of Features): Features
-
-        """
         self.image = image
         self.features = features
 
     def update(self, image, features):
-        """
+        """Update
 
         Parameters
         ----------
-        image :
+        image : np.array
+            Image
 
-        features :
-
-
-        Returns
-        -------
+        features : list of Feature
+            Features
 
         """
         self.image = image

@@ -61,8 +61,8 @@ class HuskyModelTest(unittest.TestCase):
         self.assertTrue(abs(pos_true[2, -1]) < 0.1)
 
         # Plot
-        # debug = False
-        debug = True
+        debug = False
+        # debug = True
         if debug:
             # plt.figure()
             # plt.plot(pos_true[0, :], pos_true[1, :])

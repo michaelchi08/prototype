@@ -12,7 +12,7 @@ from prototype.utils.transform import T_camera_global
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import Keypoint
+from prototype.vision.features import KeyPoint
 from prototype.vision.features import FeatureTrack
 
 
@@ -288,8 +288,8 @@ class DatasetGenerator(object):
         ----------
         feature_id : int
             Feature id
-        kp : Keypoint
-            Keypoint
+        kp : KeyPoint
+            KeyPoint
 
         """
         frame_id = self.counter_frame_id
@@ -332,8 +332,8 @@ class DatasetGenerator(object):
         ----------
         feature_id : int
             Feature id
-        kp : Keypoint
-            Keypoint
+        kp : KeyPoint
+            KeyPoint
 
         """
         track_id = self.features_buffer[feature_id]
@@ -375,7 +375,7 @@ class DatasetGenerator(object):
         # Add or update feature tracks
         for feature in fea_cur:
             kp, feature_id = feature
-            kp = Keypoint(kp, 0)
+            kp = KeyPoint(kp, 0)
 
             if feature_id not in self.features_tracking:
                 self.add_feature_track(feature_id, kp)

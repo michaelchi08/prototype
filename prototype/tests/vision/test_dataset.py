@@ -11,7 +11,7 @@ from prototype.utils.quaternion.jpl import euler2quat
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import Keypoint
+from prototype.vision.features import KeyPoint
 from prototype.vision.features import FeatureTrack
 from prototype.estimation.msckf.camera_state import CameraState
 from prototype.vision.dataset import DatasetGenerator
@@ -49,12 +49,12 @@ class DatasetFeatureEstimatorTest(unittest.TestCase):
 
         # Feature track
         p_G_f = np.array([[0.1], [0.0], [10.0]])
-        kp0 = Keypoint(cam_model.project(p_G_f, C_C0G, p_G_C0)[0:2], 0)
-        kp1 = Keypoint(cam_model.project(p_G_f, C_C1G, p_G_C1)[0:2], 0)
+        kp0 = KeyPoint(cam_model.project(p_G_f, C_C0G, p_G_C0)[0:2], 0)
+        kp1 = KeyPoint(cam_model.project(p_G_f, C_C1G, p_G_C1)[0:2], 0)
         track = FeatureTrack(0, 1, kp0, kp1, ground_truth=p_G_f)
         estimate = estimator.estimate(cam_model, track, track_cam_states)
 
-        self.assertTrue(np.array_equal(p_G_f, estimate))
+        self.assertTrue(np.allclose(p_G_f.ravel(), estimate.ravel(), atol=0.1))
         # self.assertTrue(np.allclose(estimator.r, np.zeros((4, 1))))
 
 
@@ -135,7 +135,7 @@ class DatasetGeneratorTest(unittest.TestCase):
 
         # Plot
         debug = False
-        debug = True
+        # debug = True
         if debug:
             plt.subplot(211)
             plt.plot(self.dataset.time_true, a_B_history[0, :], label="ax")

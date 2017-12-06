@@ -9,7 +9,7 @@ import matplotlib.pylab as plt
 
 import prototype.tests as test
 from prototype.vision.features import KeyPoint
-from prototype.vision.features import Keyframe
+from prototype.vision.features import KeyFrame
 from prototype.vision.features import Feature
 from prototype.vision.features import FAST
 from prototype.vision.features import ORB
@@ -28,9 +28,9 @@ class KeyPointTest(unittest.TestCase):
         self.assertEqual(kp.size, 31)
 
 
-class KeyframeTest(unittest.TestCase):
+class KeyFrameTest(unittest.TestCase):
     def test_init(self):
-        kf = Keyframe(np.zeros((100, 100)), np.ones((2, 100)))
+        kf = KeyFrame(np.zeros((100, 100)), np.ones((2, 100)))
         self.assertTrue(np.array_equiv(kf.image, np.zeros((100, 100))))
         self.assertTrue(np.array_equiv(kf.features, np.ones((2, 100))))
 

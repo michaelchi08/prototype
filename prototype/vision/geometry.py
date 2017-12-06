@@ -63,8 +63,8 @@ def triangulate_point(x1, x2, P1, P2):
 
     Returns
     -------
-
-        Homogeneous 3D point (np.array)
+    pt : np.array
+        Homogeneous 3D point
 
     """
     # Make inputs x1 and x2 homogeneous if not already
@@ -84,7 +84,8 @@ def triangulate_point(x1, x2, P1, P2):
     try:
         U, S, V = np.linalg.svd(A)
         X = V[-1, :4]
-        return (X / X[3])
+        pt = (X / X[3])
+        return pt
     except:
         return None
 

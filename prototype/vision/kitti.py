@@ -7,59 +7,6 @@ from prototype.utils.filesystem import walkdir
 from prototype.vision.vo import BasicVO
 
 
-def parse_data_dir(path):
-    """
-
-    Parameters
-    ----------
-    path :
-
-
-    Returns
-    -------
-
-    """
-    img_files = walkdir(path, ".png")
-    nb_imgs = len(img_files)
-    return (img_files, nb_imgs)
-
-
-def parse_ground_truth(data_path, sequence):
-    """
-
-    Parameters
-    ----------
-    data_path :
-
-    sequence :
-
-
-    Returns
-    -------
-
-    """
-    # Build ground truth file path
-    ground_truth_dir = os.path.realpath(data_path + "../poses")
-    ground_truth_fname = os.path.join(ground_truth_dir, sequence + ".txt")
-    ground_truth_file = open(ground_truth_fname, "r")
-
-    # Parse ground truth file
-    ground_truth = []
-    ground_truth_lines = ground_truth_file.readlines()
-
-    for line in ground_truth_lines:
-        line = line.strip().split()
-        x = float(line[3])
-        y = float(line[7])
-        z = float(line[11])
-        ground_truth.append([x, y, z])
-
-    # Clean up
-    ground_truth_file.close()
-
-    return np.array(ground_truth)
-
-
 def get_scale(ground_truth, frame_id):
     """
 

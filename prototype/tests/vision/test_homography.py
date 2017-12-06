@@ -37,7 +37,7 @@ class HomographyTest(unittest.TestCase):
             "z": {"min": -1.0, "max": 1.0}
         }
         features = rand3dfeatures(nb_features, feature_bounds)
-        fp = np.array(features).T
+        fp = np.array(features)
 
         m = np.mean(fp[:2], axis=1)
         maxstd = max(np.std(fp[:2], axis=1)) + 1e-9

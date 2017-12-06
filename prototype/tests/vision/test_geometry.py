@@ -23,7 +23,7 @@ class GeometryTest(unittest.TestCase):
             "y": {"min": -1.0, "max": 1.0},
             "z": {"min": 10.0, "max": 20.0}
         }
-        features = rand3dfeatures(nb_features, feature_bounds)
+        self.features = rand3dfeatures(nb_features, feature_bounds)
 
         # Pinhole Camera model
         image_width = 640
@@ -42,16 +42,16 @@ class GeometryTest(unittest.TestCase):
         self.t_1 = np.array([1.0, 0.0, 0.0]).reshape((3, 1))
 
         # Points as observed by camera 0 and camera 1
-        self.features = np.array(features).T
-        self.obs0 = self.project_points(features, self.cam, self.R_0, self.t_0)
-        self.obs1 = self.project_points(features, self.cam, self.R_1, self.t_1)
+        self.obs0 = self.project_points(self.features, self.cam,
+                                        self.R_0, self.t_0)
+        self.obs1 = self.project_points(self.features, self.cam,
+                                        self.R_1, self.t_1)
 
     def project_points(self, features, camera, R, t):
         obs = []
 
         # Make 3D feature homogenenous and project and store pixel measurement
-        for f in features:
-            f = np.array([f[0], f[1], f[2], 1.0])
+        for f in features.T:
             x = camera.project(f, R, t)
             obs.append(x.ravel()[0:2])
 

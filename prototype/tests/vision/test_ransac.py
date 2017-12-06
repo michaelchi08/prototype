@@ -107,7 +107,7 @@ class VerticalRANSACTest(unittest.TestCase):
     def test_init(self):
         self.assertEqual(self.ransac.image_height, self.image_height)
         self.assertEqual(self.ransac.max_iter, 100)
-        self.assertEqual(self.ransac.threshold, 10)
+        self.assertEqual(self.ransac.threshold, 0.5)
         self.assertEqual(self.ransac.inlier_ratio, 0.2)
 
     def test_compute_distance(self):

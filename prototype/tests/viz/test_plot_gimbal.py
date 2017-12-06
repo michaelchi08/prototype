@@ -1,14 +1,12 @@
 import unittest
-from math import cos
-from math import sin
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
-from prototype.viz.gimbal import GimbalPlot
-from prototype.viz.gimbal import dh_transform_matrix
 from prototype.utils.utils import deg2rad
+from prototype.viz.plot_gimbal import GimbalPlot
+from prototype.viz.plot_gimbal import dh_transform_matrix
 
 
 def axis_equal_3dplot(ax):
@@ -22,7 +20,7 @@ def axis_equal_3dplot(ax):
         getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
 
 
-class GimbalPlotTest(unittest.TestCase):
+class PlotGimbalTest(unittest.TestCase):
     def test_plot(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')

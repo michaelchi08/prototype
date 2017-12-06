@@ -2,18 +2,15 @@ import os
 import unittest
 
 
+import prototype.tests as test
 from prototype.data.kitti import VOSequence
 from prototype.data.kitti import RawSequence
 
 
-# GLOBAL VARIABLES
-VO_DATASET = "/data/vo"
-RAW_DATASET = "/data/raw"
-
-
 class VOSequenceTest(unittest.TestCase):
     def test_init(self):
-        vo_seq = VOSequence(VO_DATASET, "00")
+        data_path = os.path.join(test.TEST_DATA_PATH, "kitti", "vo")
+        vo_seq = VOSequence(data_path, "00")
 
         self.assertEqual(4541, len(vo_seq.time))
         self.assertEqual((3, 4), vo_seq.P0.shape)
@@ -24,4 +21,5 @@ class VOSequenceTest(unittest.TestCase):
 
 class RawSequenceTest(unittest.TestCase):
     def test_init(self):
-        RawSequence(RAW_DATASET, "2011_09_26", "0001")
+        data_path = os.path.join(test.TEST_DATA_PATH, "kitti", "raw")
+        RawSequence(data_path, "2011_09_26", "0001")

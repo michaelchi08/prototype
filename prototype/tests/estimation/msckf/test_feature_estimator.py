@@ -20,7 +20,7 @@ from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import Keypoint
+from prototype.vision.features import KeyPoint
 from prototype.vision.features import FeatureTrack
 from prototype.vision.features import FeatureTracker
 
@@ -116,8 +116,8 @@ class FeatureEstimatorTest(unittest.TestCase):
 
             kp1 = self.cam_model.project(feature, R_C0G, p_C_C0)
             kp2 = self.cam_model.project(feature, R_C1G, p_C_C1)
-            kp1 = Keypoint(kp1.ravel()[:2], 21)
-            kp2 = Keypoint(kp2.ravel()[:2], 21)
+            kp1 = KeyPoint(kp1.ravel()[:2], 21)
+            kp2 = KeyPoint(kp2.ravel()[:2], 21)
             track = FeatureTrack(start, end, kp1, kp2)
             track.ground_truth = T_global_camera * feature
 
@@ -125,7 +125,7 @@ class FeatureEstimatorTest(unittest.TestCase):
                 R_CG = dot(R_global_camera, C(track_cam_states[i].q_CG))
                 p_C_Ci = T_camera_global * track_cam_states[i].p_G
                 kp = self.cam_model.project(feature, R_CG, p_C_Ci)
-                kp = Keypoint(kp.ravel()[:2], 21)
+                kp = KeyPoint(kp.ravel()[:2], 21)
                 # kp[0] += np.random.normal(0, 0.1)
                 # kp[1] += np.random.normal(0, 0.1)
                 track.update(i, kp)
@@ -151,6 +151,7 @@ class FeatureEstimatorTest(unittest.TestCase):
             self.assertTrue(abs(p_G_f[1, 0] - feature_G[1]) < 0.1)
             self.assertTrue(abs(p_G_f[2, 0] - feature_G[2]) < 0.1)
 
+    @unittest.skip("skip")
     def test_estimate2(self):
         # Load RAW KITTI dataset
         data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
@@ -165,27 +166,28 @@ class FeatureEstimatorTest(unittest.TestCase):
         tracker.update(img)
 
         # Setup plot
-        fig = plt.figure()
-        plt.ion()
-        ax = fig.add_subplot(111)
-
-        pos_data = data.get_local_position(0)
-        pos_plot = ax.plot(pos_data[0], pos_data[1],
-                           marker=".", color="blue")[0]
-
         features = None
         features_plot = None
 
-        # ax.set_xlim([-60.0, 5.0])
-        # ax.set_ylim([-60.0, 5.0])
-        ax.set_xlim([0.0, 50.0])
-        ax.set_ylim([-100.0, 0.0])
-        fig.canvas.draw()
-        plt.show(block=False)
+        pos_data = data.get_local_position(0)
+
+        debug = False
+        if debug:
+            fig = plt.figure()
+            plt.ion()
+            ax = fig.add_subplot(111)
+            pos_plot = ax.plot(pos_data[0], pos_data[1],
+                               marker=".", color="blue")[0]
+            # ax.set_xlim([-60.0, 5.0])
+            # ax.set_ylim([-60.0, 5.0])
+            ax.set_xlim([0.0, 50.0])
+            ax.set_ylim([-100.0, 0.0])
+            fig.canvas.draw()
+            plt.show(block=False)
 
         # Setup feature tracks
         tracks = []
-        for i in range(1, 100):
+        for i in range(1, 10):
             # Track features
             img = cv2.imread(data.image_00_files[i])
             tracker.update(img, True)
@@ -218,9 +220,7 @@ class FeatureEstimatorTest(unittest.TestCase):
                 p_G_f = self.estimator.estimate(cam_model,
                                                 track,
                                                 track_cam_states)
-                print("estimation: ", p_G_f.ravel())
-
-                if p_G_f is None:
+                if p_G_f is not None:
                     C_CG = C(track_cam_states[-1].q_CG)
                     p_G_C = track_cam_states[-1].p_G
                     p_C_f = dot(C_CG, (p_G_f - p_G_C))
@@ -233,22 +233,19 @@ class FeatureEstimatorTest(unittest.TestCase):
             pos = data.get_local_position(i)
             pos_data = np.hstack((pos_data, pos))
 
-            if features is None and p_G_f is not None:
-                features = p_G_f
-                features_plot = ax.plot(p_G_f[0], p_G_f[1],
-                                        marker="x", color="red", ls='')[0]
-            elif p_G_f is not None:
-                features = np.hstack((features, p_G_f))
-                features_plot.set_xdata(features[0, :])
-                features_plot.set_ydata(features[1, :])
+            if debug:
+                if features is None and p_G_f is not None:
+                    features = p_G_f
+                    features_plot = ax.plot(p_G_f[0], p_G_f[1],
+                                            marker="x", color="red", ls='')[0]
+                elif p_G_f is not None:
+                    features = np.hstack((features, p_G_f))
+                    features_plot.set_xdata(features[0, :])
+                    features_plot.set_ydata(features[1, :])
 
-            pos_plot.set_xdata(pos_data[0, :])
-            pos_plot.set_ydata(pos_data[1, :])
+                    pos_plot.set_xdata(pos_data[0, :])
+                    pos_plot.set_ydata(pos_data[1, :])
 
-            ax.relim()
-            ax.autoscale_view(True, True, True)
-
-            fig.canvas.draw()
-
-        plt.pause(100000)
-
+                ax.relim()
+                ax.autoscale_view(True, True, True)
+                fig.canvas.draw()

@@ -6,7 +6,6 @@ import numpy as np
 
 import prototype.tests as test
 from prototype.vision.gms_matcher import GmsMatcher
-from prototype.vision.gms_matcher import draw_matches
 
 
 class GMSMatcherTest(unittest.TestCase):
@@ -17,9 +16,6 @@ class GMSMatcherTest(unittest.TestCase):
         self.img2 = cv2.imread(os.path.join(data_path, "2.png"))
 
     def test_compute_matches(self):
-        # cv2.imshow("image", self.img0)
-        # cv2.waitKey(0)
-
         orb = cv2.ORB_create(10000)
         orb.setFastThreshold(0)
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
@@ -30,4 +26,5 @@ class GMSMatcherTest(unittest.TestCase):
         matches = matcher.match(des0, des1)
 
         matches = gms.compute_matches(kp0, kp1, des0, des1, matches, self.img0)
-        draw_matches(self.img0, self.img1, kp0, kp1, matches)
+
+        self.assertTrue(len(matches) > 0)
