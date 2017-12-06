@@ -10,7 +10,7 @@ setup(
     author_email="chutsu@gmail.com",
     packages=find_packages(),
     install_requires=[
-        "numpy",
+        "numpy>=1.13.0",
         "scipy",
         "jinja2",
         "Pillow",

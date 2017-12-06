@@ -9,9 +9,14 @@
 
 *.pyc
 __pycache__
+build/
+dist/
+*.egg-info/
 
 .ropeproject
 
 tags
 run.sh
 unittests_log
+
+
