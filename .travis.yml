@@ -13,19 +13,19 @@ cache:
 
 install:
     # OpenCV
-    - add-apt-repository -y ppa:lkoppel/opencv
-    - apt-get -q update
-    - apt-get install -y -q libopencv-dev
-    - pip install opencv-python
-    # Numpy / Scipy
-    - apt-get install -y -q libsdl1.2-dev
-    - apt-get install -y -q libblas-dev liblapack-dev gfortran
-    # Matplotlib
-    - apt-get install -y -q python-matplotlib python3-matplotlib
-    # Others
+    - sudo add-apt-repository -y ppa:lkoppel/opencv
+    - sudo apt-get -q update
+    - sudo apt-get install -y -q libopencv-dev
+    - sudo pip install opencv-python
+    # numpy / scipy
+    - sudo apt-get install -y -q libsdl1.2-dev
+    - sudo apt-get install -y -q libblas-dev liblapack-dev gfortran
+    # matplotlib
+    - sudo apt-get install -y -q python-matplotlib python3-matplotlib
+    # others
     - python setup.py install
-    # KITTI Data
-    - bash scripts/ci/kitti_raw_data.bash
+    # kitti data
+    - sudo bash scripts/ci/kitti_raw_data.bash
 
 script:
     python -m unittest discover -b
