@@ -419,7 +419,7 @@ class FeatureTrackerTest(unittest.TestCase):
             index = 0 if index < 0 else index
 
             # Feature tracker update
-            tracker.update(self.img[index], True)
+            tracker.update(self.img[index])
             tracks_lost = tracker.remove_lost_tracks()
             # self.plot_tracks(fig, ax)
 
