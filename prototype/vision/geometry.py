@@ -23,7 +23,7 @@ def eight_point(x1, x2):
     """
     n = x1.shape[1]
     if x2.shape[1] != n:
-        raise ValueError("Number of points don’t match.")
+        raise ValueError("Number of points don't match.")
 
     # Build matrix for equations
     A = np.zeros((n, 9))

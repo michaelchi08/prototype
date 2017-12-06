@@ -29,7 +29,7 @@ class HuskyModelTest(unittest.TestCase):
         circle_vel = 1.0
         circle_w = circle_trajectory(circle_r, circle_vel)
         circumference = 2 * pi * circle_r
-        max_iter = ceil((circumference / circle_vel) / dt)
+        max_iter = int(ceil((circumference / circle_vel) / dt))
 
         # Inputs
         v_B = np.array([[circle_vel], [0.0], [0.0]])

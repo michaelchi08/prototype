@@ -14,7 +14,7 @@ setup(
         "scipy",
         "jinja2",
         "Pillow",
-        "matplotlib",
+        # "matplotlib",
         "sympy",
         # "pygame",
         "PyOpenGL",

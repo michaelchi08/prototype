@@ -665,7 +665,7 @@ class FeatureTracker:
             self.fea_ref.append(f1[f1_idx])
 
         # Update list of unmatched features
-        self.unmatched.clear()
+        del self.unmatched[:]
         for i in range(len(f1)):
             if i not in matched_indicies:
                 self.unmatched.append(f1[i])

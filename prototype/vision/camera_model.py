@@ -5,10 +5,8 @@ from prototype.vision.common import projection_matrix
 from prototype.vision.common import convert2homogeneous
 
 
-
-
 class PinholeCameraModel:
-    """ Pinhole camera model
+    """Pinhole camera model
 
     Attributes
     ----------
