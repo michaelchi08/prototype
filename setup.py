@@ -18,7 +18,7 @@ setup(
         "sympy",
         "pygame",
         "PyOpenGL",
-        "opencv-python",
+        # "opencv-python",
         "autopep8"
     ]
 )
