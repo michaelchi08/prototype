@@ -16,7 +16,7 @@ setup(
         "Pillow",
         "matplotlib",
         "sympy",
-        "pygame",
+        # "pygame",
         "PyOpenGL",
         # "opencv-python",
         "autopep8"
