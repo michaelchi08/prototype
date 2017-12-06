@@ -22,7 +22,7 @@ from prototype.estimation.msckf.imu_state import IMUState
 
 
 # GLOBAL VARIABLE
-RAW_DATASET = "/data/raw"
+RAW_DATASET = "/data/kitti/raw"
 
 
 class IMUStateTest(unittest.TestCase):

@@ -14,11 +14,11 @@ setup(
         "scipy",
         "jinja2",
         "Pillow",
-        # "matplotlib",
+        "matplotlib",
         "sympy",
         # "pygame",
         "PyOpenGL",
-        # "opencv-python",
+        "opencv-python",
         "autopep8"
     ]
 )

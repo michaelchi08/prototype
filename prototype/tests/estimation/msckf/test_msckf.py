@@ -22,7 +22,7 @@ from prototype.viz.plot_matrix import PlotMatrix
 from prototype.estimation.msckf.msckf import MSCKF
 
 # GLOBAL VARIABLE
-RAW_DATASET = "/data/raw"
+RAW_DATASET = "/data/kitti/raw"
 
 
 class MSCKFTest(unittest.TestCase):
