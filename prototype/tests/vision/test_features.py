@@ -18,9 +18,6 @@ from prototype.vision.features import FeatureTracker
 from prototype.vision.features import draw_keypoints
 from prototype.vision.features import draw_features
 
-# GLOBAL VARIABLES
-VO_DATA_PATH = "/data/vo"
-
 
 class KeyPointTest(unittest.TestCase):
     def test_init(self):
@@ -39,15 +36,19 @@ class KeyFrameTest(unittest.TestCase):
 
 class FASTTest(unittest.TestCase):
     def test_detect(self):
-        detector = FAST()
+        fast = FAST()
         img = cv2.imread(join(test.TEST_DATA_PATH, "empire/empire.jpg"))
+        kps = fast.detect_keypoints(img)
 
+        # Debug
+        # debug = True
         debug = False
-        keypoints = detector.detect(img, debug)
         if debug:
+            img = draw_keypoints(img, kps)
+            cv2.imshow("image", img)
             cv2.waitKey(0)
 
-        self.assertTrue(len(keypoints) >= 3800)
+        self.assertTrue(len(kps) >= 3800)
 
 
 class ORBTest(unittest.TestCase):

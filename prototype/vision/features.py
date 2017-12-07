@@ -249,7 +249,7 @@ class FAST:
             nonmaxSuppression=kwargs.get("nonmax_suppression", True)
         )
 
-    def detect(self, frame, debug=False):
+    def detect_keypoints(self, frame, debug=False):
         """Detect
 
         Parameters
@@ -267,13 +267,6 @@ class FAST:
         """
         # Detect
         keypoints = self.detector.detect(frame)
-
-        # Show debug image
-        if debug is True:
-            image = None
-            image = cv2.drawKeyPoints(frame, keypoints, None)
-            cv2.imshow("KeyPoints", image)
-
         results = [KeyPoint(kp.pt, kp.size) for kp in keypoints]
 
         return results
@@ -412,7 +405,7 @@ class LKFeatureTracker:
             Frame
 
         """
-        for kp in self.detector.detect(frame):
+        for kp in self.detector.detect_keypoints(frame):
             track = FeatureTrack(self.track_id, self.frame_id, kp)
             self.tracks[self.track_id] = track
             self.tracks_tracking.append(self.track_id)
