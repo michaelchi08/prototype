@@ -7,12 +7,28 @@ from prototype.vision.ransac import VerticalRANSAC
 class KeyPoint:
     """KeyPoint"""
 
-    def __init__(self, pt, size):
+    def __init__(self,
+                 pt,
+                 size,
+                 angle=-1.0,
+                 response=0.0,
+                 octave=0,
+                 class_id=-1):
         self.pt = np.array(pt)
         self.size = size
-        self.angle = None
-        self.response = None
-        self.octave = None
+        self.angle = angle
+        self.response = response
+        self.octave = octave
+        self.class_id = class_id
+
+    def as_cv_keypoint(self):
+        return cv2.KeyPoint(self.pt[0],
+                            self.pt[1],
+                            self.size,
+                            self.angle,
+                            self.response,
+                            self.octave,
+                            self.class_id)
 
     def __str__(self):
         return str(self.pt)
@@ -181,6 +197,39 @@ class FeatureTrack:
         return s
 
 
+def draw_keypoints(img, keypoints):
+    """Draw keypoints"""
+    # Convert to OpenCV KeyPoints
+    cv_kps = []
+    for kp in keypoints:
+        cv_kps.append(kp.as_cv_keypoint())
+
+    # Draw keypoints
+    img = cv2.drawKeypoints(img, cv_kps, None, color=(0, 255, 0))
+    return img
+
+
+def draw_features(img, features):
+    """Draw features"""
+    # Convert to OpenCV KeyPoints
+    cv_kps = []
+    for f in features:
+        cv_kps.append(cv2.KeyPoint(f.pt[0], f.pt[1], f.size))
+
+    # Draw keypoints
+    img = cv2.drawKeypoints(img, cv_kps, None, color=(0, 255, 0))
+    return img
+
+
+def convert2cvkeypoints(keypoints):
+    """Convert list of KeyPoint to cv2.KeyPoint"""
+    cv_kps = []
+    for kp in keypoints:
+        cv_kps.append(kp.as_cv_keypoint())
+
+    return cv_kps
+
+
 class FAST:
     """FAST Detector
 
@@ -235,7 +284,7 @@ class ORB:
 
     def __init__(self, **kwargs):
         """ Constructor """
-        self.detector = cv2.ORB_create(
+        self.orb = cv2.ORB_create(
             nfeatures=kwargs.get("nfeatures", 500),
             scaleFactor=kwargs.get("scaleFactor", 1.2),
             nlevels=kwargs.get("nlevels", 8),
@@ -247,8 +296,37 @@ class ORB:
             fastThreshold=kwargs.get("fastThreshold", 20)
         )
 
-    def detect(self, frame, debug=False):
-        """Detect
+    def detect_keypoints(self, frame):
+        """Detect keypoints
+
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+
+        Returns
+        -------
+        kps : list of KeyPoint
+            Keypoints
+
+        """
+        # Detect keypoints
+        keypoints = self.orb.detect(frame, None)
+
+        # Convert OpenCV KeyPoint to KeyPoint
+        kps = []
+        for i in range(len(keypoints)):
+            kp = keypoints[i]
+            kps.append(KeyPoint(kp.pt,
+                                kp.size,
+                                kp.angle,
+                                kp.response,
+                                kp.octave))
+
+        return kps
+
+    def detect_features(self, frame):
+        """Detect features (Detector + Descriptor)
 
         Parameters
         ----------
@@ -259,13 +337,12 @@ class ORB:
 
         Returns
         -------
-
-            features
-            List of Features
+        features : list of Feature
+            Features
 
         """
         # Detect and compute descriptors
-        keypoints, descriptors = self.detector.detectAndCompute(frame, None)
+        keypoints, descriptors = self.orb.detectAndCompute(frame, None)
 
         # Convert OpenCV keypoints and descriptors to Features
         features = []
@@ -274,14 +351,28 @@ class ORB:
             dp = descriptors[i]
             features.append(Feature(kp.pt, kp.size, dp))
 
-        # Show debug image
-        if debug is True:
-            image = None
-            image = cv2.drawKeyPoints(
-                frame, keypoints, None, color=(0, 255, 0))
-            cv2.imshow("KeyPoints", image)
-
         return features
+
+    def extract_descriptors(self, frame, kps):
+        """Extract feature descriptors
+
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+        kps: list of KeyPoint
+            Key points
+
+        Returns
+        -------
+        des : list of np.array
+            Descriptors
+
+        """
+        cv_kps = convert2cvkeypoints(kps)
+        kp, des = self.orb.compute(frame, cv_kps)
+
+        return des
 
 
 class LKFeatureTracker:
@@ -594,7 +685,7 @@ class FeatureTracker:
         features : :obj`list` of :obj`Feature`
 
         """
-        features = self.detector.detect(frame)
+        features = self.detector.detect_features(frame)
         self.counter_frame_id += 1
         return features
 
