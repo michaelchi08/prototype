@@ -249,7 +249,7 @@ class FAST:
             nonmaxSuppression=kwargs.get("nonmax_suppression", True)
         )
 
-    def detect_keypoints(self, frame, debug=False):
+    def detect_keypoints(self, frame):
         """Detect
 
         Parameters
@@ -363,9 +363,19 @@ class ORB:
 
         """
         cv_kps = convert2cvkeypoints(kps)
-        kp, des = self.orb.compute(frame, cv_kps)
+        cv_kps, des = self.orb.compute(frame, cv_kps)
 
-        return des
+        # Convert OpenCV KeyPoint to KeyPoint
+        kps = []
+        for cv_kp in cv_kps:
+            kps.append(KeyPoint(cv_kp.pt,
+                                cv_kp.size,
+                                cv_kp.angle,
+                                cv_kp.response,
+                                cv_kp.octave,
+                                cv_kp.class_id))
+
+        return kps, des
 
 
 class LKFeatureTracker:
@@ -567,8 +577,9 @@ class FeatureTracker:
         self.nb_levels = kwargs.get("nb_levels", 4)
 
         # Detector and matcher
-        self.detector = ORB(nfeatures=self.nb_features,
-                            nlevels=self.nb_levels)
+        self.detector = FAST(threshold=2)
+        self.descriptor = ORB(nfeatures=self.nb_features,
+                              nlevels=self.nb_levels)
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
         self.ransac = None
 
@@ -678,8 +689,19 @@ class FeatureTracker:
         features : :obj`list` of :obj`Feature`
 
         """
-        features = self.detector.detect_features(frame)
+        # Detect keypoints and extract features
+        kps = self.detector.detect_keypoints(frame)
+        kps, des = self.descriptor.extract_descriptors(frame, kps)
         self.counter_frame_id += 1
+
+        # Create features
+        features = []
+        for i in range(len(kps)):
+            pt = kps[i].pt
+            size = kps[i].size
+            desc = des[i, :]
+            features.append(Feature(pt, size, desc))
+
         return features
 
     def match(self, f1):

@@ -82,10 +82,11 @@ class ORBTest(unittest.TestCase):
 
     def test_extract_descriptors(self):
         kps = self.orb.detect_keypoints(self.img)
-        des = self.orb.extract_descriptors(self.img, kps)
+        kps, des = self.orb.extract_descriptors(self.img, kps)
 
         self.assertTrue(len(des) > 0)
         self.assertTrue(len(kps), len(des))
+
 
 class LKFeatureTrackerTest(unittest.TestCase):
     def setUp(self):
@@ -203,9 +204,8 @@ class FeatureTrackerTest(unittest.TestCase):
         matches, f0, f1 = self.tracker.match(f1)
 
         nb_matched = len(matches)
-        nb_unmatched = len(f0) - nb_matched
         self.assertTrue(nb_matched < len(f0))
-        self.assertEqual(len(self.tracker.unmatched), nb_unmatched)
+        self.assertTrue(len(self.tracker.unmatched) > 0)
         self.assertEqual(len(self.tracker.fea_ref), nb_matched)
 
         # Show matches
@@ -468,9 +468,11 @@ class FeatureTrackerTest(unittest.TestCase):
             else:
                 index += 1
 
-        time_elapsed = time.time() - time_start  # NOQA
-        print("fps: ", float(index) / time_elapsed)
-
-        self.plot_tracked(tracked)
-        self.plot_storage(storage)
-        plt.show()
+        # debug = True
+        debug = False
+        if debug:
+            time_elapsed = time.time() - time_start
+            print("fps: ", float(index) / time_elapsed)
+            self.plot_tracked(tracked)
+            self.plot_storage(storage)
+            plt.show()

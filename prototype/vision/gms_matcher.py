@@ -4,7 +4,7 @@ BSD 3-Clause License
 Copyright (c) 2017, JiaWang Bian
 All rights reserved.
 
-    Bian, JiaWang, et al. "GMS: Grid-based motion statistics for fast,
+    Bian, JiaWang, et al. "Gms: Grid-based motion statistics for fast,
     ultra-robust feature correspondence." 2017 IEEE Conference on Computer
     Vision and Pattern Recognition (CVPR). IEEE, 2017.
 
@@ -34,6 +34,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
+from enum import Enum
 
 import cv2
 import numpy as np
@@ -66,6 +67,11 @@ ROTATION_PATTERNS = [[1, 2, 3,
                       4, 7, 8]]
 
 
+class DrawingType(Enum):
+    ONLY_LINES = 1
+    LINES_AND_POINTS = 2
+
+
 class Size:
     def __init__(self, width, height):
         self.width = width
@@ -78,38 +84,8 @@ def imresize(src, height):
     return cv2.resize(src, (width, height))
 
 
-def draw_matches(img0, img1, kp0, kp1, matches, display_type=0):
-    height = max(img0.shape[0], img1.shape[0])
-    width = img0.shape[1] + img1.shape[1]
-    output = np.zeros((height, width, 3), dtype=np.uint8)
-    output[0:img0.shape[0], 0:img0.shape[1]] = img0
-    output[0:img1.shape[0], img0.shape[1]:] = img1[:]
-
-    if display_type == 0:
-        for i in range(len(matches)):
-            left = kp0[matches[i].queryIdx].pt
-            right = tuple(sum(x) for x in zip(kp1[matches[i].trainIdx].pt, (img0.shape[1], 0)))
-            cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (0, 255, 255))
-
-    elif display_type == 1:
-        for i in range(len(matches)):
-            left = kp0[matches[i].queryIdx].pt
-            right = tuple(sum(x) for x in zip(kp1[matches[i].trainIdx].pt, (img0.shape[1], 0)))
-            cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (255, 0, 0))
-
-        for i in range(len(matches)):
-            left = kp0[matches[i].queryIdx].pt
-            for x in zip(kp1[matches[i].trainIdx].pt, (img0.shape[1], 0)):
-                right = tuple(sum(x))
-            cv2.circle(output, tuple(map(int, left)), 1, (0, 255, 255), 2)
-            cv2.circle(output, tuple(map(int, right)), 1, (0, 255, 0), 2)
-
-    cv2.imshow('show', output)
-    cv2.waitKey()
-
-
 class GmsMatcher:
-    def __init__(self):
+    def __init__(self, descriptor, matcher):
         self.scale_ratios = [1.0, 1.0 / 2,
                              1.0 / math.sqrt(2.0),
                              math.sqrt(2.0), 2.0]
@@ -123,8 +99,8 @@ class GmsMatcher:
         self.matches_number = 0
 
         # Grid Size
-        self.grid_sz_right = Size(0, 0)
-        self.grid_nb_right = 0
+        self.grid_size_right = Size(0, 0)
+        self.grid_number_right = 0
         # x      : left grid idx
         # y      :  right grid idx
         # value  : how many matches from idx_left to idx_right
@@ -145,59 +121,92 @@ class GmsMatcher:
         self.grid_neighbor_right = []
 
         # Grid initialize
-        self.grid_sz_left = Size(20, 20)
-        self.grid_nb_left = self.grid_sz_left.width * self.grid_sz_left.height
+        self.grid_size_left = Size(20, 20)
+        self.grid_number_left = self.grid_size_left.width * self.grid_size_left.height
 
         # Initialize the neihbor of left grid
-        self.grid_neighbor_left = np.zeros((self.grid_nb_left, 9))
+        self.grid_neighbor_left = np.zeros((self.grid_number_left, 9))
 
-    # Normalize key points to range (0-1)
-    def normalize_points(self, kp, size):
-        npts = []
+        self.descriptor = descriptor
+        self.matcher = matcher
+        self.gms_matches = []
+        self.keypoints_image1 = []
+        self.keypoints_image2 = []
+
+    def empty_matches(self):
+        self.normalized_points1 = []
+        self.normalized_points2 = []
+        self.matches = []
+        self.gms_matches = []
+
+    def compute_matches(self, img1, img2):
+        self.keypoints_image1, descriptors_image1 = self.descriptor.detectAndCompute(img1, np.array([]))
+        self.keypoints_image2, descriptors_image2 = self.descriptor.detectAndCompute(img2, np.array([]))
+        size1 = Size(img1.shape[1], img1.shape[0])
+        size2 = Size(img2.shape[1], img2.shape[0])
+
+        if self.gms_matches:
+            self.empty_matches()
+
+        all_matches = self.matcher.match(descriptors_image1, descriptors_image2)
+        self.normalize_points(self.keypoints_image1, size1, self.normalized_points1)
+        self.normalize_points(self.keypoints_image2, size2, self.normalized_points2)
+        self.matches_number = len(all_matches)
+        self.convert_matches(all_matches, self.matches)
+        self.initialize_neighbours(self.grid_neighbor_left, self.grid_size_left)
+
+        mask, num_inliers = self.get_inlier_mask(False, False)
+        print('Found', num_inliers, 'matches')
+
+        for i in range(len(mask)):
+            if mask[i]:
+                self.gms_matches.append(all_matches[i])
+        return self.gms_matches
+
+    # Normalize Key points to range (0-1)
+    def normalize_points(self, kp, size, npts):
         for keypoint in kp:
             npts.append((keypoint.pt[0] / size.width,
                          keypoint.pt[1] / size.height))
-
-        return npts
 
     # Convert OpenCV match to list of tuples
     def convert_matches(self, vd_matches, v_matches):
         for match in vd_matches:
             v_matches.append((match.queryIdx, match.trainIdx))
 
-    def initialize_neighbours(self, neighbor, grid_sz):
+    def initialize_neighbours(self, neighbor, grid_size):
         for i in range(neighbor.shape[0]):
-            neighbor[i] = self.get_nb9(i, grid_sz)
+            neighbor[i] = self.get_nb9(i, grid_size)
 
-    def get_nb9(self, idx, grid_sz):
+    def get_nb9(self, idx, grid_size):
         nb9 = [-1 for _ in range(9)]
-        idx_x = idx % grid_sz.width
-        idx_y = idx // grid_sz.width
+        idx_x = idx % grid_size.width
+        idx_y = idx // grid_size.width
 
         for yi in range(-1, 2):
             for xi in range(-1, 2):
                 idx_xx = idx_x + xi
                 idx_yy = idx_y + yi
 
-                if idx_xx < 0 or idx_xx >= grid_sz.width or idx_yy < 0 or idx_yy >= grid_sz.height:
+                if idx_xx < 0 or idx_xx >= grid_size.width or idx_yy < 0 or idx_yy >= grid_size.height:
                     continue
-                nb9[xi + 4 + yi * 3] = idx_xx + idx_yy * grid_sz.width
+                nb9[xi + 4 + yi * 3] = idx_xx + idx_yy * grid_size.width
 
         return nb9
 
-    def get_inlier_mask(self, with_scale, with_rotation, npts0, npts1):
+    def get_inlier_mask(self, with_scale, with_rotation):
         max_inlier = 0
 
         if not with_scale and not with_rotation:
             self.set_scale(0)
-            max_inlier = self.run(1, npts0, npts1)
+            max_inlier = self.run(1)
             return self.inlier_mask, max_inlier
         elif with_scale and with_rotation:
             vb_inliers = []
             for scale in range(5):
                 self.set_scale(scale)
                 for rotation_type in range(1, 9):
-                    num_inlier = self.run(rotation_type, npts0, npts1)
+                    num_inlier = self.run(rotation_type)
                     if num_inlier > max_inlier:
                         vb_inliers = self.inlier_mask
                         max_inlier = num_inlier
@@ -209,7 +218,7 @@ class GmsMatcher:
         elif with_scale and not with_rotation:
             vb_inliers = []
             for rotation_type in range(1, 9):
-                num_inlier = self.run(rotation_type, npts0, npts1)
+                num_inlier = self.run(rotation_type)
                 if num_inlier > max_inlier:
                     vb_inliers = self.inlier_mask
                     max_inlier = num_inlier
@@ -222,7 +231,7 @@ class GmsMatcher:
             vb_inliers = []
             for scale in range(5):
                 self.set_scale(scale)
-                num_inlier = self.run(1, npts0, npts1)
+                num_inlier = self.run(1)
                 if num_inlier > max_inlier:
                     vb_inliers = self.inlier_mask
                     max_inlier = num_inlier
@@ -233,27 +242,27 @@ class GmsMatcher:
                 return self.inlier_mask, max_inlier
 
     def set_scale(self, scale):
-        self.grid_sz_right.width = self.grid_sz_left.width * self.scale_ratios[scale]
-        self.grid_sz_right.height = self.grid_sz_left.height * self.scale_ratios[scale]
-        self.grid_nb_right = self.grid_sz_right.width * self.grid_sz_right.height
+        self.grid_size_right.width = self.grid_size_left.width * self.scale_ratios[scale]
+        self.grid_size_right.height = self.grid_size_left.height * self.scale_ratios[scale]
+        self.grid_number_right = self.grid_size_right.width * self.grid_size_right.height
 
         # Initialize the neighbour of right grid
-        self.grid_neighbor_right = np.zeros((int(self.grid_nb_right), 9))
-        self.initialize_neighbours(self.grid_neighbor_right, self.grid_sz_right)
+        self.grid_neighbor_right = np.zeros((int(self.grid_number_right), 9))
+        self.initialize_neighbours(self.grid_neighbor_right, self.grid_size_right)
 
-    def run(self, rotation_type, npts0, npts1):
+    def run(self, rotation_type):
         self.inlier_mask = [False for _ in range(self.matches_number)]
 
         # Initialize motion statistics
-        # self.motion_statistics = np.zeros((int(self.grid_nb_left), int(self.grid_nb_right)))
+        self.motion_statistics = np.zeros((int(self.grid_number_left), int(self.grid_number_right)))
         self.match_pairs = [[0, 0] for _ in range(self.matches_number)]
 
         for GridType in range(1, 5):
-            self.motion_statistics = np.zeros((int(self.grid_nb_left), int(self.grid_nb_right)))
-            self.cell_pairs = [-1 for _ in range(self.grid_nb_left)]
-            self.number_of_points_per_cell_left = [0 for _ in range(self.grid_nb_left)]
+            self.motion_statistics = np.zeros((int(self.grid_number_left), int(self.grid_number_right)))
+            self.cell_pairs = [-1 for _ in range(self.grid_number_left)]
+            self.number_of_points_per_cell_left = [0 for _ in range(self.grid_number_left)]
 
-            self.assign_match_pairs(GridType, npts0, npts1)
+            self.assign_match_pairs(GridType)
             self.verify_cell_pairs(rotation_type)
 
             # Mark inliers
@@ -263,10 +272,10 @@ class GmsMatcher:
 
         return sum(self.inlier_mask)
 
-    def assign_match_pairs(self, grid_type, npts0, npts1):
+    def assign_match_pairs(self, grid_type):
         for i in range(self.matches_number):
-            lp = npts0[self.matches[i][0]]
-            rp = npts1[self.matches[i][1]]
+            lp = self.normalized_points1[self.matches[i][0]]
+            rp = self.normalized_points2[self.matches[i][1]]
             lgidx = self.match_pairs[i][0] = self.get_grid_index_left(lp, grid_type)
 
             if grid_type == 1:
@@ -280,8 +289,8 @@ class GmsMatcher:
             self.number_of_points_per_cell_left[int(lgidx)] += 1
 
     def get_grid_index_left(self, pt, type_of_grid):
-        x = pt[0] * self.grid_sz_left.width
-        y = pt[1] * self.grid_sz_left.height
+        x = pt[0] * self.grid_size_left.width
+        y = pt[1] * self.grid_size_left.height
 
         if type_of_grid == 2:
             x += 0.5
@@ -294,24 +303,24 @@ class GmsMatcher:
         x = math.floor(x)
         y = math.floor(y)
 
-        if x >= self.grid_sz_left.width or y >= self.grid_sz_left.height:
+        if x >= self.grid_size_left.width or y >= self.grid_size_left.height:
             return -1
-        return x + y * self.grid_sz_left.width
+        return x + y * self.grid_size_left.width
 
     def get_grid_index_right(self, pt):
-        x = int(math.floor(pt[0] * self.grid_sz_right.width))
-        y = int(math.floor(pt[1] * self.grid_sz_right.height))
-        return x + y * self.grid_sz_right.width
+        x = int(math.floor(pt[0] * self.grid_size_right.width))
+        y = int(math.floor(pt[1] * self.grid_size_right.height))
+        return x + y * self.grid_size_right.width
 
     def verify_cell_pairs(self, rotation_type):
         current_rotation_pattern = ROTATION_PATTERNS[rotation_type - 1]
 
-        for i in range(self.grid_nb_left):
+        for i in range(self.grid_number_left):
             if sum(self.motion_statistics[i]) == 0:
                 self.cell_pairs[i] = -1
                 continue
             max_number = 0
-            for j in range(int(self.grid_nb_right)):
+            for j in range(int(self.grid_number_right)):
                 value = self.motion_statistics[i]
                 if value[j] > max_number:
                     self.cell_pairs[i] = j
@@ -338,24 +347,50 @@ class GmsMatcher:
             if score < thresh:
                 self.cell_pairs[i] = -2
 
-    def compute_matches(self, kp0, kp1, des0, des1, matches, img0, img1=None):
-        # Obtain image sizes
-        size0 = Size(img0.shape[1], img0.shape[0])
-        size1 = size0
-        if img1 is not None:
-            size1 = Size(img1.shape[1], img1.shape[0])
+    def draw_matches(self, src1, src2, drawing_type=DrawingType.ONLY_LINES):
+        height = max(src1.shape[0], src2.shape[0])
+        width = src1.shape[1] + src2.shape[1]
+        output = np.zeros((height, width, 3), dtype=np.uint8)
+        output[0:src1.shape[0], 0:src1.shape[1]] = src1
+        output[0:src2.shape[0], src1.shape[1]:] = src2[:]
 
-        npts0 = self.normalize_points(kp0, size0)
-        npts1 = self.normalize_points(kp1, size1)
-        self.matches_number = len(matches)
-        self.convert_matches(matches, self.matches)
-        self.initialize_neighbours(self.grid_neighbor_left, self.grid_sz_left)
+        if drawing_type == DrawingType.ONLY_LINES:
+            for i in range(len(self.gms_matches)):
+                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
+                right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))
+                cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (0, 255, 255))
 
-        mask, num_inliers = self.get_inlier_mask(False, False, npts0, npts1)
+        elif drawing_type == DrawingType.LINES_AND_POINTS:
+            for i in range(len(self.gms_matches)):
+                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
+                right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))
+                cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (255, 0, 0))
 
-        final_matches = []
-        for i in range(len(mask)):
-            if mask[i]:
-                final_matches.append(matches[i])
+            for i in range(len(self.gms_matches)):
+                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
+                for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)):
+                    right = tuple(sum(x))
+                cv2.circle(output, tuple(map(int, left)), 1, (0, 255, 255), 2)
+                cv2.circle(output, tuple(map(int, right)), 1, (0, 255, 0), 2)
 
-        return final_matches
+        cv2.imshow('show', output)
+        cv2.waitKey(1)
+
+
+if __name__ == '__main__':
+    img1 = cv2.imread("../data/nn_left.jpg")
+    img2 = cv2.imread("../data/nn_right.jpg")
+
+    img1 = imresize(img1, 480)
+    img2 = imresize(img2, 480)
+
+    orb = cv2.ORB_create(10000)
+    orb.setFastThreshold(0)
+    if cv2.__version__.startswith('3'):
+        matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+    else:
+        matcher = cv2.BFMatcher_create(cv2.NORM_HAMMING)
+    gms = GmsMatcher(orb, matcher)
+
+    matches = gms.compute_matches(img1, img2)
+    gms.draw_matches(img1, img2)
