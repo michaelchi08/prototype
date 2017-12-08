@@ -4,8 +4,13 @@ DOWNLOAD_PATH=/usr/local/src
 REPO_VER=2016-12-01
 REPO_URL="https://april.eecs.umich.edu/media/apriltag/apriltag-$REPO_VER.tgz"
 
-install_apriltags()
-{
+check_installed() {
+    if [ -f "/usr/local/lib/libapriltag.so" ]; then
+        exit 0
+    fi
+}
+
+install_apriltags() {
     # create build directory for atl
     mkdir -p $DOWNLOAD_PATH
 
@@ -28,4 +33,5 @@ install_apriltags()
 }
 
 # RUN
+check_installed
 install_apriltags
