@@ -34,7 +34,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
-from enum import Enum
 
 import cv2
 import numpy as np
@@ -65,11 +64,6 @@ ROTATION_PATTERNS = [[1, 2, 3,
                      [2, 3, 6,
                       1, 5, 9,
                       4, 7, 8]]
-
-
-class DrawingType(Enum):
-    ONLY_LINES = 1
-    LINES_AND_POINTS = 2
 
 
 class Size:
@@ -347,20 +341,20 @@ class GmsMatcher:
             if score < thresh:
                 self.cell_pairs[i] = -2
 
-    def draw_matches(self, src1, src2, drawing_type=DrawingType.ONLY_LINES):
+    def draw_matches(self, src1, src2, drawing_type=0):
         height = max(src1.shape[0], src2.shape[0])
         width = src1.shape[1] + src2.shape[1]
         output = np.zeros((height, width, 3), dtype=np.uint8)
         output[0:src1.shape[0], 0:src1.shape[1]] = src1
         output[0:src2.shape[0], src1.shape[1]:] = src2[:]
 
-        if drawing_type == DrawingType.ONLY_LINES:
+        if drawing_type == 0: 
             for i in range(len(self.gms_matches)):
                 left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
                 right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))
                 cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (0, 255, 255))
 
-        elif drawing_type == DrawingType.LINES_AND_POINTS:
+        elif drawing_type == 1:
             for i in range(len(self.gms_matches)):
                 left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
                 right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))

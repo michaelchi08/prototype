@@ -20,7 +20,7 @@ class GMSMatcherTest(unittest.TestCase):
         orb = cv2.ORB_create(10000)
         orb.setFastThreshold(0)
         matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
-        gms = GmsMatcher()
+        gms = GmsMatcher(orb, matcher)
 
         kp0, des0 = orb.detectAndCompute(self.img0, np.array([]))
         kp1, des1 = orb.detectAndCompute(self.img1, np.array([]))

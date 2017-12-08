@@ -23,7 +23,7 @@ sudo bash $DIR/py2_env.bash
 sudo bash $DIR/py3_env.bash
 
 # Install dependencies
-# bash $DIR/kitti_raw_data.bash
+bash $DIR/kitti_raw_data.bash
 bash $DIR/../install/apriltags_michigan_install.bash*
 
 # Python 2.7
