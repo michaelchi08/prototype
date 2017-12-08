@@ -34,7 +34,6 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import math
-from enum import Enum
 
 import cv2
 import numpy as np
@@ -67,9 +66,28 @@ ROTATION_PATTERNS = [[1, 2, 3,
                       4, 7, 8]]
 
 
-class DrawingType(Enum):
-    ONLY_LINES = 1
-    LINES_AND_POINTS = 2
+def draw_matches(src1, src2, kps1, kps2, matches):
+    # Image width and height
+    height = max(src1.shape[0], src2.shape[0])
+    width = src1.shape[1] + src2.shape[1]
+
+    # Setup output image
+    output = np.zeros((height, width, 3), dtype=np.uint8)
+    output[0:src1.shape[0], 0:src1.shape[1]] = src1
+    output[0:src2.shape[0], src1.shape[1]:] = src2[:]
+
+    # Draw matches
+    for i in range(len(matches)):
+        left = kps1[matches[i].queryIdx].pt
+        left = tuple(map(int, left))
+
+        offset = np.array([src1.shape[1], 0])
+        right = tuple(kps2[matches[i].trainIdx].pt + offset)
+        right = tuple(map(int, right))
+
+        cv2.line(output, left, right, (0, 255, 255))
+
+    return output
 
 
 class Size:
@@ -156,11 +174,10 @@ class GmsMatcher:
         self.initialize_neighbours(self.grid_neighbor_left, self.grid_size_left)
 
         mask, num_inliers = self.get_inlier_mask(False, False)
-        print('Found', num_inliers, 'matches')
-
         for i in range(len(mask)):
             if mask[i]:
                 self.gms_matches.append(all_matches[i])
+
         return self.gms_matches
 
     # Normalize Key points to range (0-1)
@@ -346,36 +363,6 @@ class GmsMatcher:
             thresh = THRESHOLD_FACTOR * math.sqrt(thresh/numpair)
             if score < thresh:
                 self.cell_pairs[i] = -2
-
-    def draw_matches(self, src1, src2, drawing_type=DrawingType.ONLY_LINES):
-        height = max(src1.shape[0], src2.shape[0])
-        width = src1.shape[1] + src2.shape[1]
-        output = np.zeros((height, width, 3), dtype=np.uint8)
-        output[0:src1.shape[0], 0:src1.shape[1]] = src1
-        output[0:src2.shape[0], src1.shape[1]:] = src2[:]
-
-        if drawing_type == DrawingType.ONLY_LINES:
-            for i in range(len(self.gms_matches)):
-                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
-                right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))
-                cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (0, 255, 255))
-
-        elif drawing_type == DrawingType.LINES_AND_POINTS:
-            for i in range(len(self.gms_matches)):
-                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
-                right = tuple(sum(x) for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)))
-                cv2.line(output, tuple(map(int, left)), tuple(map(int, right)), (255, 0, 0))
-
-            for i in range(len(self.gms_matches)):
-                left = self.keypoints_image1[self.gms_matches[i].queryIdx].pt
-                for x in zip(self.keypoints_image2[self.gms_matches[i].trainIdx].pt, (src1.shape[1], 0)):
-                    right = tuple(sum(x))
-                cv2.circle(output, tuple(map(int, left)), 1, (0, 255, 255), 2)
-                cv2.circle(output, tuple(map(int, right)), 1, (0, 255, 0), 2)
-
-        cv2.imshow('show', output)
-        cv2.waitKey(1)
-
 
 if __name__ == '__main__':
     img1 = cv2.imread("../data/nn_left.jpg")

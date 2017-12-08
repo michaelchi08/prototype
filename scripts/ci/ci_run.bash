@@ -3,7 +3,6 @@ set -e
 REPO_NAME="prototype"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-
 setup_virtualenv() {
 	echo "Setting virtualenv for ${1}"
 	export PYTHONPATH=/usr/local/lib/$1/dist-packages
