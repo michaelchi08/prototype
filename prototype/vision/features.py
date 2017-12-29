@@ -677,8 +677,6 @@ class FeatureTracker:
     def detect(self, frame):
         """Detect features
 
-        Detects and initializes feature tracks
-
         Parameters
         ----------
         frame : np.array

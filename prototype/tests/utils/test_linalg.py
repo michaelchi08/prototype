@@ -4,6 +4,7 @@ import numpy as np
 
 
 from prototype.utils.linalg import skew
+from prototype.utils.linalg import skewsq
 from prototype.utils.linalg import nullspace
 
 
@@ -16,6 +17,11 @@ class LinalgTest(unittest.TestCase):
                                [-2.0, 1.0, 0.0]])
 
         self.assertTrue(np.array_equal(X, X_expected))
+
+    def test_skewsq(self):
+        v = np.array([[1.0], [2.0], [3.0]])
+        X = skewsq(v)
+        print(X)
 
     def test_nullspace(self):
         A = np.array([[1.0, 2.0, 3.0],
