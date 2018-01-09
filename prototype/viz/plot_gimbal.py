@@ -174,7 +174,38 @@ def plot_3d_cube(ax, width, origin, orientation):
 
 
 class GimbalPlot:
-    """ """
+    """ Gimbal plot
+
+    Attributes:
+    -----------
+    origin : np.array
+        Gimbal origin
+
+    attitude : np.array
+        Roll, pitch, yaw
+
+    roll_motor_base : np.array
+        Roll motor base position (x, y, z)
+    roll_motor_attitude : np.array
+        Roll motor attitude (roll, pitch, yaw)
+    roll_bar_width : float
+        Roll bar width
+    roll_bar_length : float
+        Roll bar_length
+
+    pitch_motor_base : np.array
+        Roll motor base position (x, y, z)
+    pitch_motor_attitude : np.array
+        Roll motor attitude (pitch, pitch, yaw)
+    pitch_bar_length : float
+        Roll bar_length
+
+    camera_origin : np.array
+        Camera position (x, y, z)
+    camera_attitude : np.array
+        Camera attitude (roll, pitch, yaw)
+
+    """
 
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
@@ -182,28 +213,23 @@ class GimbalPlot:
 
         self.roll_motor_base = np.array([0.0, 0.0, -0.3])
         self.roll_motor_attitude = np.array([0.0, 0.0, 0.0])
-
         self.roll_bar_width = 0.2
         self.roll_bar_length = 0.2
 
         self.pitch_motor_base = np.array([0.25, 0.25, -0.3])
         self.pitch_motor_attitude = np.array([0.0, 0.0, -90.0])
-
         self.pitch_bar_length = 0.2
 
         self.camera_origin = np.array([0.3, 0.0, -0.3])
         self.camera_attitude = np.array([0.0, 0.0, 0.0])
 
     def draw_roll_gimbal(self, ax):
-        """
+        """ Draw roll gimbal
 
         Parameters
         ----------
         ax :
-
-
-        Returns
-        -------
+            Plot axis
 
         """
         # Draw origin to roll motor
@@ -359,6 +385,6 @@ class GimbalPlot:
                 [t[1, 0], axis_z[1, 0]],
                 [t[2, 0], axis_z[2, 0]], color="blue")
 
-        # self.draw_roll_gimbal(ax)
-        # self.draw_pitch_gimbal(ax)
-        # self.draw_camera(ax)
+        self.draw_roll_gimbal(ax)
+        self.draw_pitch_gimbal(ax)
+        self.draw_camera(ax)

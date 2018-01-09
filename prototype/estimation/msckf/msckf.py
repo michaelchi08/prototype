@@ -230,20 +230,18 @@ class MSCKF:
 
         """
         x_imu_size = self.imu_state.size
-        x_cam_size = self.cam_states[0].size if self.N() else 0
+        x_cam_size = self.cam_states[0].size * self.N() if self.N() else 0
 
         # Camera pose Jacobian
         J = self.imu_state.J(self.ext_q_CI, self.ext_p_IC,
                              self.imu_state.q_IG, self.N())
 
         # Augment MSCKF covariance matrix (with new camera state)
-        X = np.block([[I(x_imu_size + x_cam_size * self.N())], [J]])
+        X = np.block([[I(x_imu_size + x_cam_size)], [J]])
         P = dot(X, dot(self.P(), X.T))
         self.imu_state.P = P[0:x_imu_size, 0:x_imu_size]
         self.P_cam = P[x_imu_size:, x_imu_size:]
         self.P_imu_cam = P[0:x_imu_size, x_imu_size:]
-        print("P_cam_shape: ", self.P_cam.shape)
-        print("P_imu_cam_shape: ", self.P_imu_cam.shape)
 
         # Add new camera state to sliding window by using current IMU pose
         # estimate to calculate camera pose
@@ -281,7 +279,6 @@ class MSCKF:
         assert track_cam_states[-1].frame_id == track.frame_end
 
         return track_cam_states
-
 
     def prediction_update(self, a_m, w_m, dt):
         """IMU state update

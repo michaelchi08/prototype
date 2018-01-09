@@ -1,6 +1,8 @@
 import unittest
 
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
@@ -29,7 +31,7 @@ class PlotGimbalTest(unittest.TestCase):
 
         gimbal.plot(ax)
 
-        debug = False
+        debug = True
         if debug:
             axis_equal_3dplot(ax)
             ax.set_xlabel("x")

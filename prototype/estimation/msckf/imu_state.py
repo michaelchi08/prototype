@@ -203,8 +203,8 @@ class IMUState:
         # -- Gyro bias
         self.b_g = self.b_g + zeros((3, 1))
         # -- Velocity
-        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
-        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # noqa
+        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
+        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # noqa
         # -- Accel bias
         self.b_a = self.b_a + zeros((3, 1))
         # -- Position

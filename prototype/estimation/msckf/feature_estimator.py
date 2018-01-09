@@ -231,17 +231,18 @@ class FeatureEstimator:
                                                  track_cam_states)
 
         print("init: ", p_C0_f.ravel())
+        print("residual: ", residual)
 
         # Get ground truth
-        p_G_f = track.ground_truth
+        # p_G_f = track.ground_truth
 
         # Convert ground truth expressed in global frame
         # to be expressed in camera 0
-        C_C0G = C(track_cam_states[0].q_CG)
-        p_G_C0 = track_cam_states[0].p_G
-        p_C0_f = dot(C_C0G, (p_G_f - p_G_C0))
+        # C_C0G = C(track_cam_states[0].q_CG)
+        # p_G_C0 = track_cam_states[0].p_G
+        # p_C0_f = dot(C_C0G, (p_G_f - p_G_C0))
 
-        print("true: ", p_C0_f.ravel())
+        # print("true: ", p_C0_f.ravel())
 
         # Create inverse depth params (these are to be optimized)
         alpha = p_C0_f[0, 0] / p_C0_f[2, 0]
