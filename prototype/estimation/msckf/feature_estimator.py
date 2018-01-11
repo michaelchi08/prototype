@@ -229,7 +229,6 @@ class FeatureEstimator:
         # # Calculate initial estimate of 3D position
         p_C0_f, residual = self.initial_estimate(cam_model, track,
                                                  track_cam_states)
-
         print("init: ", p_C0_f.ravel())
         print("residual: ", residual)
 
@@ -278,7 +277,6 @@ class FeatureEstimator:
 
         # print("ground truth: ", track.ground_truth.ravel())
         # print("cost: ", result.cost)
-        print()
         # print("initial: ", init.ravel())
         # print("final: ", p_G_f.ravel())
 
