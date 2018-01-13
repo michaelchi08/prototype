@@ -31,13 +31,16 @@ class PlotGimbalTest(unittest.TestCase):
         gimbal = GimbalPlot()
         gimbal.plot(ax)
 
-        # debug = True
-        debug = False
+        # Plot
+        debug = True
+        # debug = False
         if debug:
             axis_equal_3dplot(ax)
             ax.set_xlabel("x")
             ax.set_ylabel("y")
             ax.set_zlabel("z")
+            # plt.gca().invert_yaxis()
+
             plt.show()
         plt.clf()
 
@@ -69,8 +72,8 @@ class PlotGimbalTest(unittest.TestCase):
         links.append(T_G2)
 
         # Plot first link
-        debug = True
-        # debug = False
+        # debug = True
+        debug = False
         if debug:
             plt.plot([T_GB[0, 3], links[0][0, 3]],
                      [T_GB[1, 3], links[0][1, 3]])

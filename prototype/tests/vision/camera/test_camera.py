@@ -1,6 +1,6 @@
 import unittest
 
-from prototype.vision.camera import Camera
+from prototype.vision.camera.camera import Camera
 
 
 class CameraTest(unittest.TestCase):

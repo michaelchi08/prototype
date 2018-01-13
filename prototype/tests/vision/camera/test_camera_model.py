@@ -9,7 +9,7 @@ from prototype.utils.utils import deg2rad
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
 from prototype.vision.common import convert2homogeneous
-from prototype.vision.camera_model import PinholeCameraModel
+from prototype.vision.camera.camera_model import PinholeCameraModel
 
 
 class PinholeCameraModelTest(unittest.TestCase):

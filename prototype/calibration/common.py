@@ -22,3 +22,11 @@ def draw_chessboard_corners(image):
                                         ret)
 
     return img
+
+
+def create_chessboard_grid(nb_rows, nb_cols):
+    grid = []
+
+    for i in range(nb_rows):
+        for j in range(nb_rows):
+            grid.append([i, j])

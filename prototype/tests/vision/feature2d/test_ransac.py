@@ -7,9 +7,9 @@ import numpy as np
 import matplotlib.pylab as plt
 
 import prototype.tests as test
-from prototype.vision.ransac import RANSAC
-from prototype.vision.ransac import VerticalRANSAC
-from prototype.vision.features import FeatureTracker
+from prototype.vision.feature2d.ransac import RANSAC
+from prototype.vision.feature2d.ransac import VerticalRANSAC
+from prototype.vision.feature2d.feature_tracker import FeatureTracker
 
 
 class RANSACTest(unittest.TestCase):

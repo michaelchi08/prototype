@@ -19,10 +19,10 @@ from prototype.data.kitti import RawSequence
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
-from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import KeyPoint
-from prototype.vision.features import FeatureTrack
-from prototype.vision.features import FeatureTracker
+from prototype.vision.camera.camera_model import PinholeCameraModel
+from prototype.vision.feature2d.keypoint import KeyPoint
+from prototype.vision.feature2d.feature_track import FeatureTrack
+from prototype.vision.feature2d.feature_tracker import FeatureTracker
 
 from prototype.estimation.msckf.camera_state import CameraState
 from prototype.estimation.msckf.feature_estimator import FeatureEstimator

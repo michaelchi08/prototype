@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from prototype.vision.dataset import DatasetGenerator
+from prototype.vision.data.dataset import DatasetGenerator
 from prototype.viz.plot_vo import load_feature_data
 from prototype.viz.plot_vo import load_observed_data
 from prototype.viz.plot_vo import plot_3d

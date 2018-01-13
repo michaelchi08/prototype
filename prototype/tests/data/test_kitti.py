@@ -1,7 +1,6 @@
 import os
 import unittest
 
-
 import prototype.tests as test
 from prototype.data.kitti import VOSequence
 from prototype.data.kitti import RawSequence

@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 from prototype.utils.filesystem import walkdir
-from prototype.vision.vo import BasicVO
+from prototype.vision.vo.vo import BasicVO
 
 
 def get_scale(ground_truth, frame_id):

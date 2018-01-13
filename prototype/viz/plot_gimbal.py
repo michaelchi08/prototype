@@ -315,72 +315,73 @@ class GimbalPlot:
         #                     [R_c[2, 0], R_c[2, 1], R_c[2, 2], t_c[2, 0]],
         #                     [0.0, 0.0, 0.0, 1.0]])
 
-        self.attitude = np.array([deg2rad(10.0), deg2rad(30.0), 0.0])
+        self.attitude = np.array([deg2rad(45.0), deg2rad(0.0), 0.0])
 
-        # Base frame to first link
-        rpy = [0.0, 90.0, 90.0]
-        R_B0 = euler2rot([deg2rad(i) for i in rpy], 123).reshape(3, 3)
-        t_0_B = np.array([0.0, 0.0, 0.0]).reshape(3, 1)
-        T_B0 = np.matrix([[R_B0[0, 0], R_B0[0, 1], R_B0[0, 2], t_0_B[0, 0]],
-                          [R_B0[1, 0], R_B0[1, 1], R_B0[1, 2], t_0_B[1, 0]],
-                          [R_B0[2, 0], R_B0[2, 1], R_B0[2, 2], t_0_B[2, 0]],
-                          [0.0, 0.0, 0.0, 1.0]])
+        # Create base frame
+        rpy = [0.0, 90.0, 0.0]
+        R_BG = euler2rot([deg2rad(i) for i in rpy], 321)
+        t_G_B = np.array([0.0, 0.0, 0.0])
+        T_GB = np.array([[R_BG[0, 0], R_BG[0, 1], R_BG[0, 2], t_G_B[0]],
+                         [R_BG[1, 0], R_BG[1, 1], R_BG[1, 2], t_G_B[1]],
+                         [R_BG[2, 0], R_BG[2, 1], R_BG[2, 2], t_G_B[2]],
+                         [0.0, 0.0, 0.0, 1.0]])
 
         # Create DH Transforms
-        T_1B = dh_transform_matrix(self.attitude[0],
+        T_B1 = dh_transform_matrix(self.attitude[0],
                                    deg2rad(0.0),
                                    self.roll_bar_width,
                                    0.0)
-        T_21 = dh_transform_matrix(deg2rad(180.0),
-                                  deg2rad(0.0),
-                                  0.0,
-                                  self.roll_bar_length)
-        T_32 = dh_transform_matrix(deg2rad(0.0),
-                                    self.attitude[1],
-                                    self.pitch_bar_length,
-                                    0.0)
+        T_12 = dh_transform_matrix(deg2rad(180.0),
+                                   deg2rad(0.0),
+                                   0.0,
+                                   self.roll_bar_length)
+        T_23 = dh_transform_matrix(deg2rad(0.0),
+                                   self.attitude[1],
+                                   self.pitch_bar_length,
+                                   0.0)
 
-        # Transform from camera to end-effector
-        # T_10 = T_1B * T_B0      # Roll bar
-        # T_21 = T_1 * T_2 * T_B0 # Pitch bar
-        # T_ = T_1 * T_2 * T_3  # Pitch motor to camera
+        # Create transforms
+        T_G1 = np.dot(T_GB, T_B1)
+        T_G2 = np.dot(T_GB, np.dot(T_B1, T_12))
+        T_G3 = np.dot(T_GB, np.dot(T_B1, np.dot(T_12, T_23)))
 
-        # links = []
-        # links.append(np.array(T_10[0:3, 3]).reshape(3, 1))
-        # links.append(np.array(T_12[0:3, 3]).reshape(3, 1))
-        # links.append(np.array(T_13[0:3, 3]).reshape(3, 1))
+        # Create links
+        links = []
+        links.append(T_G1)
+        links.append(T_G2)
+        links.append(T_G3)
 
         # Plot first link
-        # ax.plot([t_0_B[0, 0], links[0][0, 0]],
-        #         [t_0_B[1, 0], links[0][1, 0]],
-        #         [t_0_B[2, 0], links[0][2, 0]], color="blue")
+        ax.plot([T_GB[0, 3], links[0][0, 3]],
+                [T_GB[1, 3], links[0][1, 3]],
+                [T_GB[2, 3], links[0][2, 3]], color="red")
 
-        # ax.plot([links[0][0, 0], links[1][0, 0]],
-        #         [links[0][1, 0], links[1][1, 0]],
-        #         [links[0][2, 0], links[1][2, 0]], color="blue")
-        #
-        # ax.plot([links[1][0, 0], links[2][0, 0]],
-        #         [links[1][1, 0], links[2][1, 0]],
-        #         [links[1][2, 0], links[2][2, 0]], color="blue")
+        ax.plot([links[0][0, 3], links[1][0, 3]],
+                [links[0][1, 3], links[1][1, 3]],
+                [links[0][2, 3], links[1][2, 3]], color="green")
+
+        ax.plot([links[1][0, 3], links[2][0, 3]],
+                [links[1][1, 3], links[2][1, 3]],
+                [links[1][2, 3], links[2][2, 3]], color="blue")
 
         # Plot end effector coordinate frame
-        # R = T_13[0:3, 0:3]
-        # t = T_13[0:3, 3]
-        # axis_x = R * np.array([[0.1], [0.0], [0.0]]) + t
-        # axis_y = R * np.array([[0.0], [0.1], [0.0]]) + t
-        # axis_z = R * np.array([[0.0], [0.0], [0.1]]) + t
-        #
-        # ax.plot([t[0, 0], axis_x[0, 0]],
-        #         [t[1, 0], axis_x[1, 0]],
-        #         [t[2, 0], axis_x[2, 0]], color="red")
-        #
-        # ax.plot([t[0, 0], axis_y[0, 0]],
-        #         [t[1, 0], axis_y[1, 0]],
-        #         [t[2, 0], axis_y[2, 0]], color="green")
-        #
-        # ax.plot([t[0, 0], axis_z[0, 0]],
-        #         [t[1, 0], axis_z[1, 0]],
-        #         [t[2, 0], axis_z[2, 0]], color="blue")
+        R = T_G3[0:3, 0:3]
+        t = T_G3[0:3, 3]
+        axis_x = np.dot(R, np.array([0.1, 0.0, 0.0])) + t
+        axis_y = np.dot(R, np.array([0.0, 0.1, 0.0])) + t
+        axis_z = np.dot(R, np.array([0.0, 0.0, 0.1])) + t
+
+        ax.plot([t[0], axis_x[0]],
+                [t[1], axis_x[1]],
+                [t[2], axis_x[2]], color="red")
+
+        ax.plot([t[0], axis_y[0]],
+                [t[1], axis_y[1]],
+                [t[2], axis_y[2]], color="green")
+
+        ax.plot([t[0], axis_z[0]],
+                [t[1], axis_z[1]],
+                [t[2], axis_z[2]], color="blue")
 
         # self.draw_roll_gimbal(ax, links[0])
         # self.draw_pitch_gimbal(ax)

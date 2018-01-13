@@ -11,9 +11,9 @@ from prototype.utils.transform import T_global_camera
 from prototype.utils.transform import T_camera_global
 from prototype.vision.common import camera_intrinsics
 from prototype.vision.common import rand3dfeatures
-from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import KeyPoint
-from prototype.vision.features import FeatureTrack
+from prototype.vision.camera.camera_model import PinholeCameraModel
+from prototype.vision.feature2d.keypoint import KeyPoint
+from prototype.vision.feature2d.feature_track import FeatureTrack
 
 
 class DatasetFeatureEstimator:

@@ -5,9 +5,9 @@ import unittest
 import cv2
 
 import prototype.tests as test
-from prototype.vision.camera import Camera
-from prototype.vision.gms_matcher import GmsMatcher
-from prototype.vision.gms_matcher import draw_matches
+from prototype.vision.camera.camera import Camera
+from prototype.vision.feature2d.gms_matcher import GmsMatcher
+from prototype.vision.feature2d.gms_matcher import draw_matches
 
 
 class GMSMatcherTest(unittest.TestCase):
@@ -29,12 +29,17 @@ class GMSMatcherTest(unittest.TestCase):
                                                   des0, des1,
                                                   self.img0.shape)
         matches_img = draw_matches(self.img0, self.img1, kp0, kp1, matches)
-        cv2.imshow("Matches", matches_img)
-        cv2.waitKey(0)
+
+        # Show matches
+        # debug = True
+        debug = False
+        if debug:
+            cv2.imshow("Matches", matches_img)
+            cv2.waitKey(0)
 
         self.assertTrue(len(matches) > 0)
 
-    # @unittest.skip("Requires Hardware")
+    @unittest.skip("Requires Hardware")
     def test_compute_matches2(self):
         orb = cv2.ORB_create(1000)
         orb.setFastThreshold(0)

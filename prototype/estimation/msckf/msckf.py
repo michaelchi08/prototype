@@ -125,6 +125,7 @@ class MSCKF:
         self.augment_state()
 
         # Filter settings
+        self.max_window_size = 200
         self.enable_ns_trick = kwargs.get("enable_ns_trick", True)
         self.enable_qr_trick = kwargs.get("enable_qr_trick", True)
 
@@ -519,6 +520,30 @@ class MSCKF:
             re = x_imu_size + x_cam_size * i + x_cam_size
             dx_cam = dx[rs:re]
             self.cam_states[i].correct(dx_cam)
+
+    def prune_camera_states(self):
+        """Prune old camera states"""
+        # Pre-check
+        if len(self.cam_states) <= self.max_window_size:
+            return
+
+        # Slice camera states
+        prune_size = self.max_window_size - len(self.cam_states)
+        self.cam_states = self.cam_states[prune_size:]
+
+        # Adjust covariance matrices
+        N = len(self.cam_states)
+        row_start = 0
+        row_end = self.imu_state.size
+        col_start = self.imu_state.size
+        col_end = self.cam_state[0].size * N
+        self.P_imu_cam = self.P_imu_cam[row_start:row_end, col_start:col_end]
+
+        row_start = self.cam_state[0].size * prune_size
+        row_end = self.P_cam.shape[0] - self.cam_state[0].size * prune_size
+        col_start = self.cam_state[0].size * prune_size
+        col_end = self.P_cam.shape[1] - self.cam_state[0].size * prune_size
+        self.P_cam = self.P_cam[row_start:row_end, col_start:col_end]
 
     def measurement_update(self, tracks):
         """Measurement update

@@ -4,7 +4,7 @@ import numpy as np
 
 from prototype.utils.utils import nwu2edn
 from prototype.utils.quaternion.hamiltonian import euler2quat
-from prototype.vision.dataset import DatasetGenerator
+from prototype.vision.data.dataset import DatasetGenerator
 from prototype.optimization.residuals import reprojection_error
 
 

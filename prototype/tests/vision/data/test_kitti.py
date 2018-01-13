@@ -1,6 +1,6 @@
 import unittest
 
-from prototype.vision.kitti import benchmark_mono_vo
+from prototype.vision.data.kitti import benchmark_mono_vo
 
 
 # class KittiTest(unittest.TestCase):

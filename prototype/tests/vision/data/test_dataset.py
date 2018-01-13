@@ -10,12 +10,12 @@ from prototype.utils.quaternion.jpl import quat2rot as C
 from prototype.utils.quaternion.jpl import euler2quat
 from prototype.vision.common import focal_length
 from prototype.vision.common import camera_intrinsics
-from prototype.vision.camera_model import PinholeCameraModel
-from prototype.vision.features import KeyPoint
-from prototype.vision.features import FeatureTrack
+from prototype.vision.camera.camera_model import PinholeCameraModel
+from prototype.vision.feature2d.keypoint import KeyPoint
+from prototype.vision.feature2d.feature_track import FeatureTrack
 from prototype.estimation.msckf.camera_state import CameraState
-from prototype.vision.dataset import DatasetGenerator
-from prototype.vision.dataset import DatasetFeatureEstimator
+from prototype.vision.data.dataset import DatasetGenerator
+from prototype.vision.data.dataset import DatasetFeatureEstimator
 
 
 class DatasetFeatureEstimatorTest(unittest.TestCase):

@@ -2,46 +2,6 @@ import cv2
 import numpy as np
 
 
-def feature_tracking(image_ref, image_cur, px_ref):
-    """Feature Tracking
-
-    Parameters
-    ----------
-    image_ref : np.array
-        Reference image
-    image_cur : np.array
-        Current image
-    px_ref :
-        Reference pixels
-
-    Returns
-    -------
-    (kp1, kp2) : (list of Keypoints, list of Keypoints)
-
-    """
-    # Setup
-    win_size = (21, 21)
-    max_level = 3
-    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01)
-
-    # Perform LK-tracking
-    lk_params = {"winSize": win_size,
-                 "maxLevel": max_level,
-                 "criteria": criteria}
-    kp2, st, err = cv2.calcOpticalFlowPyrLK(image_ref,
-                                            image_cur,
-                                            px_ref,
-                                            None,
-                                            **lk_params)
-
-    # Post-process
-    st = st.reshape(st.shape[0])
-    kp1 = px_ref[st == 1]
-    kp2 = kp2[st == 1]
-
-    return kp1, kp2
-
-
 class BasicVO:
     """Basic Visual Odometry"""
 
@@ -56,19 +16,61 @@ class BasicVO:
         self.detector = cv2.FastFeatureDetector_create(threshold=25,
                                                        nonmaxSuppression=True)
 
-    def calc_pose(self, frame):
-        """
+    def feature_tracking(self, image_ref, image_cur, px_ref):
+        """Feature Tracking
 
         Parameters
         ----------
-        frame :
-
+        image_ref : np.array
+            Reference image
+        image_cur : np.array
+            Current image
+        px_ref :
+            Reference pixels
 
         Returns
         -------
+        (kp1, kp2) : (list of Keypoints, list of Keypoints)
 
         """
-        px_ref, px_cur = feature_tracking(self.last_frame, frame, self.px_ref)
+        # Setup
+        win_size = (21, 21)
+        max_level = 3
+        criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01)
+
+        # Perform LK-tracking
+        lk_params = {"winSize": win_size,
+                     "maxLevel": max_level,
+                     "criteria": criteria}
+        kp2, st, err = cv2.calcOpticalFlowPyrLK(image_ref,
+                                                image_cur,
+                                                px_ref,
+                                                None,
+                                                **lk_params)
+
+        # Post-process
+        st = st.reshape(st.shape[0])
+        kp1 = px_ref[st == 1]
+        kp2 = kp2[st == 1]
+
+        return kp1, kp2
+
+    def calc_pose(self, frame):
+        """Calculate pose
+
+        Parameters
+        ----------
+        frame : np.array
+            Image frame
+
+        Returns
+        -------
+            (R, t, px_ref, px_cur)
+
+        """
+        px_ref, px_cur = self.feature_tracking(self.last_frame,
+                                               frame,
+                                               self.px_ref)
         E, mask = cv2.findEssentialMat(px_cur,
                                        px_ref,
                                        focal=self.focal,
@@ -84,21 +86,21 @@ class BasicVO:
         return R, t, px_ref, px_cur
 
     def process(self, frame_id, frame, scale, min_nb_features=1500):
-        """
+        """Process Image
 
         Parameters
         ----------
-        frame_id :
+        frame_id : int
+            Frame ID
 
-        frame :
+        frame : np.array
+            Image frame
 
-        scale :
+        scale : float
+            Scale
 
-        min_nb_features :
-             (Default value = 1500)
-
-        Returns
-        -------
+        min_nb_features : float
+             Minimum number of features (Default value = 1500)
 
         """
         R, t, self.px_ref, self.px_cur = self.calc_pose(frame)
@@ -116,19 +118,18 @@ class BasicVO:
         self.px_ref = self.px_cur
 
     def update(self, frame_id, frame, scale):
-        """
+        """Update VO
 
         Parameters
         ----------
-        frame_id :
+        frame_id : int
+            Frame ID
 
-        frame :
+        frame : np.array
+            Image frame
 
-        scale :
-
-
-        Returns
-        -------
+        scale : float
+            Scale
 
         """
         # Update
