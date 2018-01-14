@@ -4,7 +4,7 @@ import numpy as np
 class Feature:
     """Feature"""
 
-    def __init__(self, pt, size, des):
+    def __init__(self, pt, size=0, des=None):
         """ Constructor
 
         Args:
