@@ -14,7 +14,7 @@ class Feature:
             des (np.array): Descriptor
 
         """
-        self.pt = np.array(pt)
+        self.pt = pt if type(pt) == np.ndarray else np.array(pt)
         self.size = size
         self.des = des
 

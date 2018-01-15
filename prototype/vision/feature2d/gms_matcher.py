@@ -154,41 +154,19 @@ class GmsMatcher:
         self.matches = []
         self.gms_matches = []
 
-    def compute_matches(self, kps1, kps2, des1, des2, img1_shape, img2_shape=None):
-        if self.gms_matches:
-            self.empty_matches()
-
-        # Image sizes
-        img1_size = Size(img1_shape[1], img1_shape[0])
-        img2_size = None
-        if img2_shape is None:
-            img2_size = img1_size
-        else:
-            img2_size = Size(img2_shape[1], img2_shape[0])
-
-        # Match
-        all_matches = self.matcher.match(des1, des2)
-        self.normalized_points1 = self.normalize_points(kps1, img1_size)
-        self.normalized_points2 = self.normalize_points(kps2, img2_size)
-        self.matches_number = len(all_matches)
-        self.matches = self.convert_matches(all_matches)
-        self.initialize_neighbours(self.grid_neighbor_left, self.grid_size_left)
-
-        mask, num_inliers = self.get_inlier_mask(False, False)
-        for i in range(len(mask)):
-            if mask[i]:
-                self.gms_matches.append(all_matches[i])
-
-        return kps1, kps2, self.gms_matches
-
     # Normalize Key points to range (0-1)
-    def normalize_points(self, kp, size):
+    def normalize_keypoints(self, keypoints, size):
         npts = []
 
-        for keypoint in kp:
-            npts.append((keypoint.pt[0] / size.width,
-                         keypoint.pt[1] / size.height))
+        for kp in keypoints:
+            npts.append((kp.pt[0] / size.width,
+                         kp.pt[1] / size.height))
 
+        return npts
+
+    # Normalize points to range (0-1)
+    def normalize_points(self, points, size):
+        npts = [(pt[0] / size.width, pt[1] / size.height) for pt in points]
         return npts
 
     # Convert OpenCV match to list of tuples
@@ -372,6 +350,34 @@ class GmsMatcher:
             thresh = THRESHOLD_FACTOR * math.sqrt(thresh/numpair)
             if score < thresh:
                 self.cell_pairs[i] = -2
+
+    def compute_matches(self, kps1, kps2, des1, des2, img1_shape, img2_shape=None):
+        if self.gms_matches:
+            self.empty_matches()
+
+        # Image sizes
+        img1_size = Size(img1_shape[1], img1_shape[0])
+        img2_size = None
+        if img2_shape is None:
+            img2_size = img1_size
+        else:
+            img2_size = Size(img2_shape[1], img2_shape[0])
+
+        # Match
+        all_matches = self.matcher.match(des1, des2)
+        self.normalized_points1 = self.normalize_keypoints(kps1, img1_size)
+        self.normalized_points2 = self.normalize_keypoints(kps2, img2_size)
+        self.matches_number = len(all_matches)
+        self.matches = self.convert_matches(all_matches)
+        self.initialize_neighbours(self.grid_neighbor_left, self.grid_size_left)
+
+        mask, num_inliers = self.get_inlier_mask(False, False)
+        for i in range(len(mask)):
+            if mask[i]:
+                self.gms_matches.append(all_matches[i])
+
+        return kps1, kps2, self.gms_matches
+
 
 if __name__ == '__main__':
     img1 = cv2.imread("../data/nn_left.jpg")

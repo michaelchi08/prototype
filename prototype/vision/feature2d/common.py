@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 
 def draw_points(img, points, color=(0, 255, 0)):
@@ -15,7 +16,6 @@ def draw_points(img, points, color=(0, 255, 0)):
 
     """
     for p in points:
-        p = p.ravel()
         cv2.circle(img, (p[0], p[1]), 1, color, -1)
     return img
 
@@ -56,17 +56,26 @@ def draw_features(img, features, color=(0, 255, 0)):
     Image with features drawn
 
     """
-    # # Convert to OpenCV KeyPoints
-    # cv_kps = []
-    # for f in features:
-    #     # cv_kps.append(cv2.KeyPoint(f.pt[0], f.pt[1], f.size))
-    #
-    # # Draw keypoints
-    # img = cv2.drawKeypoints(img, cv_kps, None, color=color)
-
     for f in features:
-        cv2.circle(img, tuple(f.pt[0]), 1, color, -1)
+        cv2.circle(img, tuple(f.pt), 1, color, -1)
     return img
+
+
+def draw_matches(img_ref, img_cur,
+                 fea_ref, fea_cur,
+                 match_mask, color=(0, 255, 0)):
+    match_img = np.vstack((img_ref, img_cur))
+    height_padding = np.array([0, img_cur.shape[0]])
+
+    for i in range(len(match_mask)):
+        if match_mask[i]:
+            src_pt = tuple(fea_ref[i].pt)
+            dst_pt = tuple(fea_cur[i].pt.astype(int) + height_padding)
+            cv2.circle(match_img, src_pt, 1, color, -1)
+            cv2.circle(match_img, dst_pt, 1, color, -1)
+            cv2.line(match_img, src_pt, dst_pt, color, 1)
+
+    return match_img
 
 
 def convert2cvkeypoints(keypoints):

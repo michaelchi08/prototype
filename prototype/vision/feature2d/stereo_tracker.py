@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 
 from prototype.vision.feature2d.feature import Feature
-from prototype.vision.feature2d.feature_track import FeatureTrack
 from prototype.vision.feature2d.feature_container import FeatureContainer
 
 
@@ -12,7 +11,7 @@ class StereoTracker:
     Attributes
     ---------
     features : FeatureContainer
-        Feature container
+        Feature Container
     counter_frame_id : int
         Frame id counter
     camera_model : None
@@ -32,7 +31,8 @@ class StereoTracker:
 
     """
     def __init__(self):
-        self.features = FeatureContainer()
+        self.buf0 = FeatureContainer()
+        self.buf1 = FeatureContainer()
         self.counter_frame_id = -1
         self.camera_model = None
 
@@ -40,17 +40,20 @@ class StereoTracker:
         self.quality_level = 0.01
         self.min_distance = 10.0
 
-        self.img_cur = None
-        self.img_ref = None
+        self.img0_ref = None
+        self.img1_ref = None
 
-    def initialize(self, img_cur):
-        self.img_ref = img_cur
-        self.counter_frame_id += 1
-        return self.detect(img_cur)
+        self.fea0_ref = None
+        self.fea1_ref = None
+
+        # KLT settings
+        self.win_size = (21, 21)
+        self.max_level = 2
+        self.criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.03) # NOQA
 
     def get_lost_tracks(self):
         # Get lost tracks
-        tracks = self.features.removeLostTracks()
+        tracks = self.buf0.removeLostTracks()
         if self.camera_model is None:
             return tracks
 
@@ -64,48 +67,53 @@ class StereoTracker:
 
         return tracks
 
+    def initialize(self, img0_cur, img1_cur):
+        self.fea0_ref = self.detect(img0_cur)
+        self.fea1_ref = self.detect(img1_cur)
+        self.counter_frame_id += 1
+        self.img0_ref = img0_cur
+        self.img1_ref = img1_cur
+
     def detect(self, image):
         # Convert image to gray scale
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Feature detection
-        corners = cv2.goodFeaturesToTrack(gray_image,
-                                          self.nb_max_corners,
-                                          self.quality_level,
-                                          self.min_distance)
+        # Feature detection with Good Features To Track
+        fast = cv2.FastFeatureDetector_create()
+        keypoints = fast.detect(gray_image, None)
+        corners = np.array([[[kp.pt[0], kp.pt[1]]] for kp in keypoints])
+        corners = corners.astype(np.float32)
 
         # Return features
-        features = [Feature(corner) for corner in corners]
+        features = [Feature(corner[0]) for corner in corners]
         return features
 
-    def process_track(self, status, f0, f1, keeping):
+    def process_track(self, status, fref, fcur, buf):
         # Lost - Remove feature track
-        if status == 0 and f0.track_id is not None:
-            self.features.remove_track(f0.track_id, True)
-            return
+        if status == 0 and fref.track_id is not None:
+            buf.remove_track(fref.track_id, True)
+            return False
 
         # Tracked - Add or update feature track
-        if f0.track_id is None:
-            self.features.add_track(self.counter_frame_id, f0, f1)
+        track_id = fref.track_id
+        if track_id is None:
+            buf.add_track(self.counter_frame_id, fref, fcur)
         else:
-            self.features.update_track(self.counter_frame_id, f0.track_id, f1)
-        keeping.append(f1)
+            buf.update_track(self.counter_frame_id, track_id, fcur)
+        return True
 
-    def track(self, features):
+    def track(self, img_ref, img_cur, buf, fea_ref):
         # Convert list of features to list of cv2.Point2f
-        p0 = np.array([feature.pt for feature in features])
+        p0 = np.array([f.pt for f in fea_ref])
 
         # Convert input images to gray scale
-        gray_img_cur = cv2.cvtColor(self.img_cur, cv2.COLOR_BGR2GRAY)
-        gray_img_ref = cv2.cvtColor(self.img_ref, cv2.COLOR_BGR2GRAY)
+        gray_img_cur = cv2.cvtColor(img_cur, cv2.COLOR_BGR2GRAY)
+        gray_img_ref = cv2.cvtColor(img_ref, cv2.COLOR_BGR2GRAY)
 
         # Track features
-        win_size = (21, 21)
-        max_level = 2
-        criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.03)
-        params = {"winSize": win_size,
-                  "maxLevel": max_level,
-                  "criteria": criteria}
+        params = {"winSize": self.win_size,
+                  "maxLevel": self.max_level,
+                  "criteria": self.criteria}
         p1, status, err = cv2.calcOpticalFlowPyrLK(gray_img_ref,
                                                    gray_img_cur,
                                                    p0,
@@ -113,26 +121,61 @@ class StereoTracker:
                                                    **params)
 
         # Add, update or remove feature tracks
-        keeping = []
+        tracked_fea_ref = []
+        tracked_fea_cur = []
         for i in range(len(status)):
-            f0 = features[i]
-            f1 = Feature(p1[i])
-            self.process_track(status[i], f0, f1, keeping)
-        self.features.fea_ref = keeping
+            fref = fea_ref[i]
+            fcur = Feature(p1[i])
+            if self.process_track(status[i], fref, fcur, buf):
+                tracked_fea_ref.append(fref)
+                tracked_fea_cur.append(fcur)
 
-    def update(self, img_cur):
-        # Keep track of current image
-        self.img_cur = img_cur
+        return (tracked_fea_ref, tracked_fea_cur)
 
+    def temporal_match(self, fea_ref, fea_cur):
+        src = np.array([f.pt for f in fea_ref])
+        dst = np.array([f.pt for f in fea_cur])
+        F, inlier_mask = cv2.findFundamentalMat(src, dst, cv2.FM_RANSAC)
+
+        inliers = []
+        for i in range(len(inlier_mask)):
+            if inlier_mask[i]:
+                inliers.append(fea_cur[i])
+
+        return inliers
+
+    # TODO: use R, t to find points within next image and perform ransac
+    def stereo_match(self, fea0, fea1):
+        src = np.array([f.pt for f in fea0])
+        dst = np.array([f.pt for f in fea1])
+        F, inlier_mask = cv2.findFundamentalMat(src, dst, cv2.FM_RANSAC)
+
+        inliers_fea0 = []
+        inliers_fea1 = []
+        for i in range(len(inlier_mask)):
+            if inlier_mask[i]:
+                inliers_fea0.append(fea0[i])
+                inliers_fea1.append(fea1[i])
+
+        return inliers_fea0, inliers_fea1
+
+    def update(self, img0_cur, img1_cur):
         # Initialize feature tracker
-        if len(self.features.fea_ref) == 0:
-            self.features.fea_ref = self.initialize(img_cur)
+        if self.fea0_ref is None and self.fea1_ref is None:
+            self.initialize(img0_cur, img1_cur)
             return
 
-        # Detect
-        if (len(self.features.fea_ref) < 200):
-            self.features.fea_ref = self.detect(img_cur)
-        self.counter_frame_id += 1
-
         # Track features
-        self.track(self.features.fea_ref)
+        self.counter_frame_id += 1
+        fea0_ref, fea0_cur = self.track(self.img0_ref, img0_cur,
+                                        self.buf0, self.fea0_ref)
+        fea1_ref, fea1_cur = self.track(self.img1_ref, img1_cur,
+                                        self.buf1, self.fea1_ref)
+
+        # Match features
+        self.fea0_ref = self.temporal_match(fea0_ref, fea0_cur)
+        self.fea1_ref = self.temporal_match(fea1_ref, fea1_cur)
+
+        # Keep track of current image
+        self.img0_ref = img0_cur
+        self.img1_ref = img1_cur
