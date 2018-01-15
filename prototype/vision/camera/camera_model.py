@@ -109,7 +109,6 @@ class PinholeCameraModel:
         pt = np.array([(pixel[0] - cx) / fx, (pixel[1] - cy) / fy])
         return pt
 
-    # TODO: Need to a more robust test for when feature is behind camera
     def observed_features(self, features, rpy, t):
         """Return features are observed by camera
 

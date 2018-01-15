@@ -24,7 +24,7 @@ class StereoTrackerTest(unittest.TestCase):
 
     def test_detect(self):
         img = cv2.imread(self.data.image_00_files[0])
-        features = self.tracker.detect(img)
+        features = self.tracker.detect(img, 1000)
         self.assertTrue(len(features) > 0)
 
         # Draw keypoints
@@ -38,7 +38,7 @@ class StereoTrackerTest(unittest.TestCase):
     def test_track(self):
         img_ref = cv2.imread(self.data.image_00_files[0])
         img_cur = cv2.imread(self.data.image_00_files[1])
-        fea_ref = self.tracker.detect(img_ref)
+        fea_ref = self.tracker.detect(img_ref, 1000)
         buf = FeatureContainer()
 
         keeping = self.tracker.track(img_ref, img_cur, buf, fea_ref)
@@ -79,7 +79,7 @@ class StereoTrackerTest(unittest.TestCase):
         img_ref = cv2.imread(self.data.image_00_files[0])
         img_cur = cv2.imread(self.data.image_00_files[1])
 
-        fea_ref = self.tracker.detect(img_ref)
+        fea_ref = self.tracker.detect(img_ref, 1000)
         fea_ref, fea_cur = self.tracker.track(img_ref, img_cur,
                                               self.tracker.buf0, fea_ref)
         inlier_mask = self.tracker.temporal_match(fea_ref, fea_cur)
@@ -134,7 +134,7 @@ class StereoTrackerTest(unittest.TestCase):
             # Detect features
             self.tracker.update(img0, img1)
 
-            # Show images
+            # # Show images
             img0 = draw_features(img0, self.tracker.fea0_ref)
             img1 = draw_features(img1, self.tracker.fea1_ref)
             cv2.imshow("Image", np.hstack((img0, img1)))

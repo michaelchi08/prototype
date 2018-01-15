@@ -36,9 +36,9 @@ class StereoTracker:
         self.counter_frame_id = -1
         self.camera_model = None
 
-        self.nb_max_corners = 1000
-        self.quality_level = 0.01
-        self.min_distance = 10.0
+        self.max_corners = 2000
+        self.image_width = None
+        self.image_height = None
 
         self.img0_ref = None
         self.img1_ref = None
@@ -68,25 +68,31 @@ class StereoTracker:
         return tracks
 
     def initialize(self, img0_cur, img1_cur):
-        self.fea0_ref = self.detect(img0_cur)
-        self.fea1_ref = self.detect(img1_cur)
+        self.fea0_ref = self.detect(img0_cur, self.max_corners)
+        self.fea1_ref = self.detect(img1_cur, self.max_corners)
         self.counter_frame_id += 1
         self.img0_ref = img0_cur
         self.img1_ref = img1_cur
+        self.image_width = img0_cur.shape[1]
+        self.image_height = img0_cur.shape[0]
 
-    def detect(self, image):
+    def detect(self, image, max_corners):
         # Convert image to gray scale
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Feature detection with Good Features To Track
         fast = cv2.FastFeatureDetector_create()
+        fast.setThreshold(100)
         keypoints = fast.detect(gray_image, None)
         corners = np.array([[[kp.pt[0], kp.pt[1]]] for kp in keypoints])
         corners = corners.astype(np.float32)
 
         # Return features
         features = [Feature(corner[0]) for corner in corners]
-        return features
+        if len(features) > max_corners:
+            return features[:max_corners]
+        else:
+            return features
 
     def process_track(self, status, fref, fcur, buf):
         # Lost - Remove feature track
@@ -159,6 +165,30 @@ class StereoTracker:
 
         return inliers_fea0, inliers_fea1
 
+    def replenish(self, img, fea_ref):
+        fea_new_size = (self.max_corners - len(fea_ref))
+        if fea_new_size <= 0:
+            return
+
+        # Build a grid denoting where existing keypoints already are
+        pt_grid = np.zeros((self.image_height, self.image_width))
+        for f in fea_ref:
+            px = int(f.pt[0])
+            py = int(f.pt[1])
+            if px >= self.image_width or px <= 0:
+                continue
+            elif py >= self.image_height or py <= 0:
+                continue
+            pt_grid[py, px] = 1
+
+        # Detect new features
+        fea_new = self.detect(img, fea_new_size)
+        for f in fea_new:
+            px = int(f.pt[0])
+            py = int(f.pt[1])
+            if pt_grid[py, px] == 0:
+                fea_ref.append(f)
+
     def update(self, img0_cur, img1_cur):
         # Initialize feature tracker
         if self.fea0_ref is None and self.fea1_ref is None:
@@ -175,6 +205,10 @@ class StereoTracker:
         # Match features
         self.fea0_ref = self.temporal_match(fea0_ref, fea0_cur)
         self.fea1_ref = self.temporal_match(fea1_ref, fea1_cur)
+
+        # Redetect features to maintain high number of features
+        self.replenish(img0_cur, self.fea0_ref)
+        self.replenish(img1_cur, self.fea1_ref)
 
         # Keep track of current image
         self.img0_ref = img0_cur
