@@ -32,7 +32,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.estimation.test_inverse_depth
 
 # python3 -m unittest prototype.tests.msckf.test_camera_state
-python3 -m unittest prototype.tests.msckf.test_imu_state
+# python3 -m unittest prototype.tests.msckf.test_imu_state
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator.FeatureEstimatorTest.test_triangulate
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator.FeatureEstimatorTest.test_estimate
