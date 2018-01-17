@@ -24,8 +24,8 @@ from prototype.vision.feature2d.keypoint import KeyPoint
 from prototype.vision.feature2d.feature_track import FeatureTrack
 from prototype.vision.feature2d.feature_tracker import FeatureTracker
 
-from prototype.estimation.msckf.camera_state import CameraState
-from prototype.estimation.msckf.feature_estimator import FeatureEstimator
+from prototype.msckf.camera_state import CameraState
+from prototype.msckf.feature_estimator import FeatureEstimator
 
 
 # GLOBAL VARIABLE

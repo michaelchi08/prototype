@@ -48,8 +48,8 @@ class CameraState:
 
         """
         # Split dx into its own components
-        dtheta_CG = dx[0:3].reshape((3, 1))
-        dp_G = dx[3:6].reshape((3, 1))
+        dtheta_CG = dx[0:3]
+        dp_G = dx[3:6]
 
         # Time derivative of quaternion (small angle approx)
         dq_CG = 0.5 * dtheta_CG
@@ -67,6 +67,6 @@ class CameraState:
     def __str__(self):
         s = "Camera state:\n"
         s += "frame_id:\t{}\n".format(str(self.frame_id))
-        s += "q:\t{}\n".format(str(np.round(self.q_CG, 2).ravel()))
-        s += "p:\t{}\n".format(str(np.round(self.p_G, 2).ravel()))
+        s += "q:\t{}\n".format(str(np.round(self.q_CG, 4).ravel()))
+        s += "p:\t{}\n".format(str(np.round(self.p_G, 4).ravel()))
         return s

@@ -18,7 +18,7 @@ from prototype.data.kitti import RawSequence
 # from prototype.viz.plot_matrix import PlotMatrix
 # from prototype.viz.plot_error import plot_error_ellipse
 
-from prototype.estimation.msckf.imu_state import IMUState
+from prototype.msckf.imu_state import IMUState
 
 
 # GLOBAL VARIABLE
@@ -186,17 +186,19 @@ class IMUStateTest(unittest.TestCase):
 
         # -- First row --
         self.assertTrue(np_equal(F[0:3, 0:3], -skew(w_hat)))
-        self.assertTrue(np_equal(F[0:3, 3:6], -np.ones((3, 3))))
+        self.assertTrue(np_equal(F[0:3, 3:6], -np.eye(3)))
         # -- Third Row --
         self.assertTrue(np_equal(F[6:9, 0:3], dot(-C(q_hat).T, skew(a_hat))))
         self.assertTrue(np_equal(F[6:9, 6:9], -2.0 * skew(w_G)))
         self.assertTrue(np_equal(F[6:9, 9:12], -C(q_hat).T))
         self.assertTrue(np_equal(F[6:9, 12:15], -skewsq(w_G)))
         # -- Fifth Row --
-        self.assertTrue(np_equal(F[12:15, 6:9], np.ones((3, 3))))
+        self.assertTrue(np_equal(F[12:15, 6:9], np.eye(3)))
 
         # Plot matrix
-        if self.debug:
+        # debug = True
+        debug = False
+        if debug:
             ax = plt.subplot(111)
             ax.matshow(F)
             plt.show()
@@ -206,16 +208,18 @@ class IMUStateTest(unittest.TestCase):
         G = self.imu_state.G(q_hat)
 
         # -- First row --
-        self.assertTrue(np_equal(G[0:3, 0:3], -np.ones((3, 3))))
+        self.assertTrue(np_equal(G[0:3, 0:3], -np.eye(3)))
         # -- Second row --
-        self.assertTrue(np_equal(G[3:6, 3:6], np.ones((3, 3))))
+        self.assertTrue(np_equal(G[3:6, 3:6], np.eye(3)))
         # -- Third row --
         self.assertTrue(np_equal(G[6:9, 6:9], -C(q_hat).T))
         # -- Fourth row --
-        self.assertTrue(np_equal(G[9:12, 9:12], np.ones((3, 3))))
+        self.assertTrue(np_equal(G[9:12, 9:12], np.eye(3)))
 
         # Plot matrix
-        if self.debug:
+        # debug = True
+        debug = False
+        if debug:
             ax = plt.subplot(111)
             ax.matshow(G)
             plt.show()
@@ -239,7 +243,9 @@ class IMUStateTest(unittest.TestCase):
         self.assertTrue(np_equal(J[3:6, 12:15], I(3)))
 
         # Plot matrix
-        if self.debug:
+        debug = True
+        # debug = False
+        if debug:
             ax = plt.subplot(111)
             ax.matshow(J)
             plt.show()

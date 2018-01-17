@@ -44,8 +44,10 @@ class FeatureTrack:
             self.track = [data0, data1]
 
         self.ground_truth = kwargs.get("ground_truth", None)
+        self.pos = kwargs.get("pos", [])
+        self.rpy = kwargs.get("rpy", [])
 
-    def update(self, frame_id, data):
+    def update(self, frame_id, data, pos=None, rpy=None):
         """Update feature track
 
         Parameters
@@ -58,6 +60,10 @@ class FeatureTrack:
         """
         self.frame_end = frame_id
         self.track.append(data)
+        if pos is not None:
+            self.pos.append(pos)
+        if rpy is not None:
+            self.rpy.append(rpy)
 
     def last(self):
         """Return last data point

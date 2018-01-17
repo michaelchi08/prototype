@@ -1,11 +1,9 @@
 from math import sqrt
 
 import numpy as np
-from numpy import ones
 from numpy import zeros
 from numpy import dot
-from numpy import eye as I
-
+from numpy import eye as I # NOQA
 
 from prototype.utils.linalg import enforce_psd
 from prototype.utils.linalg import skew
@@ -95,14 +93,14 @@ class IMUState:
         F = zeros((15, 15))
         # -- First row --
         F[0:3, 0:3] = -skew(w_hat)
-        F[0:3, 3:6] = -ones((3, 3))
+        F[0:3, 3:6] = -I(3)
         # -- Third Row --
         F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
         F[6:9, 6:9] = dot(-2.0, skew(w_G))
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skewsq(w_G)
         # -- Fifth Row --
-        F[12:15, 6:9] = ones((3, 3))
+        F[12:15, 6:9] = I(3)
 
         return F
 
@@ -127,13 +125,13 @@ class IMUState:
         # G matrix
         G = zeros((15, 12))
         # -- First row --
-        G[0:3, 0:3] = -ones((3, 3))
+        G[0:3, 0:3] = -I(3)
         # -- Second row --
-        G[3:6, 3:6] = ones((3, 3))
+        G[3:6, 3:6] = I(3)
         # -- Third row --
         G[6:9, 6:9] = -C(q_hat).T
         # -- Fourth row --
-        G[9:12, 9:12] = ones((3, 3))
+        G[9:12, 9:12] = I(3)
 
         return G
 
@@ -191,20 +189,20 @@ class IMUState:
 
         """
         # Calculate new accel and gyro estimates
-        # a_hat = (a_m - self.b_a) * dt
-        # w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G)) * dt
+        # a_hat = (a_m - self.b_a)
+        # w_hat = (w_m - self.b_g - dot(C(self.q_IG), self.w_G))
         a_hat = a_m
         w_hat = w_m
 
         # Propagate IMU states
         # -- Orientation
-        self.q_IG = self.q_IG + dot(0.5 * Omega(w_hat), self.q_IG) * dt
+        self.q_IG = self.q_IG + 0.5 * dot(Omega(w_hat), self.q_IG) * dt
         self.q_IG = quatnormalize(self.q_IG)
         # -- Gyro bias
         self.b_g = self.b_g + zeros((3, 1))
         # -- Velocity
-        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
-        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # noqa
+        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
+        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # NOQA
         # -- Accel bias
         self.b_a = self.b_a + zeros((3, 1))
         # -- Position
@@ -236,11 +234,11 @@ class IMUState:
 
         """
         # Split dx into its own components
-        dtheta_IG = dx[0:3].reshape((3, 1))
-        db_g = dx[3:6].reshape((3, 1))
-        dv_G = dx[6:9].reshape((3, 1))
-        db_a = dx[9:12].reshape((3, 1))
-        dp_G = dx[12:15].reshape((3, 1))
+        dtheta_IG = dx[0:3]
+        db_g = dx[3:6]
+        dv_G = dx[6:9]
+        db_a = dx[9:12]
+        dp_G = dx[12:15]
 
         # Time derivative of quaternion (small angle approx)
         dq_IG = 0.5 * dtheta_IG
@@ -260,9 +258,9 @@ class IMUState:
 
     def __str__(self):
         s = "IMU state:\n"
-        s += "q:\t{}\n".format(str(np.round(self.q_IG, 2).ravel()))
-        s += "b_g:\t{}\n".format(str(np.round(self.b_g, 2).ravel()))
-        s += "p:\t{}\n".format(str(np.round(self.p_G, 2).ravel()))
-        s += "b_a:\t{}\n".format(str(np.round(self.b_a, 2).ravel()))
-        s += "p_G:\t{}\n".format(str(np.round(self.p_G, 2).ravel()))
+        s += "q:\t{}\n".format(str(np.round(self.q_IG, 4).ravel()))
+        s += "b_g:\t{}\n".format(str(np.round(self.b_g, 4).ravel()))
+        s += "p:\t{}\n".format(str(np.round(self.p_G, 4).ravel()))
+        s += "b_a:\t{}\n".format(str(np.round(self.b_a, 4).ravel()))
+        s += "p_G:\t{}\n".format(str(np.round(self.p_G, 4).ravel()))
         return s

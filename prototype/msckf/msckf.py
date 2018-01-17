@@ -10,9 +10,9 @@ from prototype.utils.linalg import skew
 from prototype.utils.linalg import nullspace
 from prototype.utils.quaternion.jpl import quatlcomp
 from prototype.utils.quaternion.jpl import C
-from prototype.estimation.msckf.imu_state import IMUState
-from prototype.estimation.msckf.camera_state import CameraState
-from prototype.estimation.msckf.feature_estimator import FeatureEstimator
+from prototype.msckf.imu_state import IMUState
+from prototype.msckf.camera_state import CameraState
+from prototype.msckf.feature_estimator import FeatureEstimator
 
 
 class MSCKF:
@@ -117,15 +117,15 @@ class MSCKF:
         self.ext_p_IC = kwargs["ext_p_IC"].reshape((3, 1))
         self.ext_q_CI = kwargs["ext_q_CI"].reshape((4, 1))
         # -- Camera noise
-        self.n_u = 1.0e-4
-        self.n_v = 1.0e-4
+        self.n_u = 1.0
+        self.n_v = 1.0
         # -- Camera states
         self.counter_frame_id = 0
         self.cam_states = []
         self.augment_state()
 
         # Filter settings
-        self.max_window_size = 200
+        self.max_window_size = 30
         self.enable_ns_trick = kwargs.get("enable_ns_trick", True)
         self.enable_qr_trick = kwargs.get("enable_qr_trick", True)
 
@@ -185,8 +185,6 @@ class MSCKF:
         pose_idx = track.frame_start - self.cam_states[0].frame_id
         assert track_cam_states[0].frame_id == track.frame_start
         assert track_cam_states[-1].frame_id == track.frame_end
-        assert pose_idx == track.frame_start
-        assert (pose_idx + (M - 1)) == track.frame_end
 
         # Form measurement jacobians
         for i in range(M):
@@ -329,10 +327,10 @@ class MSCKF:
             p_C_f = dot(C_CG, (p_f_G - track_cam_states[i].p_G))
             cu = p_C_f[0, 0] / p_C_f[2, 0]
             cv = p_C_f[1, 0] / p_C_f[2, 0]
-            z_hat = np.array([[cu], [cv]])
+            z_hat = np.array([cu, cv])
 
             # Transform idealized measurement
-            z = cam_model.pixel2image(track.track[i].pt).reshape((2, 1))
+            z = cam_model.pixel2image(track.track[i].pt)
 
             # Calculate reprojection error and add it to the residual vector
             rs = 2 * i
@@ -449,10 +447,6 @@ class MSCKF:
         r_o = None
         R_o = None
 
-        # # Limit number of tracks
-        # if len(tracks) > 10:
-        #     tracks = tracks[0:10]
-
         # Residualize feature tracks
         for track in tracks:
             H_o_j, r_o_j, R_o_j = self.residualize_track(track)
@@ -476,10 +470,12 @@ class MSCKF:
             # Mourikis2007]
             Q, R = np.linalg.qr(H_o)
             # -- Find non-zero rows
-            nonzero_rows = [np.any(row != 0) for row in R]
+            # nonzero_rows = [np.any(row != 0) for row in R]
             # -- Remove rows that are all zeros
-            T_H = R[nonzero_rows, :]
-            Q_1 = Q[:, nonzero_rows]
+            # T_H = R[nonzero_rows, :]
+            # Q_1 = Q[:, nonzero_rows]
+            T_H = R
+            Q_1 = Q
             # -- Calculate residual
             r_n = dot(Q_1.T, r_o)
             R_n = dot(Q_1.T, dot(R_o, Q_1))
@@ -528,22 +524,18 @@ class MSCKF:
             return
 
         # Slice camera states
-        prune_size = self.max_window_size - len(self.cam_states)
+        prune_size = len(self.cam_states) - self.max_window_size
         self.cam_states = self.cam_states[prune_size:]
 
         # Adjust covariance matrices
-        N = len(self.cam_states)
-        row_start = 0
-        row_end = self.imu_state.size
-        col_start = self.imu_state.size
-        col_end = self.cam_state[0].size * N
-        self.P_imu_cam = self.P_imu_cam[row_start:row_end, col_start:col_end]
+        x_cam_size = self.cam_states[0].size
 
-        row_start = self.cam_state[0].size * prune_size
-        row_end = self.P_cam.shape[0] - self.cam_state[0].size * prune_size
-        col_start = self.cam_state[0].size * prune_size
-        col_end = self.P_cam.shape[1] - self.cam_state[0].size * prune_size
-        self.P_cam = self.P_cam[row_start:row_end, col_start:col_end]
+        col_start = x_cam_size * prune_size
+        self.P_imu_cam = self.P_imu_cam[:, col_start:]
+
+        row_start = x_cam_size * prune_size
+        col_start = x_cam_size * prune_size
+        self.P_cam = self.P_cam[row_start:, col_start:]
 
     def measurement_update(self, tracks):
         """Measurement update
@@ -559,11 +551,13 @@ class MSCKF:
 
         # Continue with EKF update?
         if len(tracks) == 0:
+            # self.prune_camera_states()
             return
 
         # Calculate residuals
         T_H, r_n, R_n = self.calculate_residuals(tracks)
         if T_H is None and r_n is None and R_n is None:
+            # self.prune_camera_states()
             return
 
         # Calculate Kalman gain
@@ -586,3 +580,6 @@ class MSCKF:
         self.imu_state.P = P_corrected[0:x_imu_size, 0:x_imu_size]
         self.P_cam = P_corrected[x_imu_size:, x_imu_size:]
         self.P_imu_cam = P_corrected[0:x_imu_size, x_imu_size:]
+
+        # Prune camera states
+        # self.prune_camera_states()

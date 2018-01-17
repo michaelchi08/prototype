@@ -20,7 +20,6 @@ class FeatureEstimator:
         Maximum iterations (default: 30)
 
     """
-
     def triangulate(self, pt1, pt2, C_C0C1, t_C0_C0C1):
         """Triangulate feature observed from camera C0 and C1 and return the
         position relative to camera C0
@@ -80,15 +79,15 @@ class FeatureEstimator:
         # Calculate rotation and translation of first and last camera states
         # -- Get rotation and translation of camera 0 and camera 1
         C_C0G = C(track_cam_states[0].q_CG)
-        C_C1G = C(track_cam_states[1].q_CG)
+        C_C1G = C(track_cam_states[2].q_CG)
         p_G_C0 = track_cam_states[0].p_G
-        p_G_C1 = track_cam_states[1].p_G
+        p_G_C1 = track_cam_states[2].p_G
         # -- Calculate rotation and translation from camera 0 to camera 1
         C_C0C1 = dot(C_C0G, C_C1G.T)
         t_C1_C0C1 = dot(C_C0G, (p_G_C1 - p_G_C0))
         # -- Convert from pixel coordinates to image coordinates
         pt1 = cam_model.pixel2image(track.track[0].pt).reshape((2, 1))
-        pt2 = cam_model.pixel2image(track.track[1].pt).reshape((2, 1))
+        pt2 = cam_model.pixel2image(track.track[2].pt).reshape((2, 1))
 
         # Calculate initial estimate of 3D position
         p_C0_f, residual = self.triangulate(pt1, pt2, C_C0C1, t_C1_C0C1)
@@ -229,11 +228,10 @@ class FeatureEstimator:
         # # Calculate initial estimate of 3D position
         p_C0_f, residual = self.initial_estimate(cam_model, track,
                                                  track_cam_states)
-        print("init: ", p_C0_f.ravel())
-        print("residual: ", residual)
 
         # Get ground truth
-        # p_G_f = track.ground_truth
+        if track.ground_truth is not None:
+            return track.ground_truth
 
         # Convert ground truth expressed in global frame
         # to be expressed in camera 0

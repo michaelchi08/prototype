@@ -29,4 +29,4 @@ class KeyPoint:
                             self.class_id)
 
     def __str__(self):
-        return str(self.pt)
+        return str(self.pt.T[0])

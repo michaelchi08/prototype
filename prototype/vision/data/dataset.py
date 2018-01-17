@@ -46,6 +46,10 @@ class DatasetFeatureEstimator:
         # Get ground truth
         p_G_f = track.ground_truth
 
+        # p_G_f[0] += 0.1
+        # p_G_f[1] -= 0.1
+        # p_G_f[2] += 0.1
+
         # Convert ground truth expressed in global frame
         # to be expressed in camera 0
         C_C0G = C(track_cam_states[0].q_CG)
@@ -95,12 +99,12 @@ class DatasetFeatureEstimator:
         # Convert estimated inverse depth params back to feature position in
         # global frame.  See (Eq.38, Mourikis2007 (A Multi-State Constraint
         # Kalman Filter for Vision-aided Inertial Navigation)
-        z = 1 / rho
-        X = np.array([[alpha], [beta], [1.0]])
-        p_G_f = z * dot(C_C0G.T, X) + p_G_C0
-        p_G_f[0] += np.random.normal(0.0, 0.01)
-        p_G_f[1] += np.random.normal(0.0, 0.01)
-        p_G_f[2] += np.random.normal(0.0, 0.01)
+        # z = 1 / rho
+        # X = np.array([[alpha], [beta], [1.0]])
+        # p_G_f = z * dot(C_C0G.T, X) + p_G_C0
+        # p_G_f[0] += np.random.normal(0.0, 0.01)
+        # p_G_f[1] += np.random.normal(0.0, 0.01)
+        # p_G_f[2] += np.random.normal(0.0, 0.01)
 
         return p_G_f
 
@@ -153,7 +157,7 @@ class DatasetGenerator(object):
         self.cam_model = PinholeCameraModel(640, 640, K)
 
         # Features
-        self.nb_features = kwargs.get("nb_features", 500)
+        self.nb_features = kwargs.get("nb_features", 1000)
         self.feature_bounds = {"x": {"min": -10.0, "max": 10.0},
                                "y": {"min": -10.0, "max": 10.0},
                                "z": {"min": 5.0, "max": 20.0}}
@@ -192,96 +196,13 @@ class DatasetGenerator(object):
         self.tracks_lost = []
         self.tracks_buffer = {}
 
+        self.detect(self.pos, self.att)
+
     def debug(self, string):
         if self.debug_mode:
             print(string)
 
-    # def output_robot_state(self, save_dir):
-    #     """Output robot state
-    #
-    #     Parameters
-    #     ----------
-    #     save_dir : str
-    #         Path to save output
-    #
-    #     """
-    #     # Setup state file
-    #     header = ["time_step", "x", "y", "theta"]
-    #     state_file = open(os.path.join(save_dir, "state.dat"), "w")
-    #     state_file.write(",".join(header) + "\n")
-    #
-    #     # Write state file
-    #     for i in range(len(self.time_true)):
-    #         t = self.time_true[i]
-    #         pos = self.pos_true[:, i].ravel().tolist()
-    #
-    #         state_file.write(str(t) + ",")
-    #         state_file.write(str(pos[0]) + ",")
-    #         state_file.write(str(pos[1]) + ",")
-    #         state_file.write(str(pos[2]) + "\n")
-    #
-    #     # Clean up
-    #     state_file.close()
-
-    # def output_observed(self, save_dir):
-    #     """Output observed features
-    #
-    #     Parameters
-    #     ----------
-    #     save_dir : str
-    #         Path to save output
-    #
-    #     """
-    #     # Setup
-    #     index_file = open(os.path.join(save_dir, "index.dat"), "w")
-    #
-    #     # Output observed features
-    #     for i in range(len(self.time_true)):
-    #         # Setup output file
-    #         output_path = save_dir + "/observed_" + str(i) + ".dat"
-    #         index_file.write(output_path + '\n')
-    #         obs_file = open(output_path, "w")
-    #
-    #         # Data
-    #         t = self.time_true[i]
-    #         x = self.pos_true[i].ravel().tolist()
-    #         observed = self.observed_features[i]
-    #
-    #         # Output time, robot state, and number of observed features
-    #         obs_file.write(str(t) + '\n')
-    #         obs_file.write(','.join(map(str, x)) + '\n')
-    #         obs_file.write(str(len(observed)) + '\n')
-    #
-    #         # Output observed features
-    #         for obs in self.observed_features[i]:
-    #             img_pt, feature_id = obs
-    #
-    #             # Convert to string
-    #             img_pt = ','.join(map(str, img_pt[0:2]))
-    #             feature_id = str(feature_id)
-    #
-    #             # Write to file
-    #             obs_file.write(img_pt + '\n')
-    #             obs_file.write(feature_id + '\n')
-    #
-    #         # Close observed file
-    #         obs_file.close()
-    #
-    #     # Close index file
-    #     index_file.close()
-
-    # def output_features(self, save_dir):
-    #     """Output features
-    #
-    #     Parameters
-    #     ----------
-    #     save_dir : str
-    #         Path to save output
-    #
-    #     """
-    #     mat2csv(os.path.join(save_dir, "features.dat"), self.features)
-
-    def add_feature_track(self, feature_id, kp):
+    def add_feature_track(self, feature_id, kp, pos, rpy):
         """Add feature track
 
         Parameters
@@ -297,7 +218,12 @@ class DatasetGenerator(object):
 
         ground_truth = self.get_feature_position(feature_id)
         ground_truth = T_global_camera * ground_truth
-        track = FeatureTrack(track_id, frame_id, kp, ground_truth=ground_truth)
+        track = FeatureTrack(track_id,
+                             frame_id,
+                             kp,
+                             ground_truth=ground_truth,
+                             pos=[pos],
+                             rpy=[rpy])
 
         self.features_tracking.append(feature_id)
         self.features_buffer[feature_id] = track_id
@@ -325,7 +251,7 @@ class DatasetGenerator(object):
 
         self.debug("- [track_id: %d, feature_id: %d]" % (track_id, feature_id))
 
-    def update_feature_track(self, feature_id, kp):
+    def update_feature_track(self, feature_id, kp, pos, rpy):
         """Update feature track
 
         Parameters
@@ -339,9 +265,12 @@ class DatasetGenerator(object):
         track_id = self.features_buffer[feature_id]
         track = self.tracks_buffer[track_id]
 
-        track.update(self.counter_frame_id, kp)
-        self.debug("Update [track_id: %d, feature_id: %d]" %
-                   (track_id, feature_id))
+        if track.tracked_length() > 20:
+            self.remove_feature_track(feature_id)
+        else:
+            track.update(self.counter_frame_id, kp, pos, rpy)
+            self.debug("Update [track_id: %d, feature_id: %d]" %
+                       (track_id, feature_id))
 
     def detect(self, pos, rpy):
         """Update tracker with current image
@@ -378,9 +307,9 @@ class DatasetGenerator(object):
             kp = KeyPoint(kp, 0)
 
             if feature_id not in self.features_tracking:
-                self.add_feature_track(feature_id, kp)
+                self.add_feature_track(feature_id, kp, pos, rpy)
             else:
-                self.update_feature_track(feature_id, kp)
+                self.update_feature_track(feature_id, kp, pos, rpy)
 
         self.debug("tracks_tracking: {}".format(self.tracks_tracking))
         self.debug("features_tracking: {}\n".format(self.features_tracking))
@@ -392,12 +321,18 @@ class DatasetGenerator(object):
             return []
 
         # Make a copy of current lost tracks
-        lost_tracks = copy.deepcopy(self.tracks_lost)
+        lost_tracks = []
+        for track in self.tracks_lost:
+            lost_tracks.append(track)
 
         # Reset tracks lost array
         self.tracks_lost = []
 
-        return lost_tracks
+        # Filter and return lost tracks
+        if len(lost_tracks) > 20:
+            return lost_tracks[:20]
+        else:
+            return lost_tracks
 
     def get_feature_position(self, feature_id):
         """Returns feature position"""
@@ -416,10 +351,10 @@ class DatasetGenerator(object):
         # Update motion model
         self.pos = self.pos + self.vel * self.dt
         self.vel = self.vel + self.acc * self.dt
+        self.a_B = self.a_B + np.random.normal(0.0, 0.001, 3).reshape((3, 1))
+        self.w_B = self.w_B + np.random.normal(0.0, 0.001, 3).reshape((3, 1))
         self.acc = dot(R(self.att, 321), self.a_B)
-        self.a_B = self.a_B + np.random.normal(0.0, 0.001)
         self.att = self.att + dot(R(self.att, 321), self.w_B) * self.dt
-        self.w_B = self.w_B + np.random.normal(0.0, 0.001)
 
         # Check feature
         self.detect(self.pos, self.att)
@@ -436,33 +371,12 @@ class DatasetGenerator(object):
 
         imu_accel = self.a_B + np.random.normal(0.0, 0.05)
         imu_gyro = self.w_B + np.random.normal(0.0, 0.05)
+        # imu_accel = self.a_B
+        # imu_gyro = self.w_B
 
         return (imu_accel, imu_gyro)
-
-    def estimate(self):
-        pass
 
     def simulate_test_data(self):
         """Simulate test data"""
         for i in range(300):
             self.step()
-
-    def generate_test_data(self, save_dir):
-        """Generate test data
-
-        Parameters
-        ----------
-        save_dir : str
-            Path to save output
-
-        """
-        # mkdir calibration directory
-        os.mkdir(save_dir)
-
-        # Simulate test data
-        self.simulate_test_data()
-
-        # Output features and robot state
-        # self.output_features(save_dir)
-        # self.output_robot_state(save_dir)
-        # self.output_observed(save_dir)

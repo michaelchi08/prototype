@@ -22,7 +22,7 @@ from prototype.vision.data.dataset import DatasetGenerator
 from prototype.vision.data.dataset import DatasetFeatureEstimator
 from prototype.viz.plot_matrix import PlotMatrix
 
-from prototype.estimation.msckf.msckf import MSCKF
+from prototype.msckf.msckf import MSCKF
 
 # GLOBAL VARIABLE
 RAW_DATASET = "/data/kitti/raw"
@@ -60,12 +60,10 @@ class MSCKFTest(unittest.TestCase):
         # Ground truth
         plt.plot(pos_true[0, :], pos_true[1, :],
                  color="red", label="Grouth truth")
-                 # color="red", marker="x", label="Grouth truth")
 
         # Estimated
         plt.plot(pos_est[0, :], pos_est[1, :],
                  color="blue", label="Estimated")
-                 # color="blue", marker="o", label="Estimated")
 
         # Sliding window
         cam_pos = []
@@ -74,7 +72,6 @@ class MSCKFTest(unittest.TestCase):
         cam_pos = np.array(cam_pos).reshape((len(cam_pos), 3)).T
         plt.plot(cam_pos[0, :], cam_pos[1, :],
                  color="green", label="Camera Poses")
-                 # color="green", marker="o", label="Camera Poses")
 
         # Plot labels and legends
         plt.xlabel("East (m)")
@@ -141,7 +138,7 @@ class MSCKFTest(unittest.TestCase):
         plt.title("x-axis")
         plt.legend(loc=0)
         plt.xlabel("Date Time")
-        plt.ylabel("rad s^-1")
+        plt.ylabel("radians")
 
         # Y axis
         plt.subplot(312)
@@ -151,7 +148,7 @@ class MSCKFTest(unittest.TestCase):
         plt.title("y-axis")
         plt.legend(loc=0)
         plt.xlabel("Date Time")
-        plt.ylabel("rad s^-1")
+        plt.ylabel("radians")
 
         # Z axis
         plt.subplot(313)
@@ -161,7 +158,7 @@ class MSCKFTest(unittest.TestCase):
         plt.title("z-axis")
         plt.legend(loc=0)
         plt.xlabel("Date Time")
-        plt.ylabel("rad s^-1")
+        plt.ylabel("radians")
 
     def test_init(self):
         self.assertEqual(self.msckf.N(), 1)
@@ -268,14 +265,12 @@ class MSCKFTest(unittest.TestCase):
         cam_model = PinholeCameraModel(1242, 375, K)
 
         # Initialize MSCKF
-        v0 = data.get_inertial_velocity(0)
-        q0 = euler2quat(data.get_attitude(0))
         msckf = MSCKF(n_g=1e-6 * np.ones(3),
                       n_a=1e-6 * np.ones(3),
                       n_wg=1e-6 * np.ones(3),
                       n_wa=1e-6 * np.ones(3),
-                      imu_q_IG=q0,
-                      imu_v_G=v0,
+                      imu_q_IG=euler2quat(data.get_attitude(0)),
+                      imu_v_G=data.get_inertial_velocity(0),
                       cam_model=cam_model,
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
                       ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
@@ -330,14 +325,12 @@ class MSCKFTest(unittest.TestCase):
         dataset = DatasetGenerator()
 
         # Initialize MSCKF
-        v0 = dataset.vel
-        q0 = euler2quat(np.zeros((3, 1)))
         msckf = MSCKF(n_g=1e-6 * np.ones(3),
                       n_a=1e-6 * np.ones(3),
                       n_wg=1e-6 * np.ones(3),
                       n_wa=1e-6 * np.ones(3),
-                      imu_q_IG=q0,
-                      imu_v_G=v0,
+                      imu_q_IG=dataset.vel,
+                      imu_v_G=euler2quat(np.zeros((3, 1))),
                       cam_model=dataset.cam_model,
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
                       ext_q_CI=np.array([0.0, 0.0, 0.0, 1.0]))
@@ -373,28 +366,42 @@ class MSCKFTest(unittest.TestCase):
             plt.show()
 
     def test_track_residuals(self):
-        # Setup feature track
-        track_id = 0
-        frame_id = 3
-        data0 = KeyPoint(np.array([320.0, 240.0]), 21)
-        data1 = KeyPoint(np.array([320.0, 240.0]), 21)
-        track = FeatureTrack(track_id, frame_id, data0, data1)
-
         # Setup track cam states
+        # -- Camera state 0
+        self.msckf.imu_state.p_G = np.array([0.0, 0.0, 0.0]).reshape((3, 1))
         self.msckf.augment_state()
+        # -- Camera state 1
+        self.msckf.imu_state.p_G = np.array([1.0, 1.0, 0.0]).reshape((3, 1))
         self.msckf.augment_state()
+        # -- Camera state 2
+        self.msckf.imu_state.p_G = np.array([2.0, 2.0, 0.0]).reshape((3, 1))
         self.msckf.augment_state()
+        # -- Camera state 3
+        self.msckf.imu_state.p_G = np.array([3.0, 3.0, 0.0]).reshape((3, 1))
         self.msckf.augment_state()
-        track_cam_states = self.msckf.track_cam_states(track)
 
         # Setup feature
-        p_f_G = np.array([[10.0], [0.0], [0.0]])
+        p_G_f = np.array([[10.0], [1.0], [0.0]])
+
+        # Setup feature track
+        C_C2G = C(self.msckf.cam_states[2].q_CG)
+        C_C3G = C(self.msckf.cam_states[3].q_CG)
+        p_G_C2 = self.msckf.cam_states[2].p_G
+        p_G_C3 = self.msckf.cam_states[3].p_G
+        kp1 = self.cam_model.project(p_G_f, C_C2G, p_G_C2.reshape((3, 1)))[0:2]
+        kp2 = self.cam_model.project(p_G_f, C_C3G, p_G_C3.reshape((3, 1)))[0:2]
+        track_id = 0
+        frame_id = 3
+        data0 = KeyPoint(kp1, 21)
+        data1 = KeyPoint(kp2, 21)
+        track = FeatureTrack(track_id, frame_id, data0, data1)
 
         # Test
+        track_cam_states = self.msckf.track_cam_states(track)
         r_j = self.msckf.track_residuals(self.cam_model,
                                          track,
                                          track_cam_states,
-                                         p_f_G)
+                                         p_G_f)
 
         # Assert
         self.assertEqual(r_j.shape, (4, 1))
@@ -480,167 +487,171 @@ class MSCKFTest(unittest.TestCase):
         # Test
         self.msckf.calculate_residuals([track])
 
-    # def test_measurement_update(self):
-    #     # Setup
-    #     dataset = DatasetGenerator(dt=0.1)
-    #
-    #     # Initialize MSCKF
-    #     q0 = euler2quat(np.zeros((3, 1)))
-    #     v0 = dataset.vel
-    #     msckf = MSCKF(n_g=0.001 * np.ones(3),
-    #                   n_a=0.001 * np.ones(3),
-    #                   n_wg=0.001 * np.ones(3),
-    #                   n_wa=0.001 * np.ones(3),
-    #                   imu_q_IG=q0,
-    #                   imu_v_G=v0,
-    #                   cam_model=dataset.cam_model,
-    #                   ext_p_IC=np.array([0.0, 0.0, 0.0]),
-    #                   ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
-    #                   # feature_estimator=DatasetFeatureEstimator())
-    #
-    #     # cov_plot = PlotMatrix(msckf.P())
-    #     # plt.show(block=False)
-    #
-    #     # Setup state history storage and covariance plot
-    #     pos_est = msckf.imu_state.p_G
-    #     vel_est = msckf.imu_state.v_G
-    #     att_est = quat2euler(msckf.imu_state.q_IG)
-    #
-    #     np.random.seed(0)
-    #
-    #     # Loop through data
-    #     for i in range(1, 100):
-    #         print("frame: %d" % i)
-    #
-    #         # Prediction update
-    #         a_m, w_m = dataset.step()
-    #         dt = dataset.dt
-    #         msckf.prediction_update(a_m, w_m, dt)
-    #
-    #         # Measurement update
-    #         tracks = dataset.remove_lost_tracks()
-    #         msckf.measurement_update(tracks)
-    #
-    #         # cov_plot.update(msckf.P())
-    #
-    #         pos = msckf.imu_state.p_G
-    #         vel = msckf.imu_state.v_G
-    #         att = quat2euler(msckf.imu_state.q_IG)
-    #
-    #         pos_est = np.hstack((pos_est, pos))
-    #         vel_est = np.hstack((vel_est, vel))
-    #         att_est = np.hstack((att_est, att))
-    #
-    #     # Plot
-    #     # debug = True
-    #     debug = False
-    #     if debug:
-    #         # Position
-    #         self.plot_position(dataset.pos_true,
-    #                            pos_est,
-    #                            msckf.cam_states)
-    #
-    #         # Velocity
-    #         self.plot_velocity(dataset.time_true,
-    #                            dataset.vel_true,
-    #                            vel_est)
-    #
-    #         # Attitude
-    #         self.plot_attitude(dataset.time_true,
-    #                            dataset.att_true,
-    #                            att_est)
-    #
-    #         # data.plot_accelerometer()
-    #         # data.plot_gyroscope()
-    #         plt.show()
-    #
-    # def test_measurement_update2(self):
-    #     # Setup
-    #     # data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
-    #     data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
-    #     # data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
-    #     # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
-    #     K = data.calib_cam2cam["P_rect_00"].reshape((3, 4))[0:3, 0:3]
-    #     cam_model = PinholeCameraModel(1242, 375, K)
-    #
-    #
-    #     # Initialize MSCKF
-    #     v0 = data.get_inertial_velocity(0)
-    #     q0 = euler2quat(data.get_attitude(0))
-    #     msckf = MSCKF(n_g=4e-2 * np.ones(3),
-    #                   n_a=4e-2 * np.ones(3),
-    #                   n_wg=1e-6 * np.ones(3),
-    #                   n_wa=1e-6 * np.ones(3),
-    #                   imu_q_IG=q0,
-    #                   imu_v_G=v0,
-    #                   cam_model=cam_model,
-    #                   ext_p_IC=np.zeros((3, 1)),
-    #                   ext_q_CI=np.array([0.49921, -0.49657, 0.50291, -0.50129]))
-    #
-    #     # cov_plot = PlotMatrix(msckf.P())
-    #     # plt.show(block=False)
-    #
-    #     # Initialize feature tracker
-    #     img = cv2.imread(data.image_00_files[0])
-    #     tracker = FeatureTracker()
-    #     tracker.update(img)
-    #
-    #     # Setup state history storage and covariance plot
-    #     pos_est = msckf.imu_state.p_G
-    #     vel_est = msckf.imu_state.v_G
-    #     att_est = quat2euler(msckf.imu_state.q_IG)
-    #
-    #     # Loop through data
-    #     # for i in range(1, 100):
-    #     for i in range(1, len(data.oxts)):
-    #         print("frame %d" % i)
-    #         # Track features
-    #         img = cv2.imread(data.image_00_files[i])
-    #         # tracker.update(img, True)
-    #         # key = cv2.waitKey(1)
-    #         # if key == 113:
-    #         #     exit(0)
-    #         tracker.update(img)
-    #         tracks = tracker.remove_lost_tracks()
-    #
-    #         # Accelerometer and gyroscope and dt measurements
-    #         a_m, w_m = data.get_imu_measurements(i)
-    #         dt = data.get_dt(i)
-    #
-    #         # MSCKF prediction and measurement update
-    #         msckf.prediction_update(a_m, w_m, dt)
-    #         msckf.measurement_update(tracks)
-    #
-    #         # cov_plot.update(msckf.P())
-    #
-    #         # Store history
-    #         pos = msckf.imu_state.p_G
-    #         vel = msckf.imu_state.v_G
-    #         att = quat2euler(msckf.imu_state.q_IG)
-    #
-    #         pos_est = np.hstack((pos_est, pos))
-    #         vel_est = np.hstack((vel_est, vel))
-    #         att_est = np.hstack((att_est, att))
-    #
-    #     # Plot
-    #     debug = True
-    #     # debug = False
-    #     if debug:
-    #         # Position
-    #         self.plot_position(data.get_local_position(),
-    #                            pos_est,
-    #                            msckf.cam_states)
-    #
-    #         # Velocity
-    #         self.plot_velocity(data.get_timestamps(),
-    #                            data.get_inertial_velocity(),
-    #                            vel_est)
-    #
-    #         # Attitude
-    #         self.plot_attitude(data.get_timestamps(),
-    #                            data.get_attitude(),
-    #                            att_est)
-    #
-    #         # data.plot_accelerometer()
-    #         # data.plot_gyroscope()
-    #         plt.show()
+    def test_measurement_update(self):
+        # Setup
+        dataset = DatasetGenerator(dt=0.1)
+
+        print(dataset.features_buffer)
+        exit(-1)
+
+        # Initialize MSCKF
+        msckf = MSCKF(n_g=1e-3 * np.ones(3),
+                      n_a=1e-3 * np.ones(3),
+                      n_wg=1e-3 * np.ones(3),
+                      n_wa=1e-3 * np.ones(3),
+                      imu_q_IG=euler2quat(np.zeros((3, 1))),
+                      imu_v_G=dataset.vel,
+                      cam_model=dataset.cam_model,
+                      ext_p_IC=np.array([0.0, 0.0, 0.0]),
+                      ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
+                      # feature_estimator=DatasetFeatureEstimator())
+        msckf.enable_qr_trick = False
+        msckf.enable_ns_trick = False
+
+        cov_plot = PlotMatrix(msckf.P())
+        # gain_plot = PlotMatrix(msckf.K)
+        # plt.show(block=False)
+
+        # Setup state history storage and covariance plot
+        pos_est = msckf.imu_state.p_G
+        vel_est = msckf.imu_state.v_G
+        att_est = quat2euler(msckf.imu_state.q_IG)
+
+        np.random.seed(0)
+
+        # Loop through data
+        for i in range(1, 150):
+            print("frame: %d, window size: %d" % (i, len(msckf.cam_states)))
+
+            # Prediction update
+            a_m, w_m = dataset.step()
+            dt = dataset.dt
+            msckf.prediction_update(a_m, w_m, dt)
+
+            # msckf.imu_state.v_G = dataset.vel
+            # msckf.imu_state.p_G = dataset.pos
+
+            # Measurement update
+            tracks = dataset.remove_lost_tracks()
+            retval = msckf.measurement_update(tracks)
+            cov_plot.update(msckf.P())
+            # gain_plot.update(msckf.K)
+
+            # Record states
+            pos = msckf.imu_state.p_G
+            vel = msckf.imu_state.v_G
+            att = quat2euler(msckf.imu_state.q_IG)
+            pos_est = np.hstack((pos_est, pos))
+            vel_est = np.hstack((vel_est, vel))
+            att_est = np.hstack((att_est, att))
+
+            if retval == 'q':
+                break
+
+        # Plot
+        debug = True
+        # debug = False
+        if debug:
+            # Position
+            self.plot_position(dataset.pos_true, pos_est, msckf.cam_states)
+
+            # Velocity
+            self.plot_velocity(dataset.time_true, dataset.vel_true, vel_est)
+
+            # Attitude
+            self.plot_attitude(dataset.time_true, dataset.att_true, att_est)
+
+            # data.plot_accelerometer()
+            # data.plot_gyroscope()
+            plt.show()
+
+    def test_measurement_update2(self):
+        # Setup
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0001")
+        data = RawSequence(RAW_DATASET, "2011_09_26", "0005")
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0046")
+        # data = RawSequence(RAW_DATASET, "2011_09_26", "0036")
+        K = data.calib_cam2cam["P_rect_00"].reshape((3, 4))[0:3, 0:3]
+        cam_model = PinholeCameraModel(1242, 375, K)
+
+
+        # Initialize MSCKF
+        v0 = data.get_inertial_velocity(0)
+        q0 = euler2quat(data.get_attitude(0))
+        msckf = MSCKF(n_g=4e-2 * np.ones(3),
+                      n_a=4e-2 * np.ones(3),
+                      n_wg=1e-6 * np.ones(3),
+                      n_wa=1e-6 * np.ones(3),
+                      imu_q_IG=q0,
+                      imu_v_G=v0,
+                      cam_model=cam_model,
+                      ext_p_IC=np.zeros((3, 1)),
+                      ext_q_CI=np.array([0.49921, -0.49657, 0.50291, -0.50129]))
+
+        # cov_plot = PlotMatrix(msckf.P())
+        # plt.show(block=False)
+
+        # Initialize feature tracker
+        img = cv2.imread(data.image_00_files[0])
+        tracker = FeatureTracker()
+        tracker.update(img)
+
+        # Setup state history storage and covariance plot
+        pos_est = msckf.imu_state.p_G
+        vel_est = msckf.imu_state.v_G
+        att_est = quat2euler(msckf.imu_state.q_IG)
+
+        # Loop through data
+        # for i in range(1, 100):
+        for i in range(1, len(data.oxts)):
+            print("frame %d" % i)
+            # Track features
+            img = cv2.imread(data.image_00_files[i])
+            # tracker.update(img, True)
+            # key = cv2.waitKey(1)
+            # if key == 113:
+            #     exit(0)
+            tracker.update(img)
+            tracks = tracker.remove_lost_tracks()
+
+            # Accelerometer and gyroscope and dt measurements
+            a_m, w_m = data.get_imu_measurements(i)
+            dt = data.get_dt(i)
+
+            # MSCKF prediction and measurement update
+            msckf.prediction_update(a_m, w_m, dt)
+            msckf.measurement_update(tracks)
+
+            # cov_plot.update(msckf.P())
+
+            # Store history
+            pos = msckf.imu_state.p_G
+            vel = msckf.imu_state.v_G
+            att = quat2euler(msckf.imu_state.q_IG)
+
+            pos_est = np.hstack((pos_est, pos))
+            vel_est = np.hstack((vel_est, vel))
+            att_est = np.hstack((att_est, att))
+
+        # Plot
+        debug = True
+        # debug = False
+        if debug:
+            # Position
+            self.plot_position(data.get_local_position(),
+                               pos_est,
+                               msckf.cam_states)
+
+            # Velocity
+            self.plot_velocity(data.get_timestamps(),
+                               data.get_inertial_velocity(),
+                               vel_est)
+
+            # Attitude
+            self.plot_attitude(data.get_timestamps(),
+                               data.get_attitude(),
+                               att_est)
+
+            # data.plot_accelerometer()
+            # data.plot_gyroscope()
+            plt.show()

@@ -4,7 +4,7 @@ import numpy as np
 from numpy import allclose
 from numpy import array_equal
 
-from prototype.estimation.msckf.camera_state import CameraState
+from prototype.msckf.camera_state import CameraState
 
 
 class CameraStateTest(unittest.TestCase):
