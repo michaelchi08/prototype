@@ -330,7 +330,7 @@ class MSCKF:
             z_hat = np.array([cu, cv])
 
             # Transform idealized measurement
-            z = cam_model.pixel2image(track.track[i].pt)
+            z = cam_model.pixel2image(track.track[i].pt).reshape((1, 2))
 
             # Calculate reprojection error and add it to the residual vector
             rs = 2 * i
@@ -552,13 +552,13 @@ class MSCKF:
         # Continue with EKF update?
         if len(tracks) == 0:
             # self.prune_camera_states()
-            return
+            return False
 
         # Calculate residuals
         T_H, r_n, R_n = self.calculate_residuals(tracks)
         if T_H is None and r_n is None and R_n is None:
             # self.prune_camera_states()
-            return
+            return False
 
         # Calculate Kalman gain
         P = self.P()
@@ -574,8 +574,8 @@ class MSCKF:
         x_cam_size = self.cam_states[0].size
         N = self.N()
 
-        A = I(x_imu_size + x_cam_size * N) - dot(K, T_H)
-        P_corrected = dot(A, dot(P, A.T)) + dot(K, dot(R_n, K.T))
+        I_KH = I(x_imu_size + x_cam_size * N) - dot(K, T_H)
+        P_corrected = dot(I_KH, dot(P, I_KH.T)) + dot(K, dot(R_n, K.T))
 
         self.imu_state.P = P_corrected[0:x_imu_size, 0:x_imu_size]
         self.P_cam = P_corrected[x_imu_size:, x_imu_size:]
@@ -583,3 +583,5 @@ class MSCKF:
 
         # Prune camera states
         # self.prune_camera_states()
+
+        return True

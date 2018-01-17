@@ -46,10 +46,6 @@ class DatasetFeatureEstimator:
         # Get ground truth
         p_G_f = track.ground_truth
 
-        # p_G_f[0] += 0.1
-        # p_G_f[1] -= 0.1
-        # p_G_f[2] += 0.1
-
         # Convert ground truth expressed in global frame
         # to be expressed in camera 0
         C_C0G = C(track_cam_states[0].q_CG)
@@ -265,12 +261,12 @@ class DatasetGenerator(object):
         track_id = self.features_buffer[feature_id]
         track = self.tracks_buffer[track_id]
 
-        if track.tracked_length() > 20:
-            self.remove_feature_track(feature_id)
-        else:
-            track.update(self.counter_frame_id, kp, pos, rpy)
-            self.debug("Update [track_id: %d, feature_id: %d]" %
-                       (track_id, feature_id))
+        # if track.tracked_length() > 20:
+        #     self.remove_feature_track(feature_id)
+        # else:
+        track.update(self.counter_frame_id, kp, pos, rpy)
+        self.debug("Update [track_id: %d, feature_id: %d]" %
+                    (track_id, feature_id))
 
     def detect(self, pos, rpy):
         """Update tracker with current image
@@ -329,10 +325,10 @@ class DatasetGenerator(object):
         self.tracks_lost = []
 
         # Filter and return lost tracks
-        if len(lost_tracks) > 20:
-            return lost_tracks[:20]
-        else:
-            return lost_tracks
+        # if len(lost_tracks) > 300:
+        #     return lost_tracks[:300]
+        # else:
+        return lost_tracks
 
     def get_feature_position(self, feature_id):
         """Returns feature position"""

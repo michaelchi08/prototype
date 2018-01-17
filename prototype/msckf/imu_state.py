@@ -95,8 +95,8 @@ class IMUState:
         F[0:3, 0:3] = -skew(w_hat)
         F[0:3, 3:6] = -I(3)
         # -- Third Row --
-        F[6:9, 0:3] = dot(-C(q_hat).T, skew(a_hat))
-        F[6:9, 6:9] = dot(-2.0, skew(w_G))
+        F[6:9, 0:3] = -dot(C(q_hat).T, skew(a_hat))
+        F[6:9, 6:9] = -2.0 * skew(w_G)
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skewsq(w_G)
         # -- Fifth Row --
@@ -194,23 +194,19 @@ class IMUState:
         a_hat = a_m
         w_hat = w_m
 
-        # Propagate IMU states
-        # -- Orientation
-        self.q_IG = self.q_IG + 0.5 * dot(Omega(w_hat), self.q_IG) * dt
-        self.q_IG = quatnormalize(self.q_IG)
-        # -- Gyro bias
-        self.b_g = self.b_g + zeros((3, 1))
-        # -- Velocity
-        self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
-        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # NOQA
-        # -- Accel bias
-        self.b_a = self.b_a + zeros((3, 1))
-        # -- Position
-        self.p_G = self.p_G + self.v_G * dt
-
         # Build the jacobians F and G
         F = self.F(w_hat, self.q_IG, a_hat, self.w_G)
         G = self.G(self.q_IG)
+
+        # Propagate IMU states
+        # -- Orientation
+        self.q_IG += dot(0.5 * Omega(w_hat), self.q_IG) * dt
+        # self.q_IG = quatnormalize(self.q_IG)
+        # -- Velocity
+        self.v_G += (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G)) * dt
+        # self.v_G = self.v_G + (dot(C(self.q_IG).T, a_hat) - 2 * dot(skew(self.w_G), self.v_G) - dot(skewsq(self.w_G), self.p_G) + self.g_G) * dt  # NOQA
+        # -- Position
+        self.p_G += self.v_G * dt
 
         # Update covariance
         Phi = I(self.size) + F * dt

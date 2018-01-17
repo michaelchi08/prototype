@@ -167,6 +167,65 @@ class MSCKFTest(unittest.TestCase):
         self.assertEqual(self.msckf.P_cam.shape, (6, 6))
         self.assertEqual(self.msckf.P_imu_cam.shape, (15, 6))
 
+        # Plot matrix
+        # debug = True
+        debug = False
+        if debug:
+            ax = plt.subplot(311)
+            ax.matshow(self.msckf.P())
+            ax = plt.subplot(312)
+            ax.matshow(self.msckf.P_cam)
+            ax = plt.subplot(313)
+            ax.matshow(self.msckf.P_imu_cam)
+            plt.show()
+
+    def test_P(self):
+        self.assertEqual(self.msckf.P().shape, (21, 21))
+
+        # Plot matrix
+        # debug = True
+        debug = False
+        if debug:
+            ax = plt.subplot(111)
+            ax.matshow(self.msckf.P())
+            plt.show()
+
+    def test_N(self):
+        self.assertEqual(self.msckf.N(), 1)
+
+    def test_H(self):
+        # Setup feature track
+        track_id = 0
+        frame_id = 3
+        data0 = KeyPoint(np.array([0.0, 0.0]), 21)
+        data1 = KeyPoint(np.array([0.0, 0.0]), 21)
+        track = FeatureTrack(track_id, frame_id, data0, data1)
+
+        # Setup track cam states
+        self.msckf.augment_state()
+        self.msckf.augment_state()
+        self.msckf.augment_state()
+        track_cam_states = self.msckf.track_cam_states(track)
+
+        # Feature position
+        p_G_f = np.array([[1.0], [2.0], [3.0]])
+
+        # Test
+        H_f_j, H_x_j = self.msckf.H(track, track_cam_states, p_G_f)
+
+        # Assert
+        self.assertEqual(H_f_j.shape, (4, 3))
+        self.assertEqual(H_x_j.shape, (4, 39))
+
+        # Plot matrix
+        debug = True
+        # debug = False
+        if debug:
+            plt.matshow(H_f_j)
+            plt.show()
+            plt.matshow(H_x_j)
+            plt.show()
+
     def test_augment_state(self):
         self.msckf.augment_state()
 
@@ -211,52 +270,6 @@ class MSCKFTest(unittest.TestCase):
         self.assertEqual(track_cam_states[0].frame_id, track.frame_start)
         self.assertEqual(track_cam_states[1].frame_id, track.frame_end)
 
-    def test_P(self):
-        self.assertEqual(self.msckf.P().shape, (21, 21))
-
-        # Plot matrix
-        # debug = True
-        debug = False
-        if debug:
-            ax = plt.subplot(111)
-            ax.matshow(self.msckf.P())
-            plt.show()
-
-    def test_N(self):
-        self.assertEqual(self.msckf.N(), 1)
-
-    def test_H(self):
-        # Setup feature track
-        track_id = 0
-        frame_id = 3
-        data0 = KeyPoint(np.array([0.0, 0.0]), 21)
-        data1 = KeyPoint(np.array([0.0, 0.0]), 21)
-        track = FeatureTrack(track_id, frame_id, data0, data1)
-
-        # Setup track cam states
-        self.msckf.augment_state()
-        self.msckf.augment_state()
-        self.msckf.augment_state()
-        track_cam_states = self.msckf.track_cam_states(track)
-
-        # Feature position
-        p_G_f = np.array([[1.0], [2.0], [3.0]])
-
-        # Test
-        H_f_j, H_x_j = self.msckf.H(track, track_cam_states, p_G_f)
-
-        # Assert
-        self.assertEqual(H_f_j.shape, (4, 3))
-        self.assertEqual(H_x_j.shape, (4, 39))
-
-        # Plot matrix
-        # debug = True
-        debug = False
-        if debug:
-            plt.matshow(H_f_j)
-            plt.show()
-            plt.matshow(H_x_j)
-            plt.show()
 
     def test_prediction_update(self):
         # Setup
@@ -440,12 +453,15 @@ class MSCKFTest(unittest.TestCase):
         self.msckf.cam_states[1].p_G = p_G_C1.reshape((3, 1))
         self.msckf.cam_states[1].q_CG = q_C1G.reshape((4, 1))
 
+        print(self.msckf.cam_states[0])
+        print(self.msckf.cam_states[1])
+
         # Test
         # self.msckf.enable_ns_trick = False
         H_o_j, r_o_j, R_o_j = self.msckf.residualize_track(track)
 
-        # plt.matshow(H_o_j)
-        # plt.show()
+        plt.matshow(H_o_j)
+        plt.show()
         # plt.matshow(r_o_j)
         # plt.show()
         # plt.matshow(R_o_j)
@@ -491,24 +507,21 @@ class MSCKFTest(unittest.TestCase):
         # Setup
         dataset = DatasetGenerator(dt=0.1)
 
-        print(dataset.features_buffer)
-        exit(-1)
-
         # Initialize MSCKF
-        msckf = MSCKF(n_g=1e-3 * np.ones(3),
-                      n_a=1e-3 * np.ones(3),
-                      n_wg=1e-3 * np.ones(3),
-                      n_wa=1e-3 * np.ones(3),
+        msckf = MSCKF(n_g=4.2e-2 * np.ones(3),
+                      n_a=4.2e-2 * np.ones(3),
+                      n_wg=1e-6 * np.ones(3),
+                      n_wa=1e-6 * np.ones(3),
                       imu_q_IG=euler2quat(np.zeros((3, 1))),
                       imu_v_G=dataset.vel,
                       cam_model=dataset.cam_model,
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
                       ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
                       # feature_estimator=DatasetFeatureEstimator())
-        msckf.enable_qr_trick = False
-        msckf.enable_ns_trick = False
+        msckf.enable_qr_trick = True
+        msckf.enable_ns_trick = True
 
-        cov_plot = PlotMatrix(msckf.P())
+        # cov_plot = PlotMatrix(msckf.P())
         # gain_plot = PlotMatrix(msckf.K)
         # plt.show(block=False)
 
@@ -520,9 +533,7 @@ class MSCKFTest(unittest.TestCase):
         np.random.seed(0)
 
         # Loop through data
-        for i in range(1, 150):
-            print("frame: %d, window size: %d" % (i, len(msckf.cam_states)))
-
+        for i in range(1, 100):
             # Prediction update
             a_m, w_m = dataset.step()
             dt = dataset.dt
@@ -534,7 +545,9 @@ class MSCKFTest(unittest.TestCase):
             # Measurement update
             tracks = dataset.remove_lost_tracks()
             retval = msckf.measurement_update(tracks)
-            cov_plot.update(msckf.P())
+            # if retval == 'q':
+            #     break
+            # cov_plot.update(msckf.P())
             # gain_plot.update(msckf.K)
 
             # Record states
@@ -545,8 +558,7 @@ class MSCKFTest(unittest.TestCase):
             vel_est = np.hstack((vel_est, vel))
             att_est = np.hstack((att_est, att))
 
-            if retval == 'q':
-                break
+            print("frame: %d, window size: %d, updated?: %r" % (i, len(msckf.cam_states), retval))
 
         # Plot
         debug = True
