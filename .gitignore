@@ -16,7 +16,4 @@ dist/
 .ropeproject
 
 tags
-run.sh
 unittests_log
-
-
