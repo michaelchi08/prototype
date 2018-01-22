@@ -49,7 +49,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_residualize_track
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_calculate_residuals
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_estimate_feature
-python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_measurement_update
+# python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_measurement_update
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_measurement_update2
 
 # python3 -m unittest prototype.tests.models.test_imu
@@ -86,7 +86,7 @@ python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_measurement_
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-# python3 -m unittest prototype.tests.viz.test_plot_gimbal
+python3 -m unittest prototype.tests.viz.test_plot_gimbal
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 
 # python3 prototype/viz.py

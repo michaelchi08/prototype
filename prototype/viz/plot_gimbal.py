@@ -2,6 +2,7 @@ from math import cos
 from math import sin
 
 import numpy as np
+from numpy import dot
 from numpy.linalg import inv
 from scipy.linalg import norm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection  # NOQA
@@ -69,9 +70,13 @@ def plot_3d_cylinder(ax, radius, height, origin, orientation, color):
     p1 = np.array([height, 0.0, 0.0])  # Point at other end
 
     # Rotate cylinder origin
-    R = euler2rot([deg2rad(i) for i in orientation], 123)
-    p0 = np.dot(R, p0)
-    p1 = np.dot(R, p1)
+    R = None
+    if orientation.shape == (3, 3):
+        R = orientation
+    else:
+        R = euler2rot([deg2rad(i) for i in orientation], 123)
+    p0 = dot(R, p0)
+    p1 = dot(R, p1)
 
     # Translate cylinder origin
     p0 += origin
@@ -151,7 +156,7 @@ def plot_3d_cube(ax, width, origin, orientation):
 
     # Rotate Cube
     R = euler2rot([deg2rad(i) for i in orientation], 123)
-    points = np.array([np.dot(R, pt) for pt in points])
+    points = np.array([dot(R, pt) for pt in points])
 
     # Translate Cube
     points += origin
@@ -236,39 +241,6 @@ class GimbalPlot:
             Plot axes
 
         """
-        # Draw origin to roll motor
-        ax.plot([self.origin[0], self.roll_motor_base[0]],
-                [self.origin[1], self.roll_motor_base[1]],
-                [self.origin[2], self.roll_motor_base[2]],
-                linewidth=2.0,
-                zorder=100,
-                marker="o",
-                color="blue")
-
-        # Draw roll motor
-        plot_3d_cylinder(ax,
-                         0.04,
-                         0.08,
-                         self.roll_motor_base,
-                         self.roll_motor_attitude,
-                         "red")
-
-        # # Draw roll bar
-        # ax.plot([self.roll_motor_base[0], self.roll_motor_base[0]],
-        #         [self.roll_motor_base[1], self.pitch_motor_base[1]],
-        #         [self.roll_motor_base[2], self.pitch_motor_base[2]],
-        #         linewidth=2.0,
-        #         zorder=100,
-        #         marker="o",
-        #         color="blue")
-        #
-        # ax.plot([self.roll_motor_base[0], self.pitch_motor_base[0]],
-        #         [self.pitch_motor_base[1], self.pitch_motor_base[1]],
-        #         [self.pitch_motor_base[2], self.pitch_motor_base[2]],
-        #         linewidth=2.0,
-        #         zorder=100,
-        #         marker="o",
-        #         color="blue")
 
     def draw_pitch_gimbal(self, ax):
         """ Draw pitch gimbal
@@ -297,6 +269,26 @@ class GimbalPlot:
         """
         plot_3d_cube(ax, 0.1, self.camera_origin, self.camera_attitude)
 
+    def plot_coord_frame(self, ax, T, length=0.1):
+        R = T[0:3, 0:3]
+        t = T[0:3, 3]
+
+        axis_x = dot(R, np.array([length, 0.0, 0.0])) + t
+        axis_y = dot(R, np.array([0.0, length, 0.0])) + t
+        axis_z = dot(R, np.array([0.0, 0.0, length])) + t
+
+        ax.plot([t[0], axis_x[0]],
+                [t[1], axis_x[1]],
+                [t[2], axis_x[2]], color="red")
+
+        ax.plot([t[0], axis_y[0]],
+                [t[1], axis_y[1]],
+                [t[2], axis_y[2]], color="green")
+
+        ax.plot([t[0], axis_z[0]],
+                [t[1], axis_z[1]],
+                [t[2], axis_z[2]], color="blue")
+
     def plot(self, ax):
         """ Plot gimbal
 
@@ -306,19 +298,10 @@ class GimbalPlot:
             Plot axes
 
         """
-        # # End effector to camera frame
-        # rpy = [0.0, 0.0, 0.0]
-        # R_c = euler2rot([deg2rad(i) for i in rpy], 123).reshape(3, 3)
-        # t_c = np.array([0.0, 0.0, 0.0]).reshape(3, 1)
-        # camera = np.matrix([[R_c[0, 0], R_c[0, 1], R_c[0, 2], t_c[0, 0]],
-        #                     [R_c[1, 0], R_c[1, 1], R_c[1, 2], t_c[1, 0]],
-        #                     [R_c[2, 0], R_c[2, 1], R_c[2, 2], t_c[2, 0]],
-        #                     [0.0, 0.0, 0.0, 1.0]])
-
-        self.attitude = np.array([deg2rad(45.0), deg2rad(0.0), 0.0])
+        self.attitude = np.array([deg2rad(25.0), deg2rad(30.0), 0.0])
 
         # Create base frame
-        rpy = [0.0, 90.0, 0.0]
+        rpy = [-90.0, 0.0, -90.0]
         R_BG = euler2rot([deg2rad(i) for i in rpy], 321)
         t_G_B = np.array([0.0, 0.0, 0.0])
         T_GB = np.array([[R_BG[0, 0], R_BG[0, 1], R_BG[0, 2], t_G_B[0]],
@@ -340,49 +323,57 @@ class GimbalPlot:
                                    self.pitch_bar_length,
                                    0.0)
 
+        R_3C = euler2rot([deg2rad(i) for i in [0.0, 0.0, 180.0]], 321)
+        t_B_C = np.array([0.0, 0.0, 0.1])
+        T_3C = np.array([[R_3C[0, 0], R_3C[0, 1], R_3C[0, 2], t_B_C[0]],
+                         [R_3C[1, 0], R_3C[1, 1], R_3C[1, 2], t_B_C[1]],
+                         [R_3C[2, 0], R_3C[2, 1], R_3C[2, 2], t_B_C[2]],
+                         [0.0, 0.0, 0.0, 1.0]])
+
         # Create transforms
-        T_G1 = np.dot(T_GB, T_B1)
-        T_G2 = np.dot(T_GB, np.dot(T_B1, T_12))
-        T_G3 = np.dot(T_GB, np.dot(T_B1, np.dot(T_12, T_23)))
+        T_G1 = dot(T_GB, T_B1)
+        T_G2 = dot(T_GB, dot(T_B1, T_12))
+        T_G3 = dot(T_GB, dot(T_B1, dot(T_12, T_23)))
+        T_GC = dot(T_GB, dot(T_B1, dot(T_12, dot(T_23, T_3C))))
 
         # Create links
         links = []
         links.append(T_G1)
         links.append(T_G2)
         links.append(T_G3)
+        links.append(T_GC)
 
         # Plot first link
         ax.plot([T_GB[0, 3], links[0][0, 3]],
                 [T_GB[1, 3], links[0][1, 3]],
-                [T_GB[2, 3], links[0][2, 3]], color="red")
+                [T_GB[2, 3], links[0][2, 3]], '--', color="black")
 
         ax.plot([links[0][0, 3], links[1][0, 3]],
                 [links[0][1, 3], links[1][1, 3]],
-                [links[0][2, 3], links[1][2, 3]], color="green")
+                [links[0][2, 3], links[1][2, 3]], '--', color="black")
 
         ax.plot([links[1][0, 3], links[2][0, 3]],
                 [links[1][1, 3], links[2][1, 3]],
-                [links[1][2, 3], links[2][2, 3]], color="blue")
+                [links[1][2, 3], links[2][2, 3]], '--', color="black")
 
-        # Plot end effector coordinate frame
-        R = T_G3[0:3, 0:3]
-        t = T_G3[0:3, 3]
-        axis_x = np.dot(R, np.array([0.1, 0.0, 0.0])) + t
-        axis_y = np.dot(R, np.array([0.0, 0.1, 0.0])) + t
-        axis_z = np.dot(R, np.array([0.0, 0.0, 0.1])) + t
+        ax.plot([links[2][0, 3], links[3][0, 3]],
+                [links[2][1, 3], links[3][1, 3]],
+                [links[2][2, 3], links[3][2, 3]], '--', color="black")
 
-        ax.plot([t[0], axis_x[0]],
-                [t[1], axis_x[1]],
-                [t[2], axis_x[2]], color="red")
+        self.plot_coord_frame(ax, T_GB, length=0.05)
+        self.plot_coord_frame(ax, T_G1, length=0.05)
+        self.plot_coord_frame(ax, T_G2, length=0.05)
+        self.plot_coord_frame(ax, T_G3, length=0.05)
+        self.plot_coord_frame(ax, T_GC, length=0.05)
 
-        ax.plot([t[0], axis_y[0]],
-                [t[1], axis_y[1]],
-                [t[2], axis_y[2]], color="green")
+        # Draw roll motor
+        motor_origin = T_GB[0:3, 3]
+        motor_attitude = T_GB[0:3, 0:3]
+        plot_3d_cylinder(ax, 0.04, 0.08, motor_origin, motor_attitude, "red")
 
-        ax.plot([t[0], axis_z[0]],
-                [t[1], axis_z[1]],
-                [t[2], axis_z[2]], color="blue")
+        # motor_origin = T_G2[0:3, 3]
+        # motor_attitude = np.array([0.0, 0.0, 0.0])
+        # plot_3d_cylinder(ax, 0.04, 0.08, motor_origin, motor_attitude, "red")
 
-        # self.draw_roll_gimbal(ax, links[0])
-        # self.draw_pitch_gimbal(ax)
-        # self.draw_camera(ax)
+    #     # self.draw_pitch_gimbal(ax)
+    #     # self.draw_camera(ax)

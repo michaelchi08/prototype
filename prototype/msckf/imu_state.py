@@ -100,7 +100,7 @@ class IMUState:
         F[6:9, 9:12] = -C(q_hat).T
         F[6:9, 12:15] = -skewsq(w_G)
         # -- Fifth Row --
-        F[12:15, 6:9] = I(3)
+        F[12:15, 6:9] = np.ones(3)
 
         return F
 

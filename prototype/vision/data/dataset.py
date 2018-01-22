@@ -192,7 +192,7 @@ class DatasetGenerator(object):
         self.tracks_lost = []
         self.tracks_buffer = {}
 
-        self.detect(self.pos, self.att)
+        # self.detect(self.pos, self.att)
 
     def debug(self, string):
         if self.debug_mode:
@@ -261,12 +261,12 @@ class DatasetGenerator(object):
         track_id = self.features_buffer[feature_id]
         track = self.tracks_buffer[track_id]
 
-        # if track.tracked_length() > 20:
-        #     self.remove_feature_track(feature_id)
-        # else:
-        track.update(self.counter_frame_id, kp, pos, rpy)
-        self.debug("Update [track_id: %d, feature_id: %d]" %
-                    (track_id, feature_id))
+        if track.tracked_length() > 20:
+            self.remove_feature_track(feature_id)
+        else:
+            track.update(self.counter_frame_id, kp, pos, rpy)
+            self.debug("Update [track_id: %d, feature_id: %d]" %
+                        (track_id, feature_id))
 
     def detect(self, pos, rpy):
         """Update tracker with current image
@@ -319,16 +319,17 @@ class DatasetGenerator(object):
         # Make a copy of current lost tracks
         lost_tracks = []
         for track in self.tracks_lost:
-            lost_tracks.append(track)
+            if track.tracked_length() > 15:
+                lost_tracks.append(track)
 
         # Reset tracks lost array
         self.tracks_lost = []
 
         # Filter and return lost tracks
-        # if len(lost_tracks) > 300:
-        #     return lost_tracks[:300]
-        # else:
-        return lost_tracks
+        if len(lost_tracks) > 500:
+            return lost_tracks[:500]
+        else:
+            return lost_tracks
 
     def get_feature_position(self, feature_id):
         """Returns feature position"""

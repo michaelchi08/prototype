@@ -505,6 +505,7 @@ class MSCKFTest(unittest.TestCase):
 
     def test_measurement_update(self):
         # Setup
+        np.random.seed(0)
         dataset = DatasetGenerator(dt=0.1)
 
         # Initialize MSCKF
@@ -518,19 +519,21 @@ class MSCKFTest(unittest.TestCase):
                       ext_p_IC=np.array([0.0, 0.0, 0.0]),
                       ext_q_CI=np.array([0.5, -0.5, 0.5, -0.5]))
                       # feature_estimator=DatasetFeatureEstimator())
-        msckf.enable_qr_trick = True
-        msckf.enable_ns_trick = True
+        # msckf.enable_qr_trick = True
+        # msckf.enable_ns_trick = True
 
         # cov_plot = PlotMatrix(msckf.P())
         # gain_plot = PlotMatrix(msckf.K)
         # plt.show(block=False)
 
+
+
         # Setup state history storage and covariance plot
         pos_est = msckf.imu_state.p_G
         vel_est = msckf.imu_state.v_G
         att_est = quat2euler(msckf.imu_state.q_IG)
+        dataset.step()
 
-        np.random.seed(0)
 
         # Loop through data
         for i in range(1, 100):
