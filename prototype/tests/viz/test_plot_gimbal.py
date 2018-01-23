@@ -1,49 +1,17 @@
 import unittest
 
 import numpy as np
-import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
 from prototype.utils.utils import deg2rad
 from prototype.utils.euler import euler2rot
-from prototype.viz.plot_gimbal import GimbalPlot
-from prototype.viz.plot_gimbal import dh_transform_matrix
-
-
-def axis_equal_3dplot(ax):
-    extents = np.array([getattr(ax, 'get_{}lim'.format(dim))()
-                        for dim in 'xyz'])
-    sz = extents[:, 1] - extents[:, 0]
-    centers = np.mean(extents, axis=1)
-    maxsize = max(abs(sz))
-    r = maxsize / 2
-    for ctr, dim in zip(centers, 'xyz'):
-        getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
+from prototype.viz.plot_gimbal import PlotGimbal
+from prototype.viz.common import axis_equal_3dplot
+from prototype.models.gimbal import dh_transform
 
 
 class PlotGimbalTest(unittest.TestCase):
-    def test_plot(self):
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-
-        gimbal = GimbalPlot()
-        gimbal.plot(ax)
-
-        # Plot
-        debug = True
-        # debug = False
-        if debug:
-            axis_equal_3dplot(ax)
-            ax.set_xlabel("x")
-            ax.set_ylabel("y")
-            ax.set_zlabel("z")
-            # plt.gca().invert_yaxis()
-
-            plt.show()
-        plt.clf()
-
     def test_plot_elbow_manipulator(self):
         # Link angles
         link1_theta = 20.0
@@ -59,8 +27,8 @@ class PlotGimbalTest(unittest.TestCase):
                          [0.0, 0.0, 0.0, 1.0]])
 
         # Create DH Transforms
-        T_B1 = dh_transform_matrix(deg2rad(link1_theta), 0.0, 1.0, 0.0)
-        T_12 = dh_transform_matrix(deg2rad(link2_theta), 0.0, 1.0, 0.0)
+        T_B1 = dh_transform(deg2rad(link1_theta), 0.0, 1.0, 0.0)
+        T_12 = dh_transform(deg2rad(link2_theta), 0.0, 1.0, 0.0)
 
         # Create Transforms
         T_G1 = np.dot(T_GB, T_B1)
@@ -75,6 +43,7 @@ class PlotGimbalTest(unittest.TestCase):
         # debug = True
         debug = False
         if debug:
+            plt.figure()
             plt.plot([T_GB[0, 3], links[0][0, 3]],
                      [T_GB[1, 3], links[0][1, 3]])
 
@@ -88,4 +57,21 @@ class PlotGimbalTest(unittest.TestCase):
             plt.xlim([0.0, 6.0])
             plt.ylim([0.0, 6.0])
             plt.show()
-        plt.clf()
+
+    def test_plot(self):
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+
+        gimbal = PlotGimbal()
+        gimbal.set_attitude([10.0, 45.0, 0.0])
+        gimbal.plot(ax)
+
+        # Plot
+        # debug = True
+        debug = False
+        if debug:
+            axis_equal_3dplot(ax)
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+            ax.set_zlabel("z")
+            plt.show()

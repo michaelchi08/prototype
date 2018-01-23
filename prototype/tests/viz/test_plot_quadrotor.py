@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa
 
-from prototype.viz.plot_quadrotor import QuadPlot
+from prototype.viz.plot_quadrotor import PlotQuadrotor
 
 
 def axis_equal_3dplot(ax):
@@ -18,12 +18,12 @@ def axis_equal_3dplot(ax):
         getattr(ax, 'set_{}lim'.format(dim))(ctr - r, ctr + r)
 
 
-class QuadPlotTest(unittest.TestCase):
+class PlotQuadrotorTest(unittest.TestCase):
     def test_plot(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
 
-        quad = QuadPlot()
+        quad = PlotQuadrotor()
         quad.plot(ax)
 
         axis_equal_3dplot(ax)

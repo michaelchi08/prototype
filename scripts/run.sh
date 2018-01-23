@@ -20,6 +20,8 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.models.test_imu
 # python3 -m unittest prototype.tests.models.test_two_wheel
 
+python3 -m unittest prototype.tests.calibration.test_gimbal
+
 # python3 -m unittest prototype.tests.control.quadrotor.test_attitude
 # python3 -m unittest prototype.tests.control.quadrotor.test_position
 # python3 -m unittest prototype.tests.control.test_pid
@@ -86,7 +88,8 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-python3 -m unittest prototype.tests.viz.test_plot_gimbal
+# python3 -m unittest prototype.tests.viz.test_plot_gimbal
+# python3 -m unittest prototype.tests.viz.test_plot_chessboard
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 
 # python3 prototype/viz.py

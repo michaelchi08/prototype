@@ -1,47 +1,10 @@
-from math import cos
-from math import sin
-
 import numpy as np
 from numpy import dot
-from scipy.linalg import norm
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from mpl_toolkits.mplot3d.art3d import Line3DCollection  # NOQA
 
-from prototype.utils.euler import euler2rot
-from prototype.utils.utils import deg2rad
+from prototype.models.gimbal import GimbalModel
 
 
-def dh_transform_matrix(theta, alpha, a, d):
-    """ Denavit–Hartenberg transform matrix
-
-    Parameters
-    ----------
-    theta : float
-        Angle (radians)
-    alpha : float
-        Angle (radians)
-    a : float
-        Offset (m)
-    d : float
-        Offset (m)
-
-    Returns
-    -------
-    DH Transform matrix
-
-    """
-    c = cos
-    s = sin
-
-    return np.array([
-        [c(theta), -s(theta) * c(alpha), s(theta) * s(alpha), a * c(theta)],
-        [s(theta), c(theta) * c(alpha), -c(theta) * s(alpha), a * s(theta)],
-        [0.0, s(alpha), c(alpha), d],
-        [0.0, 0.0, 0.0, 1.0],
-    ])
-
-
-class GimbalPlot:
+class PlotGimbal:
     """ Gimbal plot
 
     Attributes:
@@ -55,18 +18,31 @@ class GimbalPlot:
     """
     def __init__(self):
         self.origin = np.array([0.0, 0.0, 0.0])
-        self.attitude = np.array([deg2rad(0.0), deg2rad(0.0), 0.0])
-
-        self.roll_bar_width = 0.5
-        self.roll_bar_length = 0.5
-        self.pitch_bar_length = 0.5
+        self.gimbal = GimbalModel()
 
         self.link0 = None
         self.link1 = None
         self.link2 = None
         self.link3 = None
 
+    def set_attitude(self, attitude):
+        self.gimbal.attitude = attitude
+
     def plot_coord_frame(self, ax, T, length=0.1):
+        """ Plot coordinate frame
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes
+            Plot axes
+
+        T : np.array (4x4)
+            Transform matrix
+
+        length : float (default: 0.1)
+            Length of each coordinate frame axis
+
+        """
         R = T[0:3, 0:3]
         t = T[0:3, 3]
 
@@ -84,47 +60,6 @@ class GimbalPlot:
                 [t[1], axis_z[1]],
                 [t[2], axis_z[2]], color="blue")
 
-    def set_attitude(self, attitude):
-        self.attitude = attitude
-
-    def calc_transforms(self):
-        # Create base frame
-        rpy = [-90.0, 0.0, -90.0]
-        R_BG = euler2rot([deg2rad(i) for i in rpy], 321)
-        t_G_B = np.array([0.0, 0.0, 0.0])
-        T_GB = np.array([[R_BG[0, 0], R_BG[0, 1], R_BG[0, 2], t_G_B[0]],
-                         [R_BG[1, 0], R_BG[1, 1], R_BG[1, 2], t_G_B[1]],
-                         [R_BG[2, 0], R_BG[2, 1], R_BG[2, 2], t_G_B[2]],
-                         [0.0, 0.0, 0.0, 1.0]])
-
-        # Create DH Transforms
-        roll, pitch, _ = self.attitude
-        T_B1 = dh_transform_matrix(roll, 0.0, self.roll_bar_width, 0.0)
-        T_12 = dh_transform_matrix(deg2rad(-90.0), deg2rad(90.0), 0.0, self.roll_bar_length)
-        T_23 = dh_transform_matrix(deg2rad(90.0 + pitch), deg2rad(90.0), 0.0, self.pitch_bar_length)
-
-        R_3C = euler2rot([deg2rad(i) for i in [-90.0, 0.0, -90.0]], 321)
-        t_B_C = np.array([0.1, 0.0, 0.0])
-        T_3C = np.array([[R_3C[0, 0], R_3C[0, 1], R_3C[0, 2], t_B_C[0]],
-                         [R_3C[1, 0], R_3C[1, 1], R_3C[1, 2], t_B_C[1]],
-                         [R_3C[2, 0], R_3C[2, 1], R_3C[2, 2], t_B_C[2]],
-                         [0.0, 0.0, 0.0, 1.0]])
-
-        # Create transforms
-        T_G1 = dot(T_GB, T_B1)
-        T_G2 = dot(T_GB, dot(T_B1, T_12))
-        T_G3 = dot(T_GB, dot(T_B1, dot(T_12, T_23)))
-        T_GC = dot(T_GB, dot(T_B1, dot(T_12, dot(T_23, T_3C))))
-
-        # Create links
-        links = []
-        links.append(T_G1)
-        links.append(T_G2)
-        links.append(T_G3)
-        links.append(T_GC)
-
-        return links, [T_GB, T_G1, T_G2, T_G3, T_GC]
-
     def plot(self, ax):
         """ Plot gimbal
 
@@ -134,7 +69,7 @@ class GimbalPlot:
             Plot axes
 
         """
-        links, [T_GB, T_G1, T_G2, T_G3, T_GC] = self.calc_transforms()
+        links, [T_GB, T_G1, T_G2, T_G3, T_GC] = self.gimbal.calc_transforms()
 
         # Plot links
         self.link0 = ax.plot([T_GB[0, 3], links[0][0, 3]],

@@ -19,6 +19,7 @@ setup(
         # "pygame",
         "PyOpenGL",
         "opencv-python",
-        "autopep8"
+        "autopep8",
+        "pyyaml"
     ]
 )

@@ -32,8 +32,17 @@ class Arrow3D(FancyArrowPatch):
         FancyArrowPatch.draw(self, renderer)
 
 
-class QuadPlot:
-    """ """
+class PlotQuadrotor:
+    """ Plot Quadrotor
+
+    Attributes
+    ----------
+    arm_length : float
+        Quadrotor arm length
+    arm_config : str
+        Quadrotor arm configuration
+
+    """
 
     def __init__(self):
         self.arm_length = 0.4
@@ -42,15 +51,11 @@ class QuadPlot:
                      deg2rad(10.0), deg2rad(20.0), deg2rad(30.0)]
 
     def plot(self, ax):
-        """
+        """ Plot quadrotor
 
         Parameters
         ----------
         ax :
-
-
-        Returns
-        -------
 
         """
         # Quadrotor center
