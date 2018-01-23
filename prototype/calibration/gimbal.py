@@ -16,24 +16,19 @@ class CameraIntrinsics:
     ----------
     cam_id : str
         Camera ID
-
     camera_model : str
         Camera model
-
     distortion_model : str
         Distortion model
-
     distortion_coeffs : str
         Distortion coefficients
-
     intrinsics : np.array
         Camera intrinsics
-
     resolution : np.array
         Camera resolution
 
     """
-    def __init__(self):
+    def __init__(self, cam_id, filepath):
         self.cam_id = None
         self.camera_model = None
         self.distortion_model = None
@@ -41,8 +36,40 @@ class CameraIntrinsics:
         self.intrinsics = None
         self.resolution = None
 
+        self.load(cam_id, filepath)
+
     def load(self, cam_id, filepath):
         """ Load camera intrinsics
+
+        `filepath` is expected to point towards a yaml file produced by
+        Kalibr's camera calibration process, the output is expected to have the
+        following format:
+
+        [Kalibr]: https://github.com/ethz-asl/kalibr
+
+        ```
+        cam0:
+            cam_overlaps: [1]
+            camera_model: pinhole
+            distortion_coeffs: [k1, k2, k3, k4]
+            distortion_model: equidistant
+            intrinsics: [fx, fy, cx, cy]
+            resolution: [px, py]
+            rostopic: "..."
+        cam1:
+            T_cn_cnm1:
+            - [1, 0, 0, 0]
+            - [0, 1, 0, 0]
+            - [0, 0, 1, 0]
+            - [0, 0, 0, 1]
+            cam_overlaps: [0]
+            camera_model: pinhole
+            distortion_coeffs: [k1, k2, k3, k4]
+            distortion_model: equidistant
+            intrinsics: [fx, fy, cx, cy]
+            resolution: [px, py]
+            rostopic: "..."
+        ```
 
         Parameters
         ----------
@@ -176,7 +203,7 @@ class GimbalCalibData:
         self.cam1_dir = kwargs.get("cam1_dir", "cam1")
         self.intrinsics_filename = kwargs.get("intrinsics_filename",
                                               "intrinsics.yaml")
-        self.imu_filename = kwargs.get("imu_filename", "imu")
+        self.imu_filename = kwargs.get("imu_filename", "imu.dat")
         self.chessboard = Chessboard(**kwargs)
 
         self.cam0_corners = []
@@ -214,10 +241,8 @@ class GimbalCalibData:
             Intrinsics file path
 
         """
-        self.cam0_intrinsics = CameraIntrinsics()
-        self.cam1_intrinsics = CameraIntrinsics()
-        self.cam0_intrinsics.load(0, intrinsics_fpath)
-        self.cam1_intrinsics.load(1, intrinsics_fpath)
+        self.cam0_intrinsics = CameraIntrinsics(0, intrinsics_fpath)
+        self.cam1_intrinsics = CameraIntrinsics(1, intrinsics_fpath)
 
     def draw_corners(self, image, corners, color=(0, 255, 0)):
         """ Draw corners
@@ -226,7 +251,6 @@ class GimbalCalibData:
         ----------
         image : np.array
             Image
-
         corners : np.array
             Corners
 
@@ -244,7 +268,6 @@ class GimbalCalibData:
         ----------
         cam_id : int
             Camera ID
-
         points : np.array
             Points in ideal coordinates
 
@@ -276,13 +299,21 @@ class GimbalCalibData:
 
         return np.array([pixels]).reshape((nb_points, 1, 2))
 
-    def load(self):
+    def load(self, imshow=False):
         """ Load calibration data """
-        # Load camera imagess
+        # Load camera image file paths
         cam0_path = join(self.data_path, self.cam0_dir)
         cam1_path = join(self.data_path, self.cam1_dir)
         cam0_files = walkdir(cam0_path)
         cam1_files = walkdir(cam1_path)
+
+        # Load imu data
+        imu_fpath = join(self.data_path, self.imu_filename)
+        imu_data = self.load_imu_data(imu_fpath)
+
+        # Load camera intrinsics
+        intrinsics_fpath = join(self.data_path, self.intrinsics_filename)
+        self.load_cam_intrinsics(intrinsics_fpath)
 
         # Pre-check
         if len(cam0_files) != len(cam1_files):
@@ -291,13 +322,12 @@ class GimbalCalibData:
                 cam1_path
             )
             raise RuntimeError(err)
-
-        # Load imu data
-        imu_data = self.load_imu_data(join(self.data_path, self.imu_filename))
-
-        # Load camera intrinsics
-        intrinsics_fpath = join(self.data_path, self.intrinsics_filename)
-        self.load_cam_intrinsics(intrinsics_fpath)
+        if len(cam0_files) != imu_data.shape[0]:
+            err = "Unequal num of images [{0}] and imu data [{1}]".format(
+                cam0_path,
+                imu_fpath
+            )
+            raise RuntimeError(err)
 
         # Inspect images and prep calibration data
         calib_data = GimbalCalibData()
@@ -327,28 +357,34 @@ class GimbalCalibData:
             cam1_img_ud, K1_new = result
             pixels1_ud = self.ideal2pixel(1, corners1_ud, K1_new)
 
-            # Draw corners in camera 0
-            cam0_img = self.draw_corners(cam0_img, corners0)
-            cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
-            cam0_img_pair = np.hstack((cam0_img, cam0_img_ud))
+            if imshow:
+                # Draw corners in camera 0
+                cam0_img = self.draw_corners(cam0_img, corners0)
+                cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
+                cam0_img_pair = np.hstack((cam0_img, cam0_img_ud))
 
-            # Draw corners in camera 1
-            cam1_img = self.draw_corners(cam1_img, corners1)
-            cam1_img_ud = self.draw_corners(cam1_img_ud, pixels1_ud)
-            cam1_img_pair = np.hstack((cam1_img, cam1_img_ud))
+                # Draw corners in camera 1
+                cam1_img = self.draw_corners(cam1_img, corners1)
+                cam1_img_ud = self.draw_corners(cam1_img_ud, pixels1_ud)
+                cam1_img_pair = np.hstack((cam1_img, cam1_img_ud))
 
-            # Show camera 0 and camera 1 (detected points, undistored points)
-            cam0_cam1_img = np.vstack((cam0_img_pair, cam1_img_pair))
-            cv2.imshow("Test", cam0_cam1_img)
-            if cv2.waitKey(0) == 113:
-                exit(0)
+                # Show camera 0 and camera 1
+                # (detected points, undistored points)
+                cam0_cam1_img = np.vstack((cam0_img_pair, cam1_img_pair))
+                cv2.imshow("Test", cam0_cam1_img)
+                if cv2.waitKey(0) == 113:
+                    return False
 
             # Append to calibration data
             calib_data.cam0_corners.append(corners0_ud)
             calib_data.cam1_corners.append(corners1_ud)
             calib_data.imu_data.append(imu_data[i, :])
 
+        return True
+
 
 class GimbalCalibration:
     def __init__(self, **kwargs):
         self.gimbal_model = GimbalModel()
+        self.calib_data = GimbalCalibData(**kwargs)
+        self.calib_data.load()
