@@ -8,6 +8,7 @@ from numpy import dot
 from prototype.utils.euler import euler2rot
 from prototype.utils.filesystem import walkdir
 from prototype.models.gimbal import GimbalModel
+from prototype.models.gimbal import dh_transform
 from prototype.calibration.chessboard import Chessboard
 
 
@@ -486,48 +487,77 @@ class GimbalCalibData:
 
 
 class GimbalCalibration:
+    """ Gimbal Calibration
+
+    Attributes
+    ----------
+    gimbal_model : GimbalModel
+        Gimbal model
+    data : GimbalCalibData
+        Calibration data
+
+    """
     def __init__(self, **kwargs):
         self.gimbal_model = GimbalModel()
         self.data = GimbalCalibData(**kwargs)
         self.data.load()
         # self.data.load(imshow=True)
 
-    def reprojection_error(self, K, image_point, rpy_C, t_C, X_C):
+    def reprojection_error(self, theta, *args):
         """Reprojection Error
 
         Parameters
         ----------
-        K : np.array of size 3x3
-            Camera intrinsics
-        image_point : np.array of size 3x1
-            Image point
-        rpy_C : np.array of size 3x1
-            Roll, pitch yaw
-        t_C : np.array of size 3x3
-            Translation
-        X : np.array of size 3x1
-            World point
 
         Returns
         -------
-        residual : float
+        residual : np.array
             Reprojection error
 
         """
-        # Convert euler to rotation matrix R
-        # R_CB = euler2rot(rpy_C, 321)
+        print(theta)
 
-        # Project 3D world point to image plane
-        # x = dot(K, dot(R_CB, X_C - t_C))
-        x = dot(K, X_C)
+        # Transform matrix from static camera to base-mechanism
+        # tau_s_i = tau_s[i]
+        # R_bs = euler2rot(tau_s_i[3:6], 321)
+        # t_bs = tau_s_i[0:3]
+        # T_b_s = np.block([R_bs, t_bs], [0.0, 0.0, 0.0, 1.0])
 
-        # Normalize projected image point
-        pt = np.array([0.0, 0.0])
-        pt[0] = x[0] / x[2]
-        pt[1] = x[1] / x[2]
+        # Transform matrix from base-mechanism to end-effector
+        # w_i = w[i]  # (theta, alpha, a, d)
+        # beta_i = beta[i]
+        # T_B1 = dh_transform(roll, 0.0, self.roll_bar_width, 0.0)
+        # T_12 = dh_transform(-pi / 2.0, pi / 2.0, 0.0, self.roll_bar_length)
+        # T_23 = dh_transform(pi / 2.0 + pitch,
+        #                     pi / 2.0, 0.0,
+        #                     self.pitch_bar_length)
 
-        # Calculate residual error
-        residual = image_point - pt
-        print("residual: ", residual)
+        # Transform matrix from end-effector to dynamic camera
+        # tau_d_i = tau_d[i]
+        # t_de = tau_d_i[0:3].reshape((3, 1))
+        # R_de = euler2rot(tau_d_i[3:6], 321)
+        # T_d_e = np.array([[R_de, t_de], [0.0, 0.0, 0.0, 1.0]])
 
-        return residual
+        # Calculate reprojection error on static camera
+        # -- Project 3D world point to image plane
+        # p_s_homo = np.append(p_s, [1])
+        # x_C = dot(K_d, dot(T_d_s, p_s_homo)[:3])
+        # -- Normalize projected image point
+        # x_C[0] = x_C[0] / x_C[2]
+        # x_C[1] = x_C[1] / x_C[2]
+        # x_C = x_C[:2]
+        # -- Calculate residual error
+        # residual = z_d - x_C
+        # print("residual: ", residual)
+
+        # Calculate reprojection error on dynamic camera
+        # -- Project 3D world point to image plane
+        # p_s_homo = np.append(p_s, [1])
+        # x_C = dot(K_d, dot(T_d_s, p_s_homo)[:3])
+        # -- Normalize projected image point
+        # x_C[0] = x_C[0] / x_C[2]
+        # x_C[1] = x_C[1] / x_C[2]
+        # x_C = x_C[:2]
+        # -- Calculate residual error
+        # residual = z_d - x_C
+        # print("residual: ", residual)

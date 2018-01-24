@@ -131,26 +131,21 @@ class GimbalCalibTest(unittest.TestCase):
 
         # K = self.calib.data.cam0_intrinsics.K_new
         K = self.calib.data.cam0_intrinsics.K_new
-        print("K: ", self.calib.data.cam0_intrinsics.K())
-        print("K_new: ", self.calib.data.cam0_intrinsics.K_new)
 
         img_pt = self.calib.data.cam0_corners[0][0][0]
-        print("img pt: ", img_pt)
 
         obj_pt = self.calib.data.object_points[0]
-        print("obj_pt: ", obj_pt)
 
         obj_pt_homo = np.array([obj_pt[0], obj_pt[1], obj_pt[2], 1.0])
         T_C0_CB = self.calib.data.cam0_T[0]
         X_C = np.dot(T_C0_CB, obj_pt_homo)[:3]
-        print("T_C0_CB:\n", T_C0_CB)
-        print("X_C: ", X_C)
 
-        self.calib.reprojection_error(K, img_pt, None, None, X_C)
+        self.calib.gimbal_model.calc_transforms()
+        theta = None
+        self.calib.reprojection_error()
 
         # cv2.imshow("Image", img)
         # cv2.waitKey(0)
 
         # K =
         # self.calib.reprojection_error(
-        #
