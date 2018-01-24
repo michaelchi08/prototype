@@ -62,7 +62,7 @@ class GimbalModel:
         roll, pitch, _ = self.attitude
         roll = deg2rad(roll)
         pitch = deg2rad(pitch)
-        T_B1 = dh_transform(deg2rad(roll), 0.0, self.roll_bar_width, 0.0)
+        T_B1 = dh_transform(roll, 0.0, self.roll_bar_width, 0.0)
         T_12 = dh_transform(-pi / 2.0, pi / 2.0, 0.0, self.roll_bar_length)
         T_23 = dh_transform(pi / 2.0 + pitch, pi / 2.0, 0.0, self.pitch_bar_length) # NOQA
 

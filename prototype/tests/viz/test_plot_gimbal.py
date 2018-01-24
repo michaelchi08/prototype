@@ -63,12 +63,12 @@ class PlotGimbalTest(unittest.TestCase):
         ax = fig.gca(projection='3d')
 
         gimbal = PlotGimbal()
-        gimbal.set_attitude([10.0, 45.0, 0.0])
+        gimbal.set_attitude([10.0, 20.0, 0.0])
         gimbal.plot(ax)
 
         # Plot
-        # debug = True
-        debug = False
+        debug = True
+        # debug = False
         if debug:
             axis_equal_3dplot(ax)
             ax.set_xlabel("x")

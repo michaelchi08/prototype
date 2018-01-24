@@ -3,7 +3,9 @@ from os.path import join
 import cv2
 import yaml
 import numpy as np
+from numpy import dot
 
+from prototype.utils.euler import euler2rot
 from prototype.utils.filesystem import walkdir
 from prototype.models.gimbal import GimbalModel
 from prototype.calibration.chessboard import Chessboard
@@ -35,6 +37,8 @@ class CameraIntrinsics:
         self.distortion_coeffs = None
         self.intrinsics = None
         self.resolution = None
+
+        self.K_new = None
 
         self.load(cam_id, filepath)
 
@@ -97,6 +101,10 @@ class CameraIntrinsics:
         K = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]])
         return K
 
+    def D(self):
+        """ Form distortion coefficients vector D """
+        return np.array(self.distortion_coeffs)
+
     def undistort_points(self, points):
         """ Undistort points
 
@@ -153,6 +161,8 @@ class CameraIntrinsics:
                                                            D,
                                                            None,
                                                            K_new)
+
+        self.K_new = K_new
         return undistorted_image, K_new
 
     def __str__(self):
@@ -206,8 +216,11 @@ class GimbalCalibData:
         self.imu_filename = kwargs.get("imu_filename", "imu.dat")
         self.chessboard = Chessboard(**kwargs)
 
+        self.object_points = None
         self.cam0_corners = []
         self.cam1_corners = []
+        self.cam0_T = []
+        self.cam1_T = []
         self.imu_data = []
 
         self.cam0_intrinsics = None
@@ -299,6 +312,70 @@ class GimbalCalibData:
 
         return np.array([pixels]).reshape((nb_points, 1, 2))
 
+    def create_object_points(self, chessboard):
+        # Hard-coding object points - assuming chessboard is origin by
+        # setting chessboard in the x-y plane (where z = 0).
+        object_points = []
+        for i in range(chessboard.nb_rows):
+            for j in range(chessboard.nb_cols):
+                pt = [j * chessboard.square_size,
+                      i * chessboard.square_size,
+                      0.0]
+                object_points.append(pt)
+        object_points = np.array(object_points)
+        return object_points
+
+    def solvepnp(self, chessboard, corners, K, D=np.zeros(4)):
+        # Hard-coding object points - assuming chessboard is origin by
+        # setting chessboard in the x-y plane (where z = 0).
+        object_points = []
+        for i in range(chessboard.nb_rows):
+            for j in range(chessboard.nb_cols):
+                pt = [j * chessboard.square_size,
+                      i * chessboard.square_size,
+                      0.0]
+                object_points.append(pt)
+        object_points = np.array(object_points)
+
+        # Calculate transformation matrix
+        retval, rvec, tvec = cv2.solvePnP(object_points,
+                                          corners,
+                                          K,
+                                          D,
+                                          flags=cv2.SOLVEPNP_ITERATIVE)
+        if retval is False:
+            raise RuntimeError("solvePnP failed!")
+
+        # Convert rotation vector to matrix
+        R = np.zeros((3, 3))
+        cv2.Rodrigues(rvec, R)
+
+        # Form transformation matrix
+        T = np.array([[R[0][0], R[0][1], R[0][2], tvec[0]],
+                      [R[1][0], R[1][1], R[1][2], tvec[1]],
+                      [R[2][0], R[2][1], R[2][2], tvec[2]],
+                      [0.0, 0.0, 0.0, 1.0]])
+
+        return T, rvec, tvec
+
+    def draw_coord_frame(self, chessboard, img, corners, K, D=np.zeros(4)):
+        # Coordinate frame
+        axis = np.float32([[1, 0, 0], [0, 1, 0], [0, 0, -1]]).reshape(-1, 3)
+        axis = self.chessboard.square_size * axis  # Scale chessboard sq size
+
+        # Solve PnP and project coordinate frame to image plane
+        T, rvec, tvec = self.solvepnp(chessboard, corners, K, D)
+        imgpts, _ = cv2.projectPoints(axis, rvec, tvec, K, D)
+
+        # Draw coordinate frame
+        corner = tuple(corners[0].ravel())
+        corner = (int(corner[0]), int(corner[1]))
+        img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255, 0, 0), 3)
+        img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0, 255, 0), 3)
+        img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0, 0, 255), 3)
+
+        return img
+
     def load(self, imshow=False):
         """ Load calibration data """
         # Load camera image file paths
@@ -330,7 +407,6 @@ class GimbalCalibData:
             raise RuntimeError(err)
 
         # Inspect images and prep calibration data
-        calib_data = GimbalCalibData()
         nb_images = len(cam0_files)
         for i in range(nb_images):
             print("Inspecting image %d" % i)
@@ -357,28 +433,54 @@ class GimbalCalibData:
             cam1_img_ud, K1_new = result
             pixels1_ud = self.ideal2pixel(1, corners1_ud, K1_new)
 
+            # Visually inspect images
             if imshow:
                 # Draw corners in camera 0
                 cam0_img = self.draw_corners(cam0_img, corners0)
                 cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
+                cam0_img = self.draw_coord_frame(self.chessboard,
+                                                 cam0_img,
+                                                 corners0,
+                                                 self.cam0_intrinsics.K())
+                cam0_img_ud = self.draw_coord_frame(self.chessboard,
+                                                    cam0_img_ud,
+                                                    pixels0_ud,
+                                                    K0_new)
                 cam0_img_pair = np.hstack((cam0_img, cam0_img_ud))
 
                 # Draw corners in camera 1
                 cam1_img = self.draw_corners(cam1_img, corners1)
                 cam1_img_ud = self.draw_corners(cam1_img_ud, pixels1_ud)
+                cam1_img = self.draw_coord_frame(self.chessboard,
+                                                 cam1_img,
+                                                 corners1,
+                                                 self.cam1_intrinsics.K())
+                cam1_img_ud = self.draw_coord_frame(self.chessboard,
+                                                    cam1_img_ud,
+                                                    pixels1_ud,
+                                                    K1_new)
                 cam1_img_pair = np.hstack((cam1_img, cam1_img_ud))
 
                 # Show camera 0 and camera 1
                 # (detected points, undistored points)
                 cam0_cam1_img = np.vstack((cam0_img_pair, cam1_img_pair))
-                cv2.imshow("Test", cam0_cam1_img)
+                cv2.imshow("Inspect Images", cam0_cam1_img)
                 if cv2.waitKey(0) == 113:
                     return False
 
+            # Calculate camera to chessboard transform
+            T_c0_cb, _, _ = self.solvepnp(self.chessboard, pixels0_ud,
+                                          self.cam0_intrinsics.K_new)
+            T_c1_cb, _, _ = self.solvepnp(self.chessboard, pixels0_ud,
+                                          self.cam1_intrinsics.K_new)
+
             # Append to calibration data
-            calib_data.cam0_corners.append(corners0_ud)
-            calib_data.cam1_corners.append(corners1_ud)
-            calib_data.imu_data.append(imu_data[i, :])
+            self.object_points = self.create_object_points(self.chessboard)
+            self.cam0_corners.append(pixels0_ud)
+            self.cam1_corners.append(pixels1_ud)
+            self.cam0_T.append(T_c0_cb)
+            self.cam1_T.append(T_c1_cb)
+            self.imu_data.append(imu_data[i, :])
 
         return True
 
@@ -386,5 +488,46 @@ class GimbalCalibData:
 class GimbalCalibration:
     def __init__(self, **kwargs):
         self.gimbal_model = GimbalModel()
-        self.calib_data = GimbalCalibData(**kwargs)
-        self.calib_data.load()
+        self.data = GimbalCalibData(**kwargs)
+        self.data.load()
+        # self.data.load(imshow=True)
+
+    def reprojection_error(self, K, image_point, rpy_C, t_C, X_C):
+        """Reprojection Error
+
+        Parameters
+        ----------
+        K : np.array of size 3x3
+            Camera intrinsics
+        image_point : np.array of size 3x1
+            Image point
+        rpy_C : np.array of size 3x1
+            Roll, pitch yaw
+        t_C : np.array of size 3x3
+            Translation
+        X : np.array of size 3x1
+            World point
+
+        Returns
+        -------
+        residual : float
+            Reprojection error
+
+        """
+        # Convert euler to rotation matrix R
+        # R_CB = euler2rot(rpy_C, 321)
+
+        # Project 3D world point to image plane
+        # x = dot(K, dot(R_CB, X_C - t_C))
+        x = dot(K, X_C)
+
+        # Normalize projected image point
+        pt = np.array([0.0, 0.0])
+        pt[0] = x[0] / x[2]
+        pt[1] = x[1] / x[2]
+
+        # Calculate residual error
+        residual = image_point - pt
+        print("residual: ", residual)
+
+        return residual

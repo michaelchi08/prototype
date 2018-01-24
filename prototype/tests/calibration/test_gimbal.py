@@ -8,7 +8,7 @@ import prototype.tests as test
 from prototype.calibration.chessboard import Chessboard
 from prototype.calibration.gimbal import CameraIntrinsics
 from prototype.calibration.gimbal import GimbalCalibData
-# from prototype.calibration.gimbal import GimbalCalibration
+from prototype.calibration.gimbal import GimbalCalibration
 
 
 class CameraIntrinsicsTest(unittest.TestCase):
@@ -71,14 +71,45 @@ class CameraIntrinsicsTest(unittest.TestCase):
 
         # Undistort image using equidistant distortion model
         img, K_new = self.intrinsics.undistort_image(img)
-        cv2.imshow("Image", img)
-        cv2.waitKey(0)
+        # cv2.imshow("Image", img)
+        # cv2.waitKey(0)
 
 
-class GimbalCalibDataTest(unittest.TestCase):
+# class GimbalCalibDataTest(unittest.TestCase):
+#     def setUp(self):
+#         self.data_path = join(test.TEST_DATA_PATH, "calib_data")
+#         self.calib_data = GimbalCalibData(
+#             data_path=self.data_path,
+#             cam0_dir="static_camera",
+#             cam1_dir="gimbal_camera",
+#             intrinsics_filename="intrinsics_equi.yaml",
+#             imu_filename="imu.dat",
+#             nb_rows=6,
+#             nb_cols=7,
+#             square_size=0.29
+#         )
+#
+#     def test_load_imu_data(self):
+#         imu_fpath = join(self.data_path, self.calib_data.imu_filename)
+#         imu_data = self.calib_data.load_imu_data(imu_fpath)
+#         self.assertEqual(5, imu_data.shape[0])
+#         self.assertEqual(3, imu_data.shape[1])
+#
+#     def test_load_cam_intrinsics(self):
+#         intrinsics_fpath = join(self.data_path, "intrinsics_equi.yaml")
+#         self.calib_data.load_cam_intrinsics(intrinsics_fpath)
+#         self.assertTrue(self.calib_data.cam0_intrinsics is not None)
+#         self.assertTrue(self.calib_data.cam1_intrinsics is not None)
+#
+#     def test_load(self):
+#         retval = self.calib_data.load()
+#         self.asserttrue(retval)
+
+
+class GimbalCalibTest(unittest.TestCase):
     def setUp(self):
         self.data_path = join(test.TEST_DATA_PATH, "calib_data")
-        self.calib_data = GimbalCalibData(
+        self.calib = GimbalCalibration(
             data_path=self.data_path,
             cam0_dir="static_camera",
             cam1_dir="gimbal_camera",
@@ -86,33 +117,40 @@ class GimbalCalibDataTest(unittest.TestCase):
             imu_filename="imu.dat",
             nb_rows=6,
             nb_cols=7,
-            square_size=0.29
+            square_size=0.0285
         )
 
-    def test_load_imu_data(self):
-        imu_fpath = join(self.data_path, self.calib_data.imu_filename)
-        imu_data = self.calib_data.load_imu_data(imu_fpath)
-        self.assertEqual(5, imu_data.shape[0])
-        self.assertEqual(3, imu_data.shape[1])
+    def test_reprojection_error(self):
+        # # Load image
+        # img_path = join(self.data_path, "gimbal_camera", "img_0.jpg")
+        # img = cv2.imread(img_path)
 
-    def test_load_cam_intrinsics(self):
-        intrinsics_fpath = join(self.data_path, "intrinsics_equi.yaml")
-        self.calib_data.load_cam_intrinsics(intrinsics_fpath)
-        self.assertTrue(self.calib_data.cam0_intrinsics is not None)
-        self.assertTrue(self.calib_data.cam1_intrinsics is not None)
+        # print(self.calib.data.object_points)
+        # print(self.calib.data.cam0_intrinsics.K_new)
+        # print(self.calib.data.cam0_T[0])
 
-    def test_load(self):
-        retval = self.calib_data.load()
-        self.assertTrue(retval)
+        # K = self.calib.data.cam0_intrinsics.K_new
+        K = self.calib.data.cam0_intrinsics.K_new
+        print("K: ", self.calib.data.cam0_intrinsics.K())
+        print("K_new: ", self.calib.data.cam0_intrinsics.K_new)
 
-# class GimbalCalibTest(unittest.TestCase):
-#     def test_constructor(self):
-#         data_path = "/home/chutsu/Dropbox/calib_data/extrinsics/"
-#         calib = GimbalCalibration(data_path=data_path,
-#                                   cam0_dir="static_camera",
-#                                   cam1_dir="gimbal_camera",
-#                                   intrinsics_filename="intrinsics.yaml",
-#                                   imu_filename="gimbal_joint.dat",
-#                                   nb_rows=6,
-#                                   nb_cols=7,
-#                                   square_size=0.29)
+        img_pt = self.calib.data.cam0_corners[0][0][0]
+        print("img pt: ", img_pt)
+
+        obj_pt = self.calib.data.object_points[0]
+        print("obj_pt: ", obj_pt)
+
+        obj_pt_homo = np.array([obj_pt[0], obj_pt[1], obj_pt[2], 1.0])
+        T_C0_CB = self.calib.data.cam0_T[0]
+        X_C = np.dot(T_C0_CB, obj_pt_homo)[:3]
+        print("T_C0_CB:\n", T_C0_CB)
+        print("X_C: ", X_C)
+
+        self.calib.reprojection_error(K, img_pt, None, None, X_C)
+
+        # cv2.imshow("Image", img)
+        # cv2.waitKey(0)
+
+        # K =
+        # self.calib.reprojection_error(
+        #
