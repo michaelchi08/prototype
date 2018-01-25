@@ -42,12 +42,21 @@ class GimbalModel:
     def __init__(self):
         self.attitude = np.array([0.0, 0.0, 0.0])
         self.width = 0.0
-        self.length = 0.5
+        self.length = 0.1
+
+        self.tau_s = np.array([0.0, 0.10, -0.18, 0.0, 0.0, pi / 2.0])
+        self.Lambda1 = self.attitude[0]
+        self.w1 = np.array([pi / 2.0, 0.0, self.length])
+        self.Lambda2 = self.attitude[1]
+        self.w2 = np.array([pi, 0, self.width])
+        self.tau_d = np.array([0.0, 0.0, 0.0, pi / 2.0, pi / 2.0, 0.0])
 
     def set_attitude(self, attitude):
         self.attitude = attitude
+        self.Lambda1 = self.attitude[0]
+        self.Lambda2 = self.attitude[1]
 
-    def T_sb(self, tau_s=np.array([0.0, 0.0, 0.0, pi, -pi / 2.0, 0.0])):
+    def T_sb(self, tau_s):
         """ Form transform matrix from static camera to base_frame
 
         Parameters
@@ -77,16 +86,19 @@ class GimbalModel:
 
         return T_sb
 
-    def T_be(self, w1, w2):
+    def T_be(self, Lambda1, w1, Lambda2, w2):
         """ Form transform matrix from base_frame to end-effector
 
         Parameters
         ----------
+        Lambda1 : float
+            DH parameter (theta) for the first link
         w1 : np.array
-            DH parameters for the first link (theta, alpha, a, d)
-
+            DH parameters for the first link (alpha, a, d)
+        Lambda2 : float
+            DH parameter (theta) for the second link
         w2 : np.array
-            DH parameters for the second link (theta, alpha, a, d)
+            DH parameters for the second link (alpha, a, d)
 
         Returns
         -------
@@ -94,12 +106,14 @@ class GimbalModel:
             Transform matrix from base frame to end-effector
 
         """
-        T_b1 = dh_transform(*w1)
-        T_1e = dh_transform(*w2)
+        theta1, alpha1, a1, d1 = [Lambda1, w1[0], w1[1], w1[2]]
+        theta2, alpha2, a2, d2 = [Lambda2, w2[0], w2[1], w2[2]]
+        T_b1 = dh_transform(theta1, alpha1, a1, d1)
+        T_1e = dh_transform(theta2, alpha2, a2, d2)
         T_be = dot(T_b1, T_1e)
         return T_be
 
-    def T_ed(self, tau_d=np.array([0.0, 0.1, 0.0, pi / 2.0, pi / 2.0])):
+    def T_ed(self, tau_d):
         """ Form transform matrix from end-effector to dynamic camera
 
         Parameters
@@ -128,12 +142,12 @@ class GimbalModel:
 
         return T_ed
 
-    def T_sd(self, tau_s, w1, w2, tau_d):
+    def T_sd(self, tau_s, Lambda1, w1, Lambda2, w2, tau_d):
         # Transform from static camera to base frame
         T_sb = self.T_sb(tau_s)
 
         # Transform from base frame to end-effector
-        T_be = self.T_be(w1, w2)
+        T_be = self.T_be(Lambda1, w1, Lambda2, w2)
 
         # Transform from end-effector to dynamic camera
         T_ed = self.T_ed(tau_d)
@@ -146,18 +160,13 @@ class GimbalModel:
 
     def calc_transforms(self):
         # Transform from static camera to base frame
-        tau_s = np.array([0.0, 0.0, -0.5, pi, -pi / 2.0, 0.0])
-        T_sb = self.T_sb(tau_s)
+        T_sb = self.T_sb(self.tau_s)
 
         # Transform from base frame to end-effector
-        roll, pitch, _ = self.attitude
-        w1 = np.array([roll, -pi / 2.0, 0.0, self.length])
-        w2 = np.array([-pitch, pi, 0, self.width])
-        T_be = self.T_be(w1, w2)
+        T_be = self.T_be(self.Lambda1, self.w1, self.Lambda2, self.w2)
 
         # Transform from end-effector to dynamic camera
-        tau_d = np.array([0.0, 0.1, 0.0, 0.0, pi / 2.0, pi / 2.0])
-        T_ed = self.T_ed(tau_d)
+        T_ed = self.T_ed(self.tau_d)
 
         # Create transforms
         T_se = dot(T_sb, T_be)  # Transform static camera to end effector

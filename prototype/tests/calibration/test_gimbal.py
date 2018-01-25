@@ -121,34 +121,16 @@ class GimbalCalibTest(unittest.TestCase):
         )
 
     def test_setup_problem(self):
-        self.calib.setup_problem()
+        x, Z = self.calib.setup_problem()
 
-    # def test_reprojection_error(self):
-    #     # # Load image
-    #     # img_path = join(self.data_path, "gimbal_camera", "img_0.jpg")
-    #     # img = cv2.imread(img_path)
-    #
-    #     # print(self.calib.data.object_points)
-    #     # print(self.calib.data.cam0_intrinsics.K_new)
-    #     # print(self.calib.data.cam0_T[0])
-    #
-    #     # K = self.calib.data.cam0_intrinsics.K_new
-    #     K = self.calib.data.cam0_intrinsics.K_new
-    #
-    #     img_pt = self.calib.data.cam0_corners[0][0][0]
-    #
-    #     obj_pt = self.calib.data.object_points[0]
-    #
-    #     obj_pt_homo = np.array([obj_pt[0], obj_pt[1], obj_pt[2], 1.0])
-    #     T_C0_CB = self.calib.data.cam0_T[0]
-    #     X_C = np.dot(T_C0_CB, obj_pt_homo)[:3]
-    #
-    #     self.calib.gimbal_model.calc_transforms()
-    #     theta = None
-    #     self.calib.reprojection_error()
-    #
-    #     # cv2.imshow("Image", img)
-    #     # cv2.waitKey(0)
-    #
-    #     # K =
-    #     # self.calib.reprojection_error(
+        self.assertEqual((28, ), x.shape)
+        self.assertEqual(5, len(Z))
+
+    def test_reprojection_error(self):
+        x, Z = self.calib.setup_problem()
+
+        K_s = self.calib.data.cam0_intrinsics.K_new
+        K_d = self.calib.data.cam1_intrinsics.K_new
+        args = [Z, K_s, K_d]
+
+        self.calib.reprojection_error(x, *args)

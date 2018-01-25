@@ -71,7 +71,7 @@ class PlotGimbal:
             Plot axes
 
         """
-        self.gimbal.set_attitude([radians(20), radians(10), 0])
+        self.gimbal.set_attitude([radians(0), radians(0), 0])
         links = self.gimbal.calc_transforms()
 
         # Plot links
@@ -93,5 +93,5 @@ class PlotGimbal:
         # Plot coordinate frames
         self.plot_coord_frame(ax, np.eye(4), length=0.05)
         self.plot_coord_frame(ax, links[0], length=0.05)
-        self.plot_coord_frame(ax, links[1], length=0.05)
+        # self.plot_coord_frame(ax, links[1], length=0.05)
         self.plot_coord_frame(ax, links[2], length=0.05)
