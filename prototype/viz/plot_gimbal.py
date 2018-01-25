@@ -1,3 +1,5 @@
+from math import radians
+
 import numpy as np
 from numpy import dot
 
@@ -69,7 +71,7 @@ class PlotGimbal:
             Plot axes
 
         """
-        self.gimbal.set_attitude([20, 10, 0])
+        self.gimbal.set_attitude([radians(20), radians(10), 0])
         links = self.gimbal.calc_transforms()
 
         # Plot links
