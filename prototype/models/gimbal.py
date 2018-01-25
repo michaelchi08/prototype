@@ -6,7 +6,6 @@ import numpy as np
 from numpy import dot
 
 from prototype.utils.euler import euler2rot
-from prototype.utils.utils import deg2rad
 
 
 def dh_transform(theta, alpha, a, d):
@@ -128,6 +127,22 @@ class GimbalModel:
                          [0.0, 0.0, 0.0, 1.0]])
 
         return T_ed
+
+    def T_sd(self, tau_s, w1, w2, tau_d):
+        # Transform from static camera to base frame
+        T_sb = self.T_sb(tau_s)
+
+        # Transform from base frame to end-effector
+        T_be = self.T_be(w1, w2)
+
+        # Transform from end-effector to dynamic camera
+        T_ed = self.T_ed(tau_d)
+
+        # Combine transforms
+        T_se = dot(T_sb, T_be)  # Transform static camera to end effector
+        T_sd = dot(T_se, T_ed)  # Transform static camera to dynamic camera
+
+        return T_sd
 
     def calc_transforms(self):
         # Transform from static camera to base frame

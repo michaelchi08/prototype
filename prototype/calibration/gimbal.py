@@ -1,4 +1,5 @@
 from os.path import join
+from math import pi
 
 import cv2
 import yaml
@@ -311,7 +312,7 @@ class GimbalCalibData:
             py = (p[1] * fy) + cy
             pixels.append([px, py])
 
-        return np.array([pixels]).reshape((nb_points, 1, 2))
+        return np.array([pixels])
 
     def create_object_points(self, chessboard):
         # Hard-coding object points - assuming chessboard is origin by
@@ -427,6 +428,7 @@ class GimbalCalibData:
             result = self.cam0_intrinsics.undistort_image(cam0_img)
             cam0_img_ud, K0_new = result
             pixels0_ud = self.ideal2pixel(0, corners0_ud, K0_new)
+            pixels0_ud = self.ideal2pixel(0, corners0_ud, K0_new)
 
             # Undistort corners in camera 1
             corners1_ud = self.cam1_intrinsics.undistort_points(corners1)
@@ -477,12 +479,15 @@ class GimbalCalibData:
 
             # Append to calibration data
             self.object_points = self.create_object_points(self.chessboard)
-            self.cam0_corners.append(pixels0_ud)
-            self.cam1_corners.append(pixels1_ud)
+            nb_pixels0_ud = len(pixels0_ud)
+            nb_pixels1_ud = len(pixels1_ud)
+            self.cam0_corners.append(pixels0_ud.reshape((nb_pixels0_ud, -1)))
+            self.cam1_corners.append(pixels1_ud.reshape((nb_pixels1_ud, -1)))
             self.cam0_T.append(T_c0_cb)
             self.cam1_T.append(T_c1_cb)
             self.imu_data.append(imu_data[i, :])
 
+        self.imu_data = np.array(self.imu_data)
         return True
 
 
@@ -503,7 +508,38 @@ class GimbalCalibration:
         self.data.load()
         # self.data.load(imshow=True)
 
-    def reprojection_error(self, theta, *args):
+    def setup_problem(self):
+        """ Setup the calibration optimization problem
+
+        Returns
+        -------
+        x : np.array
+            Vector of optimization parameters to be optimized
+
+        """
+        assert len(self.data.cam0_corners) == len(self.data.cam1_corners)
+        assert len(self.data.cam0_corners[0]) == len(self.data.cam1_corners[0])
+        assert len(self.data.cam0_T) == len(self.data.cam0_T)
+        assert self.data.cam0_T[0].shape == (4, 4)
+        assert self.data.cam1_T[0].shape == (4, 4)
+
+        # Setup vector of parameters to be optimized
+        K = len(self.data.cam0_corners)  # Number of measurement set
+        L = 2  # Number of links - 2 for a 2-axis gimbal
+        x = np.zeros(6 + 6 + 3 * L + K * L)  # Parameters to be optimized
+
+        tau_s = np.array([0.0, 0.0, -0.5, pi, -pi / 2.0, 0.0])
+        tau_d = np.array([0.0, 0.1, 0.0, 0.0, pi / 2.0, pi / 2.0])
+        w1 = np.array([-pi / 2.0, 0.0, self.gimbal_model.length])
+        w2 = np.array([pi, 0, self.gimbal_model.width])
+
+        x[0:6] = tau_s
+        x[6:12] = tau_d
+        x[12:15] = w1
+        x[15:18] = w2
+        x[18:18+K*L] = self.data.imu_data[:, 0:L].ravel()
+
+    def reprojection_error(self, x, *args):
         """Reprojection Error
 
         Parameters
@@ -515,7 +551,7 @@ class GimbalCalibration:
             Reprojection error
 
         """
-        print(theta)
+        print(x)
 
         # Transform matrix from static camera to base-mechanism
         # tau_s_i = tau_s[i]
