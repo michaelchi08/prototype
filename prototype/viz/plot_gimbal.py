@@ -69,12 +69,13 @@ class PlotGimbal:
             Plot axes
 
         """
-        links, [T_GB, T_G1, T_G2, T_G3, T_GC] = self.gimbal.calc_transforms()
+        self.gimbal.set_attitude([20, 10, 0])
+        links = self.gimbal.calc_transforms()
 
         # Plot links
-        self.link0 = ax.plot([T_GB[0, 3], links[0][0, 3]],
-                             [T_GB[1, 3], links[0][1, 3]],
-                             [T_GB[2, 3], links[0][2, 3]],
+        self.link0 = ax.plot([0, links[0][0, 3]],
+                             [0, links[0][1, 3]],
+                             [0, links[0][2, 3]],
                              '--', color="black")
 
         self.line1 = ax.plot([links[0][0, 3], links[1][0, 3]],
@@ -87,14 +88,8 @@ class PlotGimbal:
                              [links[1][2, 3], links[2][2, 3]],
                              '--', color="black")
 
-        self.line3 = ax.plot([links[2][0, 3], links[3][0, 3]],
-                             [links[2][1, 3], links[3][1, 3]],
-                             [links[2][2, 3], links[3][2, 3]],
-                             '--', color="black")
-
         # Plot coordinate frames
-        self.plot_coord_frame(ax, T_GB, length=0.05)
-        self.plot_coord_frame(ax, T_G1, length=0.05)
-        self.plot_coord_frame(ax, T_G2, length=0.05)
-        self.plot_coord_frame(ax, T_G3, length=0.05)
-        self.plot_coord_frame(ax, T_GC, length=0.05)
+        self.plot_coord_frame(ax, np.eye(4), length=0.05)
+        self.plot_coord_frame(ax, links[0], length=0.05)
+        self.plot_coord_frame(ax, links[1], length=0.05)
+        self.plot_coord_frame(ax, links[2], length=0.05)

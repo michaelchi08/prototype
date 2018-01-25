@@ -42,48 +42,53 @@ def dh_transform(theta, alpha, a, d):
 class GimbalModel:
     def __init__(self):
         self.attitude = np.array([0.0, 0.0, 0.0])
-        self.roll_bar_width = 0.5
-        self.roll_bar_length = 0.5
-        self.pitch_bar_length = 0.5
+        self.width = 0.0
+        self.length = 0.5
 
     def set_attitude(self, attitude):
         self.attitude = attitude
 
-    def calc_transforms(self):
+    def T_sb(self):
         # Create base frame
-        R_BG = euler2rot([deg2rad(i) for i in [-90.0, 0.0, -90.0]], 321)
-        t_G_B = np.array([0.0, 0.0, 0.0])
-        T_GB = np.array([[R_BG[0, 0], R_BG[0, 1], R_BG[0, 2], t_G_B[0]],
-                         [R_BG[1, 0], R_BG[1, 1], R_BG[1, 2], t_G_B[1]],
-                         [R_BG[2, 0], R_BG[2, 1], R_BG[2, 2], t_G_B[2]],
+        R_sb = euler2rot([deg2rad(i) for i in [180.0, -90.0, 0.0]], 321)
+        t_G_sb = np.array([0.0, 0.0, -1.0])
+        T_sb = np.array([[R_sb[0, 0], R_sb[0, 1], R_sb[0, 2], t_G_sb[0]],
+                         [R_sb[1, 0], R_sb[1, 1], R_sb[1, 2], t_G_sb[1]],
+                         [R_sb[2, 0], R_sb[2, 1], R_sb[2, 2], t_G_sb[2]],
                          [0.0, 0.0, 0.0, 1.0]])
 
-        # Create DH Transforms
+        return T_sb
+
+    def T_be(self):
+        # Create DH Transforms (theta, alpha, a, d)
         roll, pitch, _ = self.attitude
         roll = deg2rad(roll)
         pitch = deg2rad(pitch)
-        T_B1 = dh_transform(roll, 0.0, self.roll_bar_width, 0.0)
-        T_12 = dh_transform(-pi / 2.0, pi / 2.0, 0.0, self.roll_bar_length)
-        T_23 = dh_transform(pi / 2.0 + pitch, pi / 2.0, 0.0, self.pitch_bar_length) # NOQA
+        T_b1 = dh_transform(roll, -pi / 2.0, 0.0, self.length)
+        T_1e = dh_transform(-pitch, pi, 0, self.width)
+        T_be = dot(T_b1, T_1e)
+        return T_be
 
-        R_3C = euler2rot([deg2rad(i) for i in [-90.0, 0.0, -90.0]], 321)
-        t_B_C = np.array([0.1, 0.0, 0.0])
-        T_3C = np.array([[R_3C[0, 0], R_3C[0, 1], R_3C[0, 2], t_B_C[0]],
-                         [R_3C[1, 0], R_3C[1, 1], R_3C[1, 2], t_B_C[1]],
-                         [R_3C[2, 0], R_3C[2, 1], R_3C[2, 2], t_B_C[2]],
+    def T_ed(self):
+        R_ed = euler2rot([deg2rad(i) for i in [0.0, 90.0, 90.0]], 321)
+        t = np.array([0.0, 0.1, 0.0])
+        T_ed = np.array([[R_ed[0, 0], R_ed[0, 1], R_ed[0, 2], t[0]],
+                         [R_ed[1, 0], R_ed[1, 1], R_ed[1, 2], t[1]],
+                         [R_ed[2, 0], R_ed[2, 1], R_ed[2, 2], t[2]],
                          [0.0, 0.0, 0.0, 1.0]])
 
+        return T_ed
+
+    def calc_transforms(self):
+        T_sb = self.T_sb()  # Transform from static camera to base frame
+        T_be = self.T_be()  # Transform from base frame to end-effector
+        T_ed = self.T_ed()  # Transform from end-effector to dynamic camera
+
         # Create transforms
-        T_G1 = dot(T_GB, T_B1)
-        T_G2 = dot(T_GB, dot(T_B1, T_12))
-        T_G3 = dot(T_GB, dot(T_B1, dot(T_12, T_23)))
-        T_GC = dot(T_GB, dot(T_B1, dot(T_12, dot(T_23, T_3C))))
+        T_se = dot(T_sb, T_be)  # Transform static camera to end effector
+        T_sd = dot(T_se, T_ed)  # Transform static camera to dynamic camera
 
         # Create links
-        links = []
-        links.append(T_G1)
-        links.append(T_G2)
-        links.append(T_G3)
-        links.append(T_GC)
+        links = [T_sb, T_se, T_sd]
 
-        return links, [T_GB, T_G1, T_G2, T_G3, T_GC]
+        return links
