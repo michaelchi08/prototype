@@ -39,38 +39,56 @@ class Chessboard:
         self.nb_cols = kwargs.get("nb_cols", 10)
         self.square_size = kwargs.get("square_size", 0.1)
 
-        # center_x = ((self.nb_cols - 1) * self.square_size) / 2.0
-        # center_y = ((self.nb_rows - 1) * self.square_size) / 2.0
-        # self.center = np.array([center_x, center_y])
-
+        # Chessboard orientation and position
         self.R_BG = kwargs.get("R_BG", euler2rot([-pi / 2, 0.0, -pi / 2], 321))
         self.t_G = kwargs.get("t_G", np.zeros(3))
 
-        # 2D Grid_points as a list of (x, y) points
-        # starting from top left corner to bottom right
-        self.grid_points2d = []
+        # 2D and 3D Grid_points, Starting from top left corner to bottom right
+        self.grid_points2d = self.create_grid_points2d()
+        self.grid_points3d = self.create_grid_points3d()
+
+        # Create object points for calibration
+        self.object_points = self.create_object_points()
+
+    def create_grid_points2d(self):
+        """ Create 2D grid_points """
+        grid_points2d = []
         for i in range(self.nb_rows):
             for j in range(self.nb_rows):
-                self.grid_points2d.append([i, j])
-        self.grid_points2d = self.square_size * np.array(self.grid_points2d)
+                grid_points2d.append([i, j])
+        grid_points2d = self.square_size * np.array(grid_points2d)
 
-        # 3D Grid_points as a list of (x, y, z) points
-        # in the global frame
-        self.grid_points3d = []
-        T_BG = np.array([[self.R_BG[0, 0], self.R_BG[0, 1], self.R_BG[0, 2], self.t_G[0]],
-                         [self.R_BG[1, 0], self.R_BG[1, 1], self.R_BG[2, 2], self.t_G[1]],
-                         [self.R_BG[2, 0], self.R_BG[2, 1], self.R_BG[2, 2], self.t_G[2]],
-                         [0.0, 0.0, 0.0, 1.0]])
+        return grid_points2d
+
+    def create_grid_points3d(self):
+        """ Create 3D grid_points """
+        T_BG = np.array([
+            [self.R_BG[0, 0], self.R_BG[0, 1], self.R_BG[0, 2], self.t_G[0]],
+            [self.R_BG[1, 0], self.R_BG[1, 1], self.R_BG[2, 2], self.t_G[1]],
+            [self.R_BG[2, 0], self.R_BG[2, 1], self.R_BG[2, 2], self.t_G[2]],
+            [0.0, 0.0, 0.0, 1.0]
+        ])
+
+        grid_points3d = []
         for point in self.grid_points2d:
-            # point = point - self.center
-            # p = np.array([point[0], point[1], 0.0]) + self.t_G
-            # p_G = np.dot(self.R_BG, p)
-
             p = np.array([point[0], point[1], 0.0, 1.0])
             p_G = np.dot(T_BG, p)[0:3]
+            grid_points3d.append(p_G)
+        grid_points3d = np.array(grid_points3d)
 
-            self.grid_points3d.append(p_G)
-        self.grid_points3d = np.array(self.grid_points3d)
+        return grid_points3d
+
+    def create_object_points(self):
+        """ Create object points """
+        # Hard-coding object points - assuming chessboard is origin by
+        # setting chessboard in the x-y plane (where z = 0).
+        object_points = []
+        for i in range(self.nb_rows):
+            for j in range(self.nb_cols):
+                pt = [j * self.square_size, i * self.square_size, 0.0]
+                object_points.append(pt)
+        object_points = np.array(object_points)
+        return object_points
 
     def draw_corners(self, img):
         """ Draw chessboard corners to image
@@ -112,3 +130,25 @@ class Chessboard:
         else:
             print("Failed to detected chessboard in image!")
             return None
+
+    def solvepnp(self, corners, K, D=np.zeros(4)):
+        # Calculate transformation matrix
+        retval, rvec, tvec = cv2.solvePnP(self.object_points,
+                                          corners,
+                                          K,
+                                          D,
+                                          flags=cv2.SOLVEPNP_ITERATIVE)
+        if retval is False:
+            raise RuntimeError("solvePnP failed!")
+
+        # Convert rotation vector to matrix
+        R = np.zeros((3, 3))
+        cv2.Rodrigues(rvec, R)
+
+        # Form transformation matrix
+        T = np.array([[R[0][0], R[0][1], R[0][2], tvec[0]],
+                      [R[1][0], R[1][1], R[1][2], tvec[1]],
+                      [R[2][0], R[2][1], R[2][2], tvec[2]],
+                      [0.0, 0.0, 0.0, 1.0]])
+
+        return T, rvec, tvec

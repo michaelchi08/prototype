@@ -1,7 +1,6 @@
 from os.path import join
 
 import cv2
-import yaml
 import numpy as np
 from numpy import dot
 from scipy.optimize import least_squares
@@ -10,176 +9,43 @@ import matplotlib.pyplot as plt
 from prototype.utils.filesystem import walkdir
 from prototype.models.gimbal import GimbalModel
 from prototype.calibration.chessboard import Chessboard
+from prototype.calibration.camera_intrinsics import CameraIntrinsics
 from prototype.viz.plot_gimbal import PlotGimbal
 
 
-class CameraIntrinsics:
-    """ Camera intrinsics
+class GECData:
+    """ Gimbal extrinsics calibration data
 
-    Attributes
-    ----------
-    cam_id : str
-        Camera ID
-    camera_model : str
-        Camera model
-    distortion_model : str
-        Distortion model
-    distortion_coeffs : str
-        Distortion coefficients
-    intrinsics : np.array
-        Camera intrinsics
-    resolution : np.array
-        Camera resolution
+    cam0_corners2d : np.array
+        Camera 0 image corners
+    cam1_corners2d : np.array
+        Camera 1 image corners
+    cam0_corners3d : np.array
+        Camera 0 image point location
+    cam1_corners3d : np.array
+        Camera 1 image point location
+    imu_data : np.array
+        IMU data
+    cam0_intrinsics : CameraIntrinsics
+        Camera 0 Intrinsics
+    cam1_intrinsics : CameraIntrinsics
+        Camera 1 Intrinsics
 
     """
-    def __init__(self, cam_id, filepath):
-        self.cam_id = None
-        self.camera_model = None
-        self.distortion_model = None
-        self.distortion_coeffs = None
-        self.intrinsics = None
-        self.resolution = None
+    def __init__(self):
+        self.object_points = None
+        self.cam0_corners2d = []
+        self.cam1_corners2d = []
+        self.cam0_corners3d = []
+        self.cam1_corners3d = []
+        self.imu_data = []
 
-        self.K_new = None
-
-        self.load(cam_id, filepath)
-
-    def load(self, cam_id, filepath):
-        """ Load camera intrinsics
-
-        `filepath` is expected to point towards a yaml file produced by
-        Kalibr's camera calibration process, the output is expected to have the
-        following format:
-
-        [Kalibr]: https://github.com/ethz-asl/kalibr
-
-        ```
-        cam0:
-            cam_overlaps: [1]
-            camera_model: pinhole
-            distortion_coeffs: [k1, k2, k3, k4]
-            distortion_model: equidistant
-            intrinsics: [fx, fy, cx, cy]
-            resolution: [px, py]
-            rostopic: "..."
-        cam1:
-            T_cn_cnm1:
-            - [1, 0, 0, 0]
-            - [0, 1, 0, 0]
-            - [0, 0, 1, 0]
-            - [0, 0, 0, 1]
-            cam_overlaps: [0]
-            camera_model: pinhole
-            distortion_coeffs: [k1, k2, k3, k4]
-            distortion_model: equidistant
-            intrinsics: [fx, fy, cx, cy]
-            resolution: [px, py]
-            rostopic: "..."
-        ```
-
-        Parameters
-        ----------
-        cam_id : int
-            Camera ID
-        filepath : str
-            Path to camera intrinsics file
-
-        """
-        intrinsics_file = open(filepath, "r")
-        intrinsics_txt = intrinsics_file.read()
-        intrinsics_file.close()
-        intrinsics = yaml.load(intrinsics_txt)
-
-        self.cam_id = "cam%d" % (cam_id)
-        self.camera_model = intrinsics[self.cam_id]["camera_model"]
-        self.distortion_model = intrinsics[self.cam_id]["distortion_model"]
-        self.distortion_coeffs = intrinsics[self.cam_id]["distortion_coeffs"]
-        self.intrinsics = intrinsics[self.cam_id]["intrinsics"]
-        self.resolution = intrinsics[self.cam_id]["resolution"]
-
-    def K(self):
-        """ Form camera intrinsics matrix K """
-        fx, fy, cx, cy = self.intrinsics
-        K = np.array([[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]])
-        return K
-
-    def D(self):
-        """ Form distortion coefficients vector D """
-        return np.array(self.distortion_coeffs)
-
-    def undistort_points(self, points):
-        """ Undistort points
-
-        Parameters
-        ----------
-        points : np.array
-            Points to undistort in pixel coordinates
-
-        Return
-        ----------
-        points : np.array
-            Undistorted points in ideal coordinates
-
-        """
-        # Get distortion model and form camera intrinsics matrix K
-        distortion_coeffs = np.array(self.distortion_coeffs)
-        K = self.K()
-
-        # Undistort points
-        if self.distortion_model == "radtan":
-            # Distortion coefficients (k1, k2, r1, r2)
-            points = cv2.undistortPoints(points, K, distortion_coeffs)
-        elif self.distortion_model == "equidistant":
-            # Distortion coefficients (k1, k2, k3, k4)
-            points = cv2.fisheye.undistortPoints(points, K, distortion_coeffs)
-
-        return points
-
-    def undistort_image(self, image):
-        # Get distortion model and form camera intrinsics matrix K
-        distortion_coeffs = np.array(self.distortion_coeffs)
-        K = self.K()
-
-        # Undistort points
-        if self.distortion_model == "radtan":
-            D = distortion_coeffs  # (k1, k2, r1, r2)
-            image = cv2.undistort(image, K, distortion_coeffs)
-
-        elif self.distortion_model == "equidistant":
-            D = distortion_coeffs  # (k1, k2, k3, k4)
-            img_size = (image.shape[1], image.shape[0])
-            R = np.eye(3)
-            balance = 0.0
-
-            K_new = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-                K,
-                D,
-                img_size,
-                R,
-                balance=balance
-            )
-            undistorted_image = cv2.fisheye.undistortImage(image,
-                                                           K,
-                                                           D,
-                                                           None,
-                                                           K_new)
-
-        self.K_new = K_new
-        return undistorted_image, K_new
-
-    def __str__(self):
-        """ CameraIntrinsics to string """
-        s = "cam_id: " + self.cam_id + "\n"
-        s += "camera_model: " + self.camera_model + "\n"
-        s += "distortion_model: " + self.distortion_model + "\n"
-        s += "distortion_coeffs: " + str(self.distortion_coeffs) + "\n"
-        s += "intrinsics: " + str(self.intrinsics) + "\n"
-        s += "resolution: " + str(self.resolution)
-        return s
+        self.cam0_intrinsics = None
+        self.cam1_intrinsics = None
 
 
-class GimbalCalibDataLoader:
-    """ Gimbal calibration data
+class GECDataLoader:
+    """ Gimbal extrinsics calibration data loader
 
     Attributes
     ----------
@@ -200,9 +66,12 @@ class GimbalCalibDataLoader:
         Camera 0 image corners
     cam1_corners2d : np.array
         Camera 1 image corners
+    cam0_corners3d : np.array
+        Camera 0 image point location
+    cam1_corners3d : np.array
+        Camera 1 image point location
     imu_data : np.array
         IMU data
-
     cam0_intrinsics : CameraIntrinsics
         Camera 0 Intrinsics
     cam1_intrinsics : CameraIntrinsics
@@ -218,15 +87,8 @@ class GimbalCalibDataLoader:
         self.imu_filename = kwargs.get("imu_filename", "imu.dat")
         self.chessboard = Chessboard(**kwargs)
 
-        self.object_points = self.create_object_points(self.chessboard)
-        self.cam0_corners2d = []
-        self.cam1_corners2d = []
-        self.cam0_corners3d = []
-        self.cam1_corners3d = []
-        self.imu_data = []
-
-        self.cam0_intrinsics = None
-        self.cam1_intrinsics = None
+        self.data = GECData()
+        self.data.object_points = self.chessboard.object_points
 
     def load_imu_data(self, imu_fpath):
         """ Load IMU data
@@ -256,8 +118,8 @@ class GimbalCalibDataLoader:
             Intrinsics file path
 
         """
-        self.cam0_intrinsics = CameraIntrinsics(0, intrinsics_fpath)
-        self.cam1_intrinsics = CameraIntrinsics(1, intrinsics_fpath)
+        self.data.cam0_intrinsics = CameraIntrinsics(0, intrinsics_fpath)
+        self.data.cam1_intrinsics = CameraIntrinsics(1, intrinsics_fpath)
 
     def draw_corners(self, image, corners, color=(0, 255, 0)):
         """ Draw corners
@@ -300,9 +162,9 @@ class GimbalCalibDataLoader:
             cx = K[0, 2]
             cy = K[1, 2]
         elif cam_id == 0:
-            fx, fy, cx, cy = self.cam0_intrinsics.intrinsics
+            fx, fy, cx, cy = self.data.cam0_intrinsics.intrinsics
         elif cam_id == 1:
-            fx, fy, cx, cy = self.cam1_intrinsics.intrinsics
+            fx, fy, cx, cy = self.data.cam1_intrinsics.intrinsics
 
         # Convert ideal points to pixel coordinates
         pixels = []
@@ -314,48 +176,13 @@ class GimbalCalibDataLoader:
 
         return np.array([pixels])
 
-    def create_object_points(self, chessboard):
-        # Hard-coding object points - assuming chessboard is origin by
-        # setting chessboard in the x-y plane (where z = 0).
-        object_points = []
-        for i in range(chessboard.nb_rows):
-            for j in range(chessboard.nb_cols):
-                pt = [j * chessboard.square_size,
-                      i * chessboard.square_size,
-                      0.0]
-                object_points.append(pt)
-        object_points = np.array(object_points)
-        return object_points
-
-    def solvepnp_chessboard(self, chessboard, corners, K, D=np.zeros(4)):
-        # Calculate transformation matrix
-        retval, rvec, tvec = cv2.solvePnP(self.object_points,
-                                          corners,
-                                          K,
-                                          D,
-                                          flags=cv2.SOLVEPNP_ITERATIVE)
-        if retval is False:
-            raise RuntimeError("solvePnP failed!")
-
-        # Convert rotation vector to matrix
-        R = np.zeros((3, 3))
-        cv2.Rodrigues(rvec, R)
-
-        # Form transformation matrix
-        T = np.array([[R[0][0], R[0][1], R[0][2], tvec[0]],
-                      [R[1][0], R[1][1], R[1][2], tvec[1]],
-                      [R[2][0], R[2][1], R[2][2], tvec[2]],
-                      [0.0, 0.0, 0.0, 1.0]])
-
-        return T, rvec, tvec
-
     def draw_coord_frame(self, chessboard, img, corners, K, D=np.zeros(4)):
         # Coordinate frame
         axis = np.float32([[1, 0, 0], [0, 1, 0], [0, 0, -1]]).reshape(-1, 3)
-        axis = self.chessboard.square_size * axis  # Scale chessboard sq size
+        axis = chessboard.square_size * axis  # Scale chessboard sq size
 
         # Solve PnP and project coordinate frame to image plane
-        T, rvec, tvec = self.solvepnp_chessboard(chessboard, corners, K, D)
+        T, rvec, tvec = chessboard.solvepnp(corners, K, D)
         imgpts, _ = cv2.projectPoints(axis, rvec, tvec, K, D)
 
         # Draw coordinate frame
@@ -377,7 +204,7 @@ class GimbalCalibDataLoader:
         cam0_img = self.draw_coord_frame(self.chessboard,
                                          cam0_img,
                                          corners0,
-                                         self.cam0_intrinsics.K())
+                                         self.data.cam0_intrinsics.K())
 
         cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
         cam0_img_ud = self.draw_coord_frame(self.chessboard,
@@ -392,7 +219,7 @@ class GimbalCalibDataLoader:
         cam1_img = self.draw_coord_frame(self.chessboard,
                                          cam1_img,
                                          corners1,
-                                         self.cam1_intrinsics.K())
+                                         self.data.cam1_intrinsics.K())
         cam1_img_ud = self.draw_coord_frame(self.chessboard,
                                             cam1_img_ud,
                                             pixels1_ud,
@@ -416,10 +243,11 @@ class GimbalCalibDataLoader:
             N Chessboard corners in 3D as a matrix
 
         """
-        assert self.object_points is not None
+        assert self.data.object_points is not None
 
-        nb_obj_pts = self.object_points.shape[0]
-        obj_pts_homo = np.block([self.object_points, np.ones((nb_obj_pts, 1))])
+        nb_obj_pts = self.data.object_points.shape[0]
+        obj_pts_homo = np.block([self.data.object_points,
+                                 np.ones((nb_obj_pts, 1))])
         obj_pts_homo = obj_pts_homo.T
 
         X = np.dot(T_o_t, obj_pts_homo)
@@ -463,15 +291,14 @@ class GimbalCalibDataLoader:
                 continue  # Skip this for loop iteration
 
             # Undistort corners in camera 0
-            corners0_ud = self.cam0_intrinsics.undistort_points(corners0)
-            result = self.cam0_intrinsics.undistort_image(cam0_img)
+            corners0_ud = self.data.cam0_intrinsics.undistort_points(corners0)
+            result = self.data.cam0_intrinsics.undistort_image(cam0_img)
             cam0_img_ud, K0_new = result
-            pixels0_ud = self.ideal2pixel(0, corners0_ud, K0_new)
             pixels0_ud = self.ideal2pixel(0, corners0_ud, K0_new)
 
             # Undistort corners in camera 1
-            corners1_ud = self.cam1_intrinsics.undistort_points(corners1)
-            result = self.cam1_intrinsics.undistort_image(cam1_img)
+            corners1_ud = self.data.cam1_intrinsics.undistort_points(corners1)
+            result = self.data.cam1_intrinsics.undistort_image(cam1_img)
             cam1_img_ud, K1_new = result
             pixels1_ud = self.ideal2pixel(1, corners1_ud, K1_new)
 
@@ -482,52 +309,47 @@ class GimbalCalibDataLoader:
                                            cam1_img, cam1_img_ud, K1_new,
                                            corners1, pixels1_ud)
                 if cv2.waitKey(0) == 113:
-                    return False
+                    return None
 
             # Calculate camera to chessboard transform
-            T_c0_cb, _, _ = self.solvepnp_chessboard(
-                self.chessboard,
-                pixels0_ud,
-                self.cam0_intrinsics.K_new
-            )
-            T_c1_cb, _, _ = self.solvepnp_chessboard(
-                self.chessboard,
-                pixels1_ud,
-                self.cam1_intrinsics.K_new
-            )
+            K0_new = self.data.cam0_intrinsics.K_new
+            K1_new = self.data.cam1_intrinsics.K_new
+            T_c0_cb, _, _ = self.chessboard.solvepnp(pixels0_ud, K0_new)
+            T_c1_cb, _, _ = self.chessboard.solvepnp(pixels1_ud, K1_new)
             P_c0 = self.calc_chessboard_corner_positions(T_c0_cb)
             P_c1 = self.calc_chessboard_corner_positions(T_c1_cb)
 
             # Append to calibration data
-            self.cam0_corners2d.append(pixels0_ud[0])
-            self.cam1_corners2d.append(pixels1_ud[0])
-            self.cam0_corners3d.append(P_c0)
-            self.cam1_corners3d.append(P_c1)
-            self.imu_data.append(imu_data[i, :])
+            self.data.cam0_corners2d.append(pixels0_ud[0])
+            self.data.cam1_corners2d.append(pixels1_ud[0])
+            self.data.cam0_corners3d.append(P_c0)
+            self.data.cam1_corners3d.append(P_c1)
+            self.data.imu_data.append(imu_data[i, :])
 
-        self.cam0_corners2d = np.array(self.cam0_corners2d)
-        self.cam1_corners2d = np.array(self.cam1_corners2d)
-        self.imu_data = np.array(self.imu_data)
+        self.data.cam0_corners2d = np.array(self.data.cam0_corners2d)
+        self.data.cam1_corners2d = np.array(self.data.cam1_corners2d)
+        self.data.imu_data = np.array(self.data.imu_data)
         if imshow:
             cv2.destroyAllWindows()
-        return True
+
+        return self.data
 
 
-class GimbalCalibration:
-    """ Gimbal Calibration
+class GEC:
+    """ Gimbal Extrinsics Calibrator
 
     Attributes
     ----------
     gimbal_model : GimbalModel
         Gimbal model
-    data : GimbalCalibDataLoader
+    data : GECDataLoader
         Calibration data
 
     """
     def __init__(self, **kwargs):
         self.gimbal_model = GimbalModel()
-        self.data = GimbalCalibDataLoader(**kwargs)
-        self.data.load(imshow=kwargs.get("inspect_data", False))
+        self.loader = GECDataLoader(**kwargs)
+        self.data = self.loader.load(imshow=kwargs.get("inspect_data", False))
 
     def setup_problem(self):
         """ Setup the calibration optimization problem
@@ -572,6 +394,12 @@ class GimbalCalibration:
 
         Parameters
         ----------
+        x : np.array
+            Parameters to be optimized
+        args : tuple of (Z, K_s, K_d)
+            Z: list of measurement sets
+            K_s: np.array static camera intrinsics matrix K
+            K_d: np.array dynamic camera intrinsics matrix K
 
         Returns
         -------
@@ -640,6 +468,7 @@ class GimbalCalibration:
         return np.array(residuals).reshape((-1))
 
     def optimize(self):
+        """ Optimize Gimbal Extrinsics """
         # Setup
         x, Z = self.setup_problem()
         K_s = self.data.cam0_intrinsics.K_new
