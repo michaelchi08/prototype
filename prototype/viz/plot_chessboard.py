@@ -1,13 +1,14 @@
-import numpy as np
+import matplotlib.pyplot as plt
 
+from prototype.viz.common import axis_equal_3dplot
 from prototype.calibration.chessboard import Chessboard
 
 
 class PlotChessboard:
-    def __init__(self):
-        self.chessboard = Chessboard()
+    def __init__(self, **kwargs):
+        self.chessboard = kwargs.get("chessboard", Chessboard())
 
-    def plot(self, ax):
+    def plot(self, ax=None):
         """ Plot chessboard
 
         Parameters
@@ -16,14 +17,18 @@ class PlotChessboard:
             Plot axes
 
         """
-        grid_points = self.chessboard.grid_points
-        R_BG = self.chessboard.R_BG
-        t_G = self.chessboard.t_G
-        # R_BG = euler2rot([deg2rad(i) for i in [0.0, 20.0, 0.0]], 321)
-        # t_G = np.array([0.0, 0.0, 0.0])
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
 
-        for point in grid_points:
-            point = point - self.chessboard.center
-            p = np.array([point[0], point[1], 0.0]) + t_G
-            p_G = np.dot(R_BG, p)
-            ax.plot([p_G[0]], [p_G[1]], [p_G[2]], marker="o", color="red")
+        # Plot chessboard points
+        for p in self.chessboard.grid_points3d:
+            ax.plot([p[0]], [p[1]], [p[2]], marker="o", color="red")
+
+        # Plot settings
+        axis_equal_3dplot(ax)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+
+        return ax

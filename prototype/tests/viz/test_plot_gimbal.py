@@ -59,19 +59,12 @@ class PlotGimbalTest(unittest.TestCase):
             plt.show()
 
     def test_plot(self):
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-
         gimbal = PlotGimbal()
         gimbal.set_attitude([0.0, 0.0, 0.0])
-        gimbal.plot(ax)
+        gimbal.plot()
 
         # Plot
         debug = True
         # debug = False
         if debug:
-            axis_equal_3dplot(ax)
-            ax.set_xlabel("x")
-            ax.set_ylabel("y")
-            ax.set_zlabel("z")
             plt.show()

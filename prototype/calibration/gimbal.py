@@ -1,14 +1,16 @@
 from os.path import join
-from math import pi
 
 import cv2
 import yaml
 import numpy as np
 from numpy import dot
+from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
 
 from prototype.utils.filesystem import walkdir
 from prototype.models.gimbal import GimbalModel
 from prototype.calibration.chessboard import Chessboard
+from prototype.viz.plot_gimbal import PlotGimbal
 
 
 class CameraIntrinsics:
@@ -176,7 +178,7 @@ class CameraIntrinsics:
         return s
 
 
-class GimbalCalibData:
+class GimbalCalibDataLoader:
     """ Gimbal calibration data
 
     Attributes
@@ -372,11 +374,12 @@ class GimbalCalibData:
                               corners1, pixels1_ud):
         # Draw corners in camera 0
         cam0_img = self.draw_corners(cam0_img, corners0)
-        cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
         cam0_img = self.draw_coord_frame(self.chessboard,
                                          cam0_img,
                                          corners0,
                                          self.cam0_intrinsics.K())
+
+        cam0_img_ud = self.draw_corners(cam0_img_ud, pixels0_ud)
         cam0_img_ud = self.draw_coord_frame(self.chessboard,
                                             cam0_img_ud,
                                             pixels0_ud,
@@ -505,6 +508,8 @@ class GimbalCalibData:
         self.cam0_corners2d = np.array(self.cam0_corners2d)
         self.cam1_corners2d = np.array(self.cam1_corners2d)
         self.imu_data = np.array(self.imu_data)
+        if imshow:
+            cv2.destroyAllWindows()
         return True
 
 
@@ -515,15 +520,14 @@ class GimbalCalibration:
     ----------
     gimbal_model : GimbalModel
         Gimbal model
-    data : GimbalCalibData
+    data : GimbalCalibDataLoader
         Calibration data
 
     """
     def __init__(self, **kwargs):
         self.gimbal_model = GimbalModel()
-        self.data = GimbalCalibData(**kwargs)
-        self.data.load()
-        # self.data.load(imshow=True)
+        self.data = GimbalCalibDataLoader(**kwargs)
+        self.data.load(imshow=kwargs.get("inspect_data", False))
 
     def setup_problem(self):
         """ Setup the calibration optimization problem
@@ -536,6 +540,7 @@ class GimbalCalibration:
         """
         assert len(self.data.cam0_corners2d) == len(self.data.cam1_corners2d)
         assert len(self.data.cam0_corners3d) == len(self.data.cam0_corners3d)
+        print("Setting up optimization problem ...")
 
         # Setup vector of parameters to be optimized
         K = len(self.data.cam0_corners2d)  # Number of measurement set
@@ -583,46 +588,88 @@ class GimbalCalibration:
 
         Z, K_s, K_d = args
 
+        residuals = []
         for i in range(int(K)):
             # Get joint angles
-            Lambda1 = x[18] # Roll
-            Lambda2 = x[18+1] # Pitch
+            Lambda1 = x[18 + (i * 2)]  # Roll
+            Lambda2 = x[18 + (i * 2 + 1)]  # Pitch
 
             # Get measurements
             P_s, P_d, Q_s, Q_d = Z[i]
 
-            # Calculate
-            T_sd = self.gimbal_model.T_sd(tau_s, Lambda1, w1, Lambda2, w2, tau_d)
+            # Calculate static to dynamic camera transform
+            T_sd = self.gimbal_model.T_sd(tau_s,
+                                          Lambda1, w1, Lambda2, w2,
+                                          tau_d)
 
-            for j in range(len(P_d)):
+            # Calculate reprojection error in the static camera
+            nb_P_d_corners = len(P_d)
+            err_s = np.zeros(nb_P_d_corners * 2)
+            for j in range(nb_P_d_corners):
+                # -- Transform 3D world point from dynamic to static camera
                 P_d_homo = np.append(P_d[j], 1.0)
-                print("P_s calculated: ", dot(T_sd, P_d_homo))
-                print("P_s measured: ", P_s[j])
+                P_s_cal = dot(T_sd, P_d_homo)[0:3]
+                # -- Project 3D world point to image plane
+                Q_s_cal = dot(K_s, P_s_cal)
+                # -- Normalize projected image point
+                Q_s_cal[0] = Q_s_cal[0] / Q_s_cal[2]
+                Q_s_cal[1] = Q_s_cal[1] / Q_s_cal[2]
+                Q_s_cal = Q_s_cal[:2]
+                # -- Calculate reprojection error
+                err_s[(j * 2):(j * 2 + 2)] = Q_s[j] - Q_s_cal
 
-        # P_s_homo = np.append(P_s[0], 1.0)
-        # print("P_d calculated: ", dot(np.linalg.inv(T_sd), P_s_homo)[0:3])
-        # print("P_d measured: ", P_d[0])
+            # Calculate reprojection error in the dynamic camera
+            nb_P_s_corners = len(P_s)
+            err_d = np.zeros(nb_P_s_corners * 2)
+            for j in range(nb_P_s_corners):
+                # -- Transform 3D world point from dynamic to static camera
+                P_s_homo = np.append(P_s[j], 1.0)
+                P_d_cal = dot(np.linalg.inv(T_sd), P_s_homo)[0:3]
+                # -- Project 3D world point to image plane
+                Q_d_cal = dot(K_d, P_d_cal)
+                # -- Normalize projected image point
+                Q_d_cal[0] = Q_d_cal[0] / Q_d_cal[2]
+                Q_d_cal[1] = Q_d_cal[1] / Q_d_cal[2]
+                Q_d_cal = Q_d_cal[:2]
+                # -- Calculate reprojection error
+                err_d[(j * 2):(j * 2 + 2)] = Q_d[j] - Q_d_cal
 
-        # Calculate reprojection error on static camera
-        # -- Project 3D world point to image plane
-        # p_s_homo = np.append(p_s, [1])
-        # x_C = dot(K_d, dot(T_d_s, p_s_homo)[:3])
-        # -- Normalize projected image point
-        # x_C[0] = x_C[0] / x_C[2]
-        # x_C[1] = x_C[1] / x_C[2]
-        # x_C = x_C[:2]
-        # -- Calculate residual error
-        # residual = z_d - x_C
-        # print("residual: ", residual)
+            # Stack residuals
+            residuals.append(np.block([err_s, err_d]))
 
-        # Calculate reprojection error on dynamic camera
-        # -- Project 3D world point to image plane
-        # p_s_homo = np.append(p_s, [1])
-        # x_C = dot(K_d, dot(T_d_s, p_s_homo)[:3])
-        # -- Normalize projected image point
-        # x_C[0] = x_C[0] / x_C[2]
-        # x_C[1] = x_C[1] / x_C[2]
-        # x_C = x_C[:2]
-        # -- Calculate residual error
-        # residual = z_d - x_C
-        # print("residual: ", residual)
+        return np.array(residuals).reshape((-1))
+
+    def optimize(self):
+        # Setup
+        x, Z = self.setup_problem()
+        K_s = self.data.cam0_intrinsics.K_new
+        K_d = self.data.cam1_intrinsics.K_new
+        args = [Z, K_s, K_d]
+
+        # Optimize
+        print("Optimizing!")
+        print("This can take a while...")
+        result = least_squares(self.reprojection_error,
+                               x,
+                               args=args,
+                               verbose=1)
+
+        # Parse results
+        self.gimbal_model.tau_s = result.x[0:6]
+        self.gimbal_model.tau_d = result.x[6:12]
+        self.gimbal_model.w1 = result.x[12:15]
+        self.gimbal_model.w2 = result.x[15:18]
+        self.gimbal_model.Lambda1 = 0
+        self.gimbal_model.Lambda2 = 0
+
+        print("Results:")
+        print("---------------------------------")
+        print("tau_s: ", self.gimbal_model.tau_s)
+        print("tau_d: ", self.gimbal_model.tau_d)
+        print("w1: ", self.gimbal_model.w1)
+        print("w2: ", self.gimbal_model.w2)
+
+        # Plot gimbal
+        plot_gimbal = PlotGimbal(gimbal=self.gimbal_model)
+        plot_gimbal.plot()
+        plt.show()

@@ -3,12 +3,17 @@ from os.path import join
 
 import cv2
 import numpy as np
+from scipy.optimize import least_squares
+import matplotlib.pyplot as plt
 
 import prototype.tests as test
 from prototype.calibration.chessboard import Chessboard
 from prototype.calibration.gimbal import CameraIntrinsics
-from prototype.calibration.gimbal import GimbalCalibData
+from prototype.calibration.gimbal import GimbalCalibDataLoader
 from prototype.calibration.gimbal import GimbalCalibration
+from prototype.viz.plot_gimbal import PlotGimbal
+from prototype.viz.plot_chessboard import PlotChessboard
+from prototype.viz.common import axis_equal_3dplot
 
 
 class CameraIntrinsicsTest(unittest.TestCase):
@@ -75,35 +80,35 @@ class CameraIntrinsicsTest(unittest.TestCase):
         # cv2.waitKey(0)
 
 
-# class GimbalCalibDataTest(unittest.TestCase):
-#     def setUp(self):
-#         self.data_path = join(test.TEST_DATA_PATH, "calib_data")
-#         self.calib_data = GimbalCalibData(
-#             data_path=self.data_path,
-#             cam0_dir="static_camera",
-#             cam1_dir="gimbal_camera",
-#             intrinsics_filename="intrinsics_equi.yaml",
-#             imu_filename="imu.dat",
-#             nb_rows=6,
-#             nb_cols=7,
-#             square_size=0.29
-#         )
-#
-#     def test_load_imu_data(self):
-#         imu_fpath = join(self.data_path, self.calib_data.imu_filename)
-#         imu_data = self.calib_data.load_imu_data(imu_fpath)
-#         self.assertEqual(5, imu_data.shape[0])
-#         self.assertEqual(3, imu_data.shape[1])
-#
-#     def test_load_cam_intrinsics(self):
-#         intrinsics_fpath = join(self.data_path, "intrinsics_equi.yaml")
-#         self.calib_data.load_cam_intrinsics(intrinsics_fpath)
-#         self.assertTrue(self.calib_data.cam0_intrinsics is not None)
-#         self.assertTrue(self.calib_data.cam1_intrinsics is not None)
-#
-#     def test_load(self):
-#         retval = self.calib_data.load()
-#         self.assertTrue(retval)
+class GimbalCalibDataLoaderTest(unittest.TestCase):
+    def setUp(self):
+        self.data_path = join(test.TEST_DATA_PATH, "calib_data")
+        self.calib_data = GimbalCalibDataLoader(
+            data_path=self.data_path,
+            cam0_dir="static_camera",
+            cam1_dir="gimbal_camera",
+            intrinsics_filename="intrinsics_equi.yaml",
+            imu_filename="imu.dat",
+            nb_rows=6,
+            nb_cols=7,
+            square_size=0.29
+        )
+
+    def test_load_imu_data(self):
+        imu_fpath = join(self.data_path, self.calib_data.imu_filename)
+        imu_data = self.calib_data.load_imu_data(imu_fpath)
+        self.assertEqual(5, imu_data.shape[0])
+        self.assertEqual(3, imu_data.shape[1])
+
+    def test_load_cam_intrinsics(self):
+        intrinsics_fpath = join(self.data_path, "intrinsics_equi.yaml")
+        self.calib_data.load_cam_intrinsics(intrinsics_fpath)
+        self.assertTrue(self.calib_data.cam0_intrinsics is not None)
+        self.assertTrue(self.calib_data.cam1_intrinsics is not None)
+
+    def test_load(self):
+        retval = self.calib_data.load()
+        self.assertTrue(retval)
 
 
 class GimbalCalibTest(unittest.TestCase):
@@ -134,3 +139,23 @@ class GimbalCalibTest(unittest.TestCase):
         args = [Z, K_s, K_d]
 
         self.calib.reprojection_error(x, *args)
+
+    # def test_optimize(self):
+    #     data_path = "/home/chutsu/Dropbox/calib_data/extrinsics"
+    #     calib = GimbalCalibration(
+    #         data_path=data_path,
+    #         cam0_dir="static_camera",
+    #         cam1_dir="gimbal_camera",
+    #         intrinsics_filename="intrinsics.yaml",
+    #         imu_filename="gimbal_joint.dat",
+    #         nb_rows=6,
+    #         nb_cols=7,
+    #         square_size=0.0285
+    #     )
+    #     calib.optimize()
+
+    def test_sandbox(self):
+        chessboard = Chessboard(t_G=np.array([5.0, 0.0, 1.0]))
+        plot_chessboard = PlotChessboard(chessboard=chessboard)
+        plot_chessboard.plot()
+        plt.show()

@@ -16,8 +16,8 @@ class PlotChessboardTest(unittest.TestCase):
         chessboard.plot(ax)
 
         # Plot
-        debug = True
-        # debug = False
+        # debug = True
+        debug = False
         if debug:
             axis_equal_3dplot(ax)
             ax.set_xlabel("x")

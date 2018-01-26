@@ -39,20 +39,38 @@ class Chessboard:
         self.nb_cols = kwargs.get("nb_cols", 10)
         self.square_size = kwargs.get("square_size", 0.1)
 
-        center_x = ((self.nb_cols - 1) * self.square_size) / 2.0
-        center_y = ((self.nb_rows - 1) * self.square_size) / 2.0
-        self.center = np.array([center_x, center_y])
+        # center_x = ((self.nb_cols - 1) * self.square_size) / 2.0
+        # center_y = ((self.nb_rows - 1) * self.square_size) / 2.0
+        # self.center = np.array([center_x, center_y])
 
         self.R_BG = kwargs.get("R_BG", euler2rot([-pi / 2, 0.0, -pi / 2], 321))
         self.t_G = kwargs.get("t_G", np.zeros(3))
 
-        # Grid_points as a list of (x, y) points
+        # 2D Grid_points as a list of (x, y) points
         # starting from top left corner to bottom right
-        self.grid_points = []
+        self.grid_points2d = []
         for i in range(self.nb_rows):
             for j in range(self.nb_rows):
-                self.grid_points.append([i, j])
-        self.grid_points = self.square_size * np.array(self.grid_points)
+                self.grid_points2d.append([i, j])
+        self.grid_points2d = self.square_size * np.array(self.grid_points2d)
+
+        # 3D Grid_points as a list of (x, y, z) points
+        # in the global frame
+        self.grid_points3d = []
+        T_BG = np.array([[self.R_BG[0, 0], self.R_BG[0, 1], self.R_BG[0, 2], self.t_G[0]],
+                         [self.R_BG[1, 0], self.R_BG[1, 1], self.R_BG[2, 2], self.t_G[1]],
+                         [self.R_BG[2, 0], self.R_BG[2, 1], self.R_BG[2, 2], self.t_G[2]],
+                         [0.0, 0.0, 0.0, 1.0]])
+        for point in self.grid_points2d:
+            # point = point - self.center
+            # p = np.array([point[0], point[1], 0.0]) + self.t_G
+            # p_G = np.dot(self.R_BG, p)
+
+            p = np.array([point[0], point[1], 0.0, 1.0])
+            p_G = np.dot(T_BG, p)[0:3]
+
+            self.grid_points3d.append(p_G)
+        self.grid_points3d = np.array(self.grid_points3d)
 
     def draw_corners(self, img):
         """ Draw chessboard corners to image
