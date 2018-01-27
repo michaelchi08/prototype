@@ -104,6 +104,7 @@ class Chessboard:
 
         """
         # Find the chessboard corners
+        img = np.array(img) # Make a copy
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         size = (self.nb_cols, self.nb_rows)
         ret, corners = cv2.findChessboardCorners(gray_img, size, None)
@@ -115,6 +116,66 @@ class Chessboard:
         corners = cv2.cornerSubPix(gray_img, corners, (11, 11), (-1, -1), crit)
         img = cv2.drawChessboardCorners(img, size, corners, ret)
 
+        return img
+
+    def draw_coord_frame(self, img, corners, K, D=np.zeros(4)):
+        """ Draw coordinate frame onto image
+
+        Parameters
+        ----------
+        img : np.array
+            Input image
+        corners : np.array
+            Chessboard corners
+        K : np.array
+            Camera matrix K
+        D : np.array
+            Rad-Tan distortion parameters
+
+        Returns
+        -------
+        img : np.array
+            Image with coordinate frame drawn on
+
+        """
+        # Coordinate frame
+        axis = np.float32([[1, 0, 0], [0, 1, 0], [0, 0, -1]]).reshape(-1, 3)
+        axis = self.square_size * axis  # Scale chessboard sq size
+
+        # Solve PnP and project coordinate frame to image plane
+        T, rvec, tvec = self.solvepnp(corners, K, D)
+        imgpts, _ = cv2.projectPoints(axis, rvec, tvec, K, D)
+
+        # Draw coordinate frame
+        corner = tuple(corners[0].ravel())
+        corner = (int(corner[0]), int(corner[1]))
+        img = np.array(img)  # Make a copy
+        img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255, 0, 0), 3)
+        img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0, 255, 0), 3)
+        img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0, 0, 255), 3)
+
+        return img
+
+    def draw_viz(self, img, corners, K):
+        """ Draw visualization
+
+        Parameters
+        ----------
+        img : np.array
+            Input image
+        corners : np.array
+            Chessboard corners
+        K : np.array
+            Camera matrix K
+
+        Returns
+        -------
+        img : np.array
+            Output Image
+
+        """
+        img = self.draw_corners(img)
+        img = self.draw_coord_frame(img, corners, K)
         return img
 
     def find_corners(self, img):
@@ -132,6 +193,24 @@ class Chessboard:
             return None
 
     def solvepnp(self, corners, K, D=np.zeros(4)):
+        """ Calculate transform from camera to chessboard
+
+        Parameters
+        ----------
+        corners : np.array
+            Chessboard corners (starting top left, to bottom right)
+        K : np.array
+            Camera matrix K
+        D : np.array
+            Rad-tan distortion coefficients
+
+        Returns
+        -------
+        T, rev, tvec : np.array, np.array, np.array
+            Transform from camera to chessboard, and the corresponding
+            Rodrigues rotation vector and translation vector
+
+        """
         # Calculate transformation matrix
         retval, rvec, tvec = cv2.solvePnP(self.object_points,
                                           corners,
@@ -152,3 +231,29 @@ class Chessboard:
                       [0.0, 0.0, 0.0, 1.0]])
 
         return T, rvec, tvec
+
+    def calc_corner_positions(self, corners, K, D=np.zeros(4)):
+        """ Calculate chessboard corner position
+
+        Having calculated the passive transform from camera to chessboard via
+        SolvePnP, this function takes the transform and calculates the 3D
+        position of each chessboard corner.
+
+        Returns
+        -------
+        X : np.array (Nx3)
+            N Chessboard corners in 3D as a matrix
+
+        """
+        T_o_t, _, _ = self.solvepnp(corners, K, D=np.zeros(4))
+
+        nb_obj_pts = self.object_points.shape[0]
+        ones = np.ones((nb_obj_pts, 1))
+        obj_pts_homo = np.block([self.object_points, ones])
+        obj_pts_homo = obj_pts_homo.T
+
+        X = np.dot(T_o_t, obj_pts_homo)
+        X = X.T
+        X = X[:, 0:3]
+
+        return X

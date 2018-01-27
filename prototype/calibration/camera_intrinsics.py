@@ -22,19 +22,17 @@ class CameraIntrinsics:
         Camera resolution
 
     """
-    def __init__(self, cam_id, filepath):
-        self.cam_id = None
+    def __init__(self, filepath):
         self.camera_model = None
         self.distortion_model = None
         self.distortion_coeffs = None
         self.intrinsics = None
         self.resolution = None
-
         self.K_new = None
 
-        self.load(cam_id, filepath)
+        self.load(filepath)
 
-    def load(self, cam_id, filepath):
+    def load(self, filepath):
         """ Load camera intrinsics
 
         `filepath` is expected to point towards a yaml file produced by
@@ -80,12 +78,11 @@ class CameraIntrinsics:
         intrinsics_file.close()
         intrinsics = yaml.load(intrinsics_txt)
 
-        self.cam_id = "cam%d" % (cam_id)
-        self.camera_model = intrinsics[self.cam_id]["camera_model"]
-        self.distortion_model = intrinsics[self.cam_id]["distortion_model"]
-        self.distortion_coeffs = intrinsics[self.cam_id]["distortion_coeffs"]
-        self.intrinsics = intrinsics[self.cam_id]["intrinsics"]
-        self.resolution = intrinsics[self.cam_id]["resolution"]
+        self.camera_model = intrinsics["camera_model"]
+        self.distortion_model = intrinsics["distortion_model"]
+        self.distortion_coeffs = intrinsics["distortion_coeffs"]
+        self.intrinsics = intrinsics["intrinsics"]
+        self.resolution = intrinsics["resolution"]
 
     def K(self):
         """ Form camera intrinsics matrix K """
