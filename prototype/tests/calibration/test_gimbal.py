@@ -7,12 +7,11 @@ import matplotlib.pyplot as plt
 
 import prototype.tests as test
 from prototype.calibration.chessboard import Chessboard
+from prototype.calibration.camera_intrinsics import CameraIntrinsics
 from prototype.calibration.gimbal import ECData
 from prototype.calibration.gimbal import GECDataLoader
 from prototype.calibration.gimbal import GEC
-from prototype.viz.plot_gimbal import PlotGimbal
-from prototype.viz.plot_chessboard import PlotChessboard
-from prototype.viz.common import axis_equal_3dplot
+from prototype.calibration.gimbal import GimbalDataGenerator
 
 
 class ECDataTest(unittest.TestCase):
@@ -20,8 +19,9 @@ class ECDataTest(unittest.TestCase):
         self.data_path = join(test.TEST_DATA_PATH, "calib_data")
         images_dir = join(self.data_path, "gimbal_camera")
         intrinsics_file = join(self.data_path, "static_camera.yaml")
+        intrinsics = CameraIntrinsics(intrinsics_file)
         chessboard = Chessboard(nb_rows=6, nb_cols=7, square_size=0.29)
-        self.data = ECData(images_dir, intrinsics_file, chessboard)
+        self.data = ECData(images_dir, intrinsics, chessboard)
 
     def test_ideal2pixels(self):
         # Load test image
@@ -40,6 +40,7 @@ class ECDataTest(unittest.TestCase):
         self.data.ideal2pixel(corners_ud, K_new)
 
     def test_load(self):
+        self.data.load()
         self.assertTrue(len(self.data.images) > 0)
         self.assertTrue(len(self.data.images_ud) > 0)
 
@@ -105,8 +106,17 @@ class GECTest(unittest.TestCase):
     #     )
     #     calib.optimize()
 
-    def test_sandbox(self):
-        chessboard = Chessboard(t_G=np.array([5.0, 0.0, 1.0]))
-        plot_chessboard = PlotChessboard(chessboard=chessboard)
-        plot_chessboard.plot()
-        plt.show()
+
+class GimbalDataGeneratorTest(unittest.TestCase):
+    def setUp(self):
+        self.data_path = join(test.TEST_DATA_PATH, "calib_data2")
+        self.intrinsics_file = join(self.data_path, "camera.yaml")
+        self.data = GimbalDataGenerator(self.intrinsics_file)
+
+    # def test_sandbox(self):
+    #     data.plot()
+
+    def test_generate(self):
+        ec_data, imu_data = self.data.generate()
+        gec = GEC(sim_mode=True, ec_data=ec_data, imu_data=imu_data)
+        gec.optimize()

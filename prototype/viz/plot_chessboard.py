@@ -26,9 +26,10 @@ class PlotChessboard:
             ax.plot([p[0]], [p[1]], [p[2]], marker="o", color="red")
 
         # Plot settings
-        axis_equal_3dplot(ax)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
+        if ax is None:
+            axis_equal_3dplot(ax)
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+            ax.set_zlabel("z")
 
         return ax

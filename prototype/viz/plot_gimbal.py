@@ -89,7 +89,6 @@ class PlotGimbal:
                          [0.0, 0.0, 0.0, 1.0]])
 
         # Calculate gimbal transforms
-        self.gimbal.set_attitude([radians(0), radians(0), 0])
         T_sb, T_se, T_sd = self.gimbal.calc_transforms()
         T_gb = dot(T_gs, T_sb)
         T_ge = dot(T_gs, T_se)
@@ -120,9 +119,10 @@ class PlotGimbal:
         self.plot_coord_frame(ax, T_gd, length=0.05)
 
         # Plot settings
-        axis_equal_3dplot(ax)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
-        ax.set_zlabel("z")
+        if ax is None:
+            axis_equal_3dplot(ax)
+            ax.set_xlabel("x")
+            ax.set_ylabel("y")
+            ax.set_zlabel("z")
 
         return ax
