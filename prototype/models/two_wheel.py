@@ -12,15 +12,16 @@ def two_wheel_2d_model(x, u, dt):
 
     Parameters
     ----------
-    x :
-
-    u :
-
-    dt :
-
+    x : np.array
+        Two Wheel model state vector (x, y, theta)
+    u : np.array
+        Input
+    dt : float
+        Time difference
 
     Returns
     -------
+    np.array (x, y, theta)
 
     """
     gdot = np.array([[u[0, 0] * cos(x[2, 0]) * dt],
@@ -35,15 +36,16 @@ def two_wheel_2d_linearized_model(x, u, dt):
 
     Parameters
     ----------
-    x :
-
-    u :
-
-    dt :
-
+    x : np.array
+        Two Wheel model state vector (x, y, theta)
+    u : np.array
+        Input
+    dt : float
+        Time difference
 
     Returns
     -------
+    np.array 3x3 matrix of linearized two wheel model
 
     """
     G1 = 1.0
@@ -68,27 +70,28 @@ def two_wheel_3d_model(x, u, dt):
 
     Parameters
     ----------
-    x :
-
-    u :
-
-    dt :
-
+    x : np.array
+        Two Wheel model state vector (x, y, theta)
+    u : np.array
+        Input
+    dt : float
+        Time difference
 
     Returns
     -------
+    np.array (x, y, z, theta)
 
     """
-    g1 = x[0, 0] + u[0] * cos(x[3, 0]) * dt
-    g2 = x[1, 0] + u[0] * sin(x[3, 0]) * dt
-    g3 = x[2, 0] + u[1] * dt
-    g4 = x[3, 0] + u[2] * dt
+    g1 = x[0] + u[0] * cos(x[3]) * dt
+    g2 = x[1] + u[0] * sin(x[3]) * dt
+    g3 = x[2] + u[1] * dt
+    g4 = x[3] + u[2] * dt
 
     return np.array([g1, g2, g3, g4])
 
 
 def two_wheel_2d_deriv():
-    """ """
+    """ Symbolic derivation of Jacobian of the 2D two wheel motion model """
     x1, x2, x3, x4, x5 = sympy.symbols("x1,x2,x3,x4,x5")
     dt = sympy.symbols("dt")
 
@@ -104,7 +107,7 @@ def two_wheel_2d_deriv():
 
 
 def two_wheel_3d_deriv():
-    """ """
+    """ Symbolic derivation of Jacobian of the 3D two wheel motion model """
     x1, x2, x3, x4, x5, x6, x7 = sympy.symbols("x1,x2,x3,x4,x5,x6,x7")
     dt = sympy.symbols("dt")
 
@@ -130,7 +133,7 @@ def two_wheel_3d_deriv():
 
 
 def two_wheel_3d_deriv2():
-    """ """
+    """ Symbolic derivation of Jacobian of the 3D two wheel motion model """
     functions = sympy.symbols("f1,f2,f3,f4,f5,f6,f7,f8,f9")
     variables = sympy.symbols("x1,x2,x3,x4,x5,x6,x7,x8,x9")
 

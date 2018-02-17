@@ -8,7 +8,7 @@ from prototype.control.quadrotor.attitude import AttitudeController
 from prototype.models.quadrotor import QuadrotorModel
 
 
-class PositionControllerTest(unittest.TestCase):
+class QuadrotorTest(unittest.TestCase):
     def setUp(self):
         self.quadrotor = QuadrotorModel()
         self.position_controller = PositionController()
@@ -19,28 +19,16 @@ class PositionControllerTest(unittest.TestCase):
 
         time = []
         pos_true = []
-        vel_true = []
-        acc_true = []
+        # vel_true = []
+        # acc_true = []
 
         t = 0.0
         dt = 0.01
         for i in range(5000):
-            # position controller
-            pos_actual = np.array([self.quadrotor.states[6],
-                                   self.quadrotor.states[7],
-                                   self.quadrotor.states[8],
-                                   self.quadrotor.states[2]])
-            att_setpoints = self.position_controller.update(
-                pos_setpoints, pos_actual, self.quadrotor.states[2], dt)
-
-            # attitude controller
-            att_actual = np.array([self.quadrotor.states[0],
-                                   self.quadrotor.states[1],
-                                   self.quadrotor.states[2],
-                                   self.quadrotor.states[8]])
-            motor_inputs = self.attitude_controller.update(att_setpoints,
-                                                           att_actual,
-                                                           dt)
+            motor_inputs = self.quadrotor.update_pos_controller(
+                pos_setpoints,
+                dt
+            )
             self.quadrotor.update(motor_inputs, dt)
 
             t += dt
@@ -64,4 +52,3 @@ class PositionControllerTest(unittest.TestCase):
         plt.plot(time, pos_true[:, 2])
 
         plt.show()
-

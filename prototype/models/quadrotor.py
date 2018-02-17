@@ -13,61 +13,65 @@ from prototype.control.quadrotor.attitude import AttitudeController
 
 class QuadrotorModel(object):
     """Quadrotor model"""
-
     def __init__(self):
         self.states = [0.0 for i in range(12)]
 
+        # Moment of inertia in x, y, z axis
         self.Ix = 0.0963
         self.Iy = 0.0963
         self.Iz = 0.1927
 
+        # Rotation and translation drag constant
         self.kr = 0.1
         self.kt = 0.2
 
-        self.l = 0.9
+        self.arm_length = 0.9  # Quadrotor Arm length
         self.d = 1.0
 
-        self.m = 1.0
-        self.g = 10.0
+        self.m = 1.0    # Mass of quadrotor
+        self.g = 10.0   # Gravity
 
         self.position_controller = PositionController()
         self.attitude_controller = AttitudeController()
 
-    @property
-    def attitude(self):
-        """Attitude"""
-        roll = self.states[0]
-        pitch = self.states[1]
-        yaw = self.states[2]
-        att = np.array([[roll], [pitch], [yaw]])
-        return att
+    def update_pos_controller(self, pos_setpoints, dt):
+        """ Update position controller
 
-    @property
-    def angular_velocity(self):
-        """Angular Velocity"""
-        wx = self.states[3]
-        wy = self.states[4]
-        wz = self.states[5]
-        w = np.array([[wx], [wy], [wz]])
-        return w
+        Parameters
+        ----------
+        pos_setpoints : np.array
+            Position setpoints (x, y, z, yaw)
+        dt : float
+            Time difference
 
-    @property
-    def position(self):
-        """Position"""
-        x = self.states[6]
-        y = self.states[7]
-        z = self.states[8]
-        pos = np.array([[x], [y], [z]])
-        return pos
+        Returns
+        -------
+        motor_inputs : np.array
+            Motor inputs (Roll, Pitch, Yaw, Thrust)
 
-    @property
-    def velocity(self):
-        """Velocity"""
-        vx = self.states[9]
-        vy = self.states[10]
-        vz = self.states[11]
-        vel = np.array([[vx], [vy], [vz]])
-        return vel
+        """
+        # Position controller
+        pos_actual = np.array([self.states[6],   # x
+                               self.states[7],   # y
+                               self.states[8],   # z
+                               self.states[2]])  # Yaw
+        att_setpoints = self.position_controller.update(pos_setpoints,
+                                                        pos_actual,
+                                                        self.states[2],
+                                                        dt)
+
+        # Attitude controller
+        att_actual = np.array([self.states[0],   # Roll
+                               self.states[1],   # Pitch
+                               self.states[2],   # Yaw
+                               self.states[8]])  # z
+        motor_inputs = self.attitude_controller.update(
+            att_setpoints,
+            att_actual,
+            dt
+        )
+
+        return motor_inputs
 
     def update(self, motor_inputs, dt):
         """Update quadrotor motion model
@@ -80,7 +84,7 @@ class QuadrotorModel(object):
             Time difference
 
         """
-        # states
+        # States
         ph = self.states[0]
         th = self.states[1]
         ps = self.states[2]
@@ -97,10 +101,10 @@ class QuadrotorModel(object):
         vy = self.states[10]
         vz = self.states[11]
 
-        # convert motor inputs to angular p, q, r and total thrust
+        # Convert motor inputs to angular p, q, r and total thrust
         A = np.array([[1.0, 1.0, 1.0, 1.0],
-                      [0.0, -self.l, 0.0, self.l],
-                      [-self.l, 0.0, self.l, 0.0],
+                      [0.0, -self.arm_length, 0.0, self.arm_length],
+                      [-self.arm_length, 0.0, self.arm_length, 0.0],
                       [-self.d, self.d, -self.d, self.d]])
         tau = dot(A, motor_inputs)
         tauf = tau[0]
@@ -108,7 +112,7 @@ class QuadrotorModel(object):
         tauq = tau[2]
         taur = tau[3]
 
-        # update
+        # Update
         self.states[0] = ph + (p + q * sin(ph) * tan(th) + r * cos(ph) * tan(th)) * dt  # NOQA
         self.states[1] = th + (q * cos(ph) - r * sin(ph)) * dt  # NOQA
         self.states[2] = ps + ((1 / cos(th)) * (q * sin(ph) + r * cos(ph))) * dt  # NOQA
@@ -119,10 +123,14 @@ class QuadrotorModel(object):
         self.states[7] = y + vy * dt
         self.states[8] = z + vz * dt
 
-        self.states[9] = vx + ((-self.kt * vx / self.m) + (1 / self.m) * (cos(ph) * sin(th) * cos(ps) + sin(ph) * sin(ps)) * tauf) * dt  # NOQA
-        self.states[10] = vy + ((-self.kt * vy / self.m) + (1 / self.m) * (cos(ph) * sin(th) * sin(ps) - sin(ph) * cos(ps)) * tauf) * dt  # NOQA
-        self.states[11] = vz + (-(self.kt * vz / self.m) + (1 / self.m) * (cos(ph) * cos(th)) * tauf - self.g) * dt  # NOQA
+        ax = ((-self.kt * vx / self.m) + (1 / self.m) * (cos(ph) * sin(th) * cos(ps) + sin(ph) * sin(ps)) * tauf)  # NOQA
+        ay = ((-self.kt * vy / self.m) + (1 / self.m) * (cos(ph) * sin(th) * sin(ps) - sin(ph) * cos(ps)) * tauf)  # NOQA
+        az = (-(self.kt * vz / self.m) + (1 / self.m) * (cos(ph) * cos(th)) * tauf - self.g)  # NOQA
 
-        # constrain yaw to be [-180, 180]
+        self.states[9] = vx + ax * dt
+        self.states[10] = vy + ay * dt
+        self.states[11] = vz + az * dt
+
+        # Constrain yaw to be [-180, 180]
         self.states[2] = rad2deg(self.states[2])
         self.states[2] = deg2rad(self.states[2])

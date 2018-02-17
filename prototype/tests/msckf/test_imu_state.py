@@ -348,33 +348,3 @@ class IMUStateTest(unittest.TestCase):
         self.assertTrue(allclose(dv_G, self.imu_state.v_G))
         self.assertTrue(allclose(db_a, self.imu_state.b_a))
         self.assertTrue(allclose(dp_G, self.imu_state.p_G))
-
-    def test_str(self):
-        # Setup IMU state
-        n_g = np.ones((3, 1)) * 0.01  # Gyro Noise
-        n_a = np.ones((3, 1)) * 0.02  # Accel Noise
-        n_wg = np.ones((3, 1)) * 0.03  # Gyro Random Walk Noise
-        n_wa = np.ones((3, 1)) * 0.04  # Accel Random Walk Noise
-        n_imu = np.block([[n_g], [n_wg], [n_a], [n_wa]])
-
-        q_IG = np.array([0.0, 0.0, 0.0, 1.0])
-        b_g = np.zeros((3, 1))
-        v_G = np.zeros((3, 1))
-        b_a = np.zeros((3, 1))
-        p_G = np.zeros((3, 1))
-
-        imu_state = IMUState(q_IG, b_g, v_G, b_a, p_G, n_imu)
-
-        # Test
-        imu_state_str = str(imu_state).replace("\t", "")
-
-        # Assert
-        expected = """
-IMU state:
-q:    [ 0.  0.  0.  1.]
-b_g:    [ 0.  0.  0.]
-p:    [ 0.  0.  0.]
-b_a:    [ 0.  0.  0.]
-p_G:    [ 0.  0.  0.]
-        """.replace("    ", "")
-        self.assertEqual(imu_state_str.strip(), expected.strip())
