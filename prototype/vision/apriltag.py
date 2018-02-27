@@ -227,9 +227,9 @@ class AprilTagDetector:
             family = tag36h10_create()
         elif family_str == "36artoolkit":
             family = tag36artoolkit_create()
-        elif family_str == "tag25h9":
+        elif family_str == "25h9":
             family = tag25h9_create()
-        elif family_str == "tag25h7":
+        elif family_str == "25h7":
             family = tag25h7_create()
         else:
             raise RuntimeError("Unrecognized tag family: %s", family_str)

@@ -17,11 +17,11 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python -m unittest discover
 # python3 -m unittest discover -b
 
-# python3 -m unittest prototype.tests.calibration.test_gimbal
+python3 -m unittest prototype.tests.calibration.test_gimbal
 
 # python3 -m unittest prototype.tests.control.quadrotor.test_attitude
 # python3 -m unittest prototype.tests.control.quadrotor.test_position
-python3 -m unittest prototype.tests.control.test_carrot
+# python3 -m unittest prototype.tests.control.test_carrot
 # python3 -m unittest prototype.tests.control.test_pid
 
 # python3 -m unittest prototype.tests.data.test_dataset
