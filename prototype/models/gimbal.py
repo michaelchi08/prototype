@@ -40,32 +40,27 @@ def dh_transform(theta, alpha, a, d):
 
 class GimbalModel:
     def __init__(self, **kwargs):
-        self.attitude = np.array([0.0, 0.0, 0.0])
-        self.width = kwargs.get("width", 0.0)
-        self.length = kwargs.get("length", 0.05)
+        self.attitude = np.array([0.0, 0.0])
 
         # 6-dof transform from static camera to base mechanism frame
         self.tau_s = kwargs.get(
             "tau_s",
-            np.array([0.0, 0.10, -0.15, 0.0, 0.0, pi / 2.0])
+            np.array([0.045, 0.075, -0.085, 0.0, 0.0, 0.0])
         )
-
-        # 2 link DH-params
-        self.Lambda1 = self.attitude[0]
-        self.w1 = kwargs.get("w1", np.array([-pi / 2.0, 0.0, self.length]))
-        self.Lambda2 = self.attitude[1]
-        self.w2 = kwargs.get("w2", np.array([pi, 0, self.width]))
 
         # 6-dof transform from end-effector frame to dynamic camera
         self.tau_d = kwargs.get(
             "tau_d",
-            np.array([0.0, 0.0, 0.0, 0.0, -pi / 2.0, -pi / 2.0])
+            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         )
+
+        # DH-params
+        self.link = kwargs.get("link", np.array([0.0, 0.0, -0.02, 0.075]))
 
     def set_attitude(self, attitude):
         self.attitude = attitude
-        self.Lambda1 = self.attitude[0]
-        self.Lambda2 = self.attitude[1]
+        self.link[0] = attitude[0]
+        self.tau_d[3] = -attitude[1]
 
     def T_sb(self, tau_s):
         """ Form transform matrix from static camera to base_frame
@@ -97,33 +92,6 @@ class GimbalModel:
 
         return T_sb
 
-    def T_be(self, Lambda1, w1, Lambda2, w2):
-        """ Form transform matrix from base_frame to end-effector
-
-        Parameters
-        ----------
-        Lambda1 : float
-            DH parameter (theta) for the first link
-        w1 : np.array
-            DH parameters for the first link (alpha, a, d)
-        Lambda2 : float
-            DH parameter (theta) for the second link
-        w2 : np.array
-            DH parameters for the second link (alpha, a, d)
-
-        Returns
-        -------
-        T_be : np.array
-            Transform matrix from base frame to end-effector
-
-        """
-        theta1, alpha1, a1, d1 = [Lambda1, w1[0], w1[1], w1[2]]
-        theta2, alpha2, a2, d2 = [Lambda2, w2[0], w2[1], w2[2]]
-        T_b1 = dh_transform(theta1, alpha1, a1, d1)
-        T_1e = dh_transform(theta2, alpha2, a2, d2)
-        T_be = dot(T_b1, T_1e)
-        return T_be
-
     def T_ed(self, tau_d):
         """ Form transform matrix from end-effector to dynamic camera
 
@@ -153,12 +121,36 @@ class GimbalModel:
 
         return T_ed
 
-    def T_sd(self, tau_s, Lambda1, w1, Lambda2, w2, tau_d):
+    def T_be(self, link):
+        """ Form transform matrix from base_frame to end-effector
+
+        Parameters
+        ----------
+        Lambda1 : float
+            DH parameter (theta) for the first link
+        w1 : np.array
+            DH parameters for the first link (alpha, a, d)
+        Lambda2 : float
+            DH parameter (theta) for the second link
+        w2 : np.array
+            DH parameters for the second link (alpha, a, d)
+
+        Returns
+        -------
+        T_be : np.array
+            Transform matrix from base frame to end-effector
+
+        """
+        theta, alpha, a, d = self.link
+        T_be = dh_transform(theta, alpha, a, d)
+        return T_be
+
+    def T_sd(self, tau_s, link, tau_d):
         # Transform from static camera to base frame
         T_sb = self.T_sb(tau_s)
 
         # Transform from base frame to end-effector
-        T_be = self.T_be(Lambda1, w1, Lambda2, w2)
+        T_be = self.T_be(link)
 
         # Transform from end-effector to dynamic camera
         T_ed = self.T_ed(tau_d)
@@ -174,7 +166,7 @@ class GimbalModel:
         T_sb = self.T_sb(self.tau_s)
 
         # Transform from base frame to end-effector
-        T_be = self.T_be(self.Lambda1, self.w1, self.Lambda2, self.w2)
+        T_be = self.T_be(self.link)
 
         # Transform from end-effector to dynamic camera
         T_ed = self.T_ed(self.tau_d)
