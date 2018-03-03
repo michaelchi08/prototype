@@ -1,4 +1,5 @@
 import unittest
+from math import pi
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,6 +10,7 @@ from prototype.utils.euler import euler2rot
 from prototype.viz.plot_gimbal import PlotGimbal
 from prototype.viz.common import axis_equal_3dplot
 from prototype.models.gimbal import dh_transform
+from prototype.models.gimbal import GimbalModel
 
 
 class PlotGimbalTest(unittest.TestCase):
@@ -59,9 +61,15 @@ class PlotGimbalTest(unittest.TestCase):
             plt.show()
 
     def test_plot(self):
-        gimbal = PlotGimbal()
-        gimbal.set_attitude([0.0, 0.0, 0.0])
-        gimbal.plot()
+        gimbal_model = GimbalModel(
+            tau_s=np.array([0.045, 0.075, -0.085, 0.0, 0.0, 0.0]),
+            tau_d=np.array([0.0, 0.0, 0.0, 0.2, 0.0, 0.0]),
+            w1=np.array([0.0, -0.02, 0.075]),
+            w2=np.array([0.0, 0.0, 0.0])
+        )
+        plot = PlotGimbal(gimbal=gimbal_model)
+        plot.set_attitude([0.0, 0.0])
+        plot.plot()
 
         # Plot
         debug = True

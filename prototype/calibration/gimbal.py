@@ -67,6 +67,7 @@ class ECData:
             raise RuntimeError("Invalid data type [%s]!" % data_type)
 
         self.intrinsics = kwargs["intrinsics"]
+        self.target_points = []
         self.corners2d = []
         self.corners3d = []
         self.corners2d_ud = []
@@ -185,6 +186,7 @@ class ECData:
         point2d = [u, v]
 
         # Add to storage
+        data["target_points"].append(point3d)
         data["corners3d"].append(point3d)
         data["corners2d"].append(point2d)
 
@@ -199,6 +201,22 @@ class ECData:
         elements = line.strip().split(" ")
         data["gimbal_angles"] += [float(x) for x in elements]
 
+    def transform_corners(self, data):
+        data["T_c_t"] = np.array(data["T_c_t"]).reshape((4, 4))
+        data["corners3d"] = np.array(data["corners3d"])
+        data["corners2d"] = np.array(data["corners2d"])
+
+        # Transform the 3d points
+        # -- Convert 3d points to homogeneous coordinates
+        nb_corners = data["corners3d"].shape[0]
+        ones = np.ones((nb_corners, 1))
+        corners_homo = np.block([data["corners3d"], ones])
+        corners_homo = corners_homo.T
+        # -- Transform 3d points
+        X = np.dot(data["T_c_t"], corners_homo)
+        X = X.T
+        data["corners3d"] = X[:, 0:3]
+
     def load_preprocessed_file(self, filepath):
         # Setup
         datafile = open(filepath, "r")
@@ -206,6 +224,7 @@ class ECData:
 
         # Data
         data = {
+            "target_points": [],
             "corners3d": [],
             "corners2d": [],
             "gimbal_angles": [],
@@ -232,10 +251,11 @@ class ECData:
                 elif mode == "gimbalangles":
                     self.parse_gimbal_angles(line, data)
 
-        # Transform
-        data["T_c_t"] = np.array(data["T_c_t"]).reshape((4, 4))
-
-        # Close up
+        # Finish up
+        self.transform_corners(data)
+        data["target_points"] = np.array(data["target_points"])
+        data["corners2d_ud"] = data["corners2d"]
+        data["corners3d_ud"] = data["corners3d"]
         datafile.close()
 
         return data
@@ -243,11 +263,21 @@ class ECData:
     def load_preprocessed(self):
         files = walkdir(self.data_path)
         files.sort(key=lambda f: int(os.path.splitext(os.path.basename(f))[0]))
+        if len(files) == 0:
+            err_msg = "No data files found in [%s]!" % (self.data_path)
+            raise RuntimeError(err_msg)
 
-        # for f in files:
-        self.load_preprocessed_file(files[0])
+        for f in files:
+            data = self.load_preprocessed_file(f)
+            self.target_points.append(data["target_points"])
+            self.corners2d.append(data["corners2d"])
+            self.corners3d.append(data["corners3d"])
+
+        self.target_points = np.array(self.target_points)
         self.corners2d = np.array(self.corners2d)
         self.corners3d = np.array(self.corners3d)
+        self.corners2d_ud = self.corners2d
+        self.corners3d_ud = self.corners3d
 
     def load(self):
         """ Load extrinsics calibration data """
@@ -281,33 +311,34 @@ class GECDataLoader:
         self.data_path = kwargs.get("data_path")
         self.preprocessed = kwargs.get("preprocessed", False)
         self.inspect_data = kwargs.get("inspect_data", False)
-        self.imu_file = kwargs["imu_file"]
+        self.joint_file = kwargs["joint_file"]
 
         if self.preprocessed is False:
             self.image_dirs = kwargs["image_dirs"]
             self.intrinsic_files = kwargs["intrinsic_files"]
             self.chessboard = Chessboard(**kwargs)
-        # else:
-        #     self.camchain =
+        else:
+            self.data_dirs = kwargs["data_dirs"]
+            self.intrinsic_files = kwargs["intrinsic_files"]
 
-    def load_imu_data(self):
-        """ Load IMU data
+    def load_joint_data(self):
+        """ Load joint data
 
         Parameters
         ----------
-        imu_fpath : str
-            IMU data file path
+        joint_fpath : str
+            Joint data file path
 
         Returns
         -------
-        imu_data : np.array
+        joint_data : np.array
             IMU data
 
         """
-        imu_file = open(join(self.data_path, self.imu_file), "r")
-        imu_data = np.loadtxt(imu_file, delimiter=",")
-        imu_file.close()
-        return imu_data
+        joint_file = open(join(self.data_path, self.joint_file), "r")
+        joint_data = np.loadtxt(joint_file, delimiter=",")
+        joint_file.close()
+        return joint_data
 
     def draw_corners(self, image, corners, color=(0, 255, 0)):
         """ Draw corners
@@ -341,11 +372,8 @@ class GECDataLoader:
 
         return True
 
-    def load(self):
-        """ Load calibration data """
-        # Load imu data
-        imu_data = self.load_imu_data()
-
+    def preprocess_images(self):
+        """ Preprocess images """
         # Load camera data
         nb_cameras = len(self.image_dirs)
         ec_data = []
@@ -353,14 +381,17 @@ class GECDataLoader:
             image_dir = join(self.data_path, self.image_dirs[i])
             intrinsics_file = join(self.data_path, self.intrinsic_files[i])
             intrinsics = CameraIntrinsics(intrinsics_file)
-            data_entry = ECData(image_dir, intrinsics, self.chessboard)
+            data_entry = ECData("IMAGES",
+                                images_dir=image_dir,
+                                chessboard=self.chessboard,
+                                intrinsics=intrinsics)
             data_entry.load()
             ec_data.append(data_entry)
 
         # Inspect data
         self.check_nb_images(ec_data)
         if self.inspect_data is False:
-            return ec_data, imu_data
+            return ec_data
 
         nb_images = len(ec_data[0].images)
         for i in range(nb_images):
@@ -370,7 +401,89 @@ class GECDataLoader:
             cv2.imshow("Image", viz)
             cv2.waitKey(0)
 
-        return ec_data, imu_data
+        return ec_data
+
+    def filter_common_observations(self, i, ec_data):
+        cam0_idx = 0
+        cam1_idx = 0
+
+        P_s = []
+        P_d = []
+        Q_s = []
+        Q_d = []
+
+        # Find common target points and store the
+        # respective points in 3d and 2d
+        for pt_a in ec_data[0].target_points[i]:
+            for pt_b in ec_data[1].target_points[i]:
+                if np.array_equal(pt_a, pt_b):
+                    # Corners 3d observed in both the static and dynamic cam
+                    P_s.append(ec_data[0].corners3d_ud[i][cam0_idx])
+                    P_d.append(ec_data[1].corners3d_ud[i][cam1_idx])
+
+                    # Corners 2d observed in both the static and dynamic cam
+                    Q_s.append(ec_data[0].corners2d_ud[i][cam0_idx])
+                    Q_d.append(ec_data[1].corners2d_ud[i][cam1_idx])
+                    break
+
+                else:
+                    cam1_idx += 1
+
+            cam0_idx += 1
+            cam1_idx = 0
+
+        P_s = np.array(P_s)
+        P_d = np.array(P_d)
+        Q_s = np.array(Q_s)
+        Q_d = np.array(Q_d)
+
+        return [P_s, P_d, Q_s, Q_d]
+
+    def load_preprocessed(self):
+        ec_data = []
+
+        # Load data from each camera
+        nb_cameras = len(self.data_dirs)
+        for i in range(nb_cameras):
+            intrinsics_path = join(self.data_path, self.intrinsic_files[i])
+            intrinsics = CameraIntrinsics(intrinsics_path)
+            data = ECData("PREPROCESSED",
+                          data_path=join(self.data_path, self.data_dirs[i]),
+                          intrinsics=intrinsics)
+            data.load()
+            ec_data.append(data)
+
+        # Find common measurements between cameras
+        nb_measurements = len(ec_data[0].target_points)
+        Z = []
+        # -- Iterate through measurement sets
+        for i in range(nb_measurements):
+            Z_i = self.filter_common_observations(i, ec_data)
+            Z.append(Z_i)
+
+        # Camera intrinsics
+        intrinsics_path = join(self.data_path, self.intrinsic_files[0])
+        # K_s = CameraIntrinsics(intrinsics_path).K()
+        K_s = CameraIntrinsics(intrinsics_path).calc_Knew()
+
+        intrinsics_path = join(self.data_path, self.intrinsic_files[1])
+        # K_d = CameraIntrinsics(intrinsics_path).K()
+        K_d = CameraIntrinsics(intrinsics_path).calc_Knew()
+
+        return Z, K_s, K_d
+
+    def load(self):
+        """ Load calibration data """
+        # Load joint data
+        joint_data = self.load_joint_data()
+
+        # Load EC data
+        if self.preprocessed is False:
+            ec_data = self.preprocess_images()
+            return ec_data, joint_data
+        else:
+            Z, K_s, K_d = self.load_preprocessed()
+            return Z, K_s, K_d, joint_data
 
 
 class GEC:
@@ -385,14 +498,50 @@ class GEC:
 
     """
     def __init__(self, **kwargs):
-        self.gimbal_model = GimbalModel()
+        self.gimbal_model = kwargs.get("gimbal_model", GimbalModel())
+        sim_mode = kwargs.get("sim_mode", False)
 
-        if kwargs.get("sim_mode", False):
+        # Load sim data
+        if sim_mode:
             self.ec_data = kwargs["ec_data"]
-            self.imu_data = kwargs["imu_data"]
+            self.joint_data = kwargs["joint_data"]
+
+        # Load data
+        self.loader = GECDataLoader(**kwargs)
+        if kwargs.get("preprocessed", False) is False:
+            self.ec_data, self.joint_data = self.loader.load()
+
+            # Camera intrinsics matrix
+            self.K_s = self.ec_data[0].intrinsics.K_new
+            self.K_d = self.ec_data[1].intrinsics.K_new
+
+            # Number of measurement set
+            self.K = len(self.ec_data[0].corners2d_ud)
+
+            # Number of links - 2 for a 2-axis gimbal
+            self.L = 2
+
+            # Setup measurement sets
+            self.Z = []
+            for i in range(self.K):
+                # Corners 3d observed in both the static and dynamic cam
+                P_s = self.ec_data[0].corners3d_ud[i]
+                P_d = self.ec_data[1].corners3d_ud[i]
+                # Corners 2d observed in both the static and dynamic cam
+                Q_s = self.ec_data[0].corners2d_ud[i]
+                Q_d = self.ec_data[1].corners2d_ud[i]
+                Z_i = [P_s, P_d, Q_s, Q_d]
+                self.Z.append(Z_i)
+
         else:
-            self.loader = GECDataLoader(**kwargs)
-            self.ec_data, self.imu_data = self.loader.load()
+            # Measurement set and joint data
+            self.Z, self.K_s, self.K_d, self.joint_data = self.loader.load()
+
+            # Number of measurement set
+            self.K = len(self.Z)
+
+            # Number of links - 2 for a 2-axis gimbal
+            self.L = 2
 
     def setup_problem(self):
         """ Setup the calibration optimization problem
@@ -405,34 +554,15 @@ class GEC:
         """
         print("Setting up optimization problem ...")
 
-        # Setup vector of parameters to be optimized
-        K = len(self.ec_data[0].corners2d_ud)  # Number of measurement set
-        L = 2  # Number of links - 2 for a 2-axis gimbal
-        x = np.zeros(6 + 6 + 3 * L + K * L)  # Parameters to be optimized
-
+        # Parameters to be optimized
+        x = np.zeros(6 + 6 + 3 * self.L + self.K * self.L)
         x[0:6] = self.gimbal_model.tau_s
         x[6:12] = self.gimbal_model.tau_d
         x[12:15] = self.gimbal_model.w1
         x[15:18] = self.gimbal_model.w2
-        x[18:18+K*L] = self.imu_data[:, 0:L].ravel()
+        x[18:18+self.K*self.L] = self.joint_data[:, 0:self.L].ravel()
 
-        # Setup measurement sets
-        Z = []
-        for i in range(K):
-            # Corners 3d observed in both the static and dynamic cam
-            P_s = self.ec_data[0].corners3d_ud[i]
-            P_d = self.ec_data[1].corners3d_ud[i]
-            # Corners 2d observed in both the static and dynamic cam
-            Q_s = self.ec_data[0].corners2d_ud[i]
-            Q_d = self.ec_data[1].corners2d_ud[i]
-            Z_i = [P_s, P_d, Q_s, Q_d]
-            Z.append(Z_i)
-
-        # Get camera matrix K
-        K_s = self.ec_data[0].intrinsics.K_new
-        K_d = self.ec_data[1].intrinsics.K_new
-
-        return x, Z, K_s, K_d
+        return x, self.Z, self.K_s, self.K_d
 
     def reprojection_error(self, x, *args):
         """Reprojection Error
@@ -511,7 +641,10 @@ class GEC:
             # Stack residuals
             residuals.append(np.block([err_s, err_d]))
 
-        return np.array(residuals).reshape((-1))
+        result = np.array(residuals).reshape((-1))
+        result = np.hstack(result)
+
+        return result
 
     def optimize(self):
         """ Optimize Gimbal Extrinsics """
@@ -543,6 +676,7 @@ class GEC:
         print("w2: ", self.gimbal_model.w2)
 
         # Plot gimbal
+        self.gimbal_model.set_attitude([0.0, 0.0])
         plot_gimbal = PlotGimbal(gimbal=self.gimbal_model)
         plot_gimbal.plot()
         plt.show()
@@ -693,7 +827,10 @@ class GimbalDataGenerator:
 
         # Generate static camera data
         self.intrinsics.K_new = self.intrinsics.K()
-        static_cam_data = ECData(None, self.intrinsics, self.chessboard)
+        static_cam_data = ECData("IMAGES",
+                                 images_dir=None,
+                                 intrinsics=self.intrinsics,
+                                 chessboard=self.chessboard)
         x = self.calc_static_camera_view()
         X = dot(R_CG, self.chessboard.grid_points3d.T).T
         for i in range(nb_images):
@@ -704,8 +841,11 @@ class GimbalDataGenerator:
 
         # Generate gimbal data
         roll_vals, pitch_vals = self.calc_roll_pitch_combo(nb_images)
-        gimbal_cam_data = ECData(None, self.intrinsics, self.chessboard)
-        imu_data = []
+        gimbal_cam_data = ECData("IMAGES",
+                                 images_dir=None,
+                                 intrinsics=self.intrinsics,
+                                 chessboard=self.chessboard)
+        joint_data = []
 
         for roll in roll_vals:
             for pitch in pitch_vals:
@@ -713,10 +853,10 @@ class GimbalDataGenerator:
                 x, X = self.calc_gimbal_camera_view()
                 gimbal_cam_data.corners2d_ud.append(x)
                 gimbal_cam_data.corners3d_ud.append(X)
-                imu_data.append([roll, pitch])
+                joint_data.append([roll, pitch])
 
         gimbal_cam_data.corners2d_ud = np.array(gimbal_cam_data.corners2d_ud)
         gimbal_cam_data.corners3d_ud = np.array(gimbal_cam_data.corners3d_ud)
-        imu_data = np.array(imu_data)
+        joint_data = np.array(joint_data)
 
-        return [static_cam_data, gimbal_cam_data], imu_data
+        return [static_cam_data, gimbal_cam_data], joint_data

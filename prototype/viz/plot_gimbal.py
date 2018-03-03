@@ -33,7 +33,7 @@ class PlotGimbal:
         self.link3 = None
 
     def set_attitude(self, attitude):
-        self.gimbal.attitude = attitude
+        self.gimbal.set_attitude(attitude)
 
     def plot_coord_frame(self, ax, T, length=0.1):
         """ Plot coordinate frame
@@ -118,11 +118,11 @@ class PlotGimbal:
         # self.plot_coord_frame(ax, T_ge, length=0.05)
         self.plot_coord_frame(ax, T_gd, length=0.05)
 
-        # Plot settings
-        if ax is None:
-            axis_equal_3dplot(ax)
-            ax.set_xlabel("x")
-            ax.set_ylabel("y")
-            ax.set_zlabel("z")
+        # # Plot settings
+        # if ax is None:
+        #     axis_equal_3dplot(ax)
+        #     ax.set_xlabel("x")
+        #     ax.set_ylabel("y")
+        #     ax.set_zlabel("z")
 
         return ax

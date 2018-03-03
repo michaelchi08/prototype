@@ -94,6 +94,32 @@ class CameraIntrinsics:
         """ Form distortion coefficients vector D """
         return np.array(self.distortion_coeffs)
 
+    def calc_Knew(self):
+        """ Calculate new camera intrinsics matrix K for equidistant distortion
+        model """
+        # Pre-check
+        if self.distortion_model != "equidistant":
+            raise RuntimeError("Only supports equidistant at the moment!")
+
+        # Get distortion model and form camera intrinsics matrix K
+        distortion_coeffs = np.array(self.distortion_coeffs)
+        K = self.K()
+
+        D = distortion_coeffs  # (k1, k2, k3, k4)
+        img_size = (self.resolution[0], self.resolution[1])
+        R = np.eye(3)
+        balance = 0.0
+
+        # Calculate Knew
+        K_new = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
+            K,
+            D,
+            img_size,
+            R,
+            balance=balance
+        )
+        return K_new
+
     def undistort_points(self, points):
         """ Undistort points
 

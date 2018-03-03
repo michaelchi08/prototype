@@ -17,7 +17,10 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python -m unittest discover
 # python3 -m unittest discover -b
 
-python3 -m unittest prototype.tests.calibration.test_gimbal
+# python3 -m unittest prototype.tests.calibration.test_gimbal.GECTest.test_optimize
+# python3 -m unittest prototype.tests.calibration.test_gimbal.GECTest.test_optimize_preprocessed
+# python3 -m unittest prototype.tests.calibration.test_gimbal.GECDataLoaderTest
+# python3 -m unittest prototype.tests.calibration.test_gimbal.GimbalDataGeneratorTest
 
 # python3 -m unittest prototype.tests.control.quadrotor.test_attitude
 # python3 -m unittest prototype.tests.control.quadrotor.test_position
@@ -87,7 +90,7 @@ python3 -m unittest prototype.tests.calibration.test_gimbal
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-# python3 -m unittest prototype.tests.viz.test_plot_gimbal
+python3 -m unittest prototype.tests.viz.test_plot_gimbal
 # python3 -m unittest prototype.tests.viz.test_plot_chessboard
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 

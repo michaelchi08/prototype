@@ -39,17 +39,28 @@ def dh_transform(theta, alpha, a, d):
 
 
 class GimbalModel:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.attitude = np.array([0.0, 0.0, 0.0])
-        self.width = 0.0
-        self.length = 0.05
+        self.width = kwargs.get("width", 0.0)
+        self.length = kwargs.get("length", 0.05)
 
-        self.tau_s = np.array([0.0, 0.10, -0.15, 0.0, 0.0, pi / 2.0])
+        # 6-dof transform from static camera to base mechanism frame
+        self.tau_s = kwargs.get(
+            "tau_s",
+            np.array([0.0, 0.10, -0.15, 0.0, 0.0, pi / 2.0])
+        )
+
+        # 2 link DH-params
         self.Lambda1 = self.attitude[0]
-        self.w1 = np.array([-pi / 2.0, 0.0, self.length])
+        self.w1 = kwargs.get("w1", np.array([-pi / 2.0, 0.0, self.length]))
         self.Lambda2 = self.attitude[1]
-        self.w2 = np.array([pi, 0, self.width])
-        self.tau_d = np.array([0.0, 0.0, 0.0, 0.0, -pi / 2.0, -pi / 2.0])
+        self.w2 = kwargs.get("w2", np.array([pi, 0, self.width]))
+
+        # 6-dof transform from end-effector frame to dynamic camera
+        self.tau_d = kwargs.get(
+            "tau_d",
+            np.array([0.0, 0.0, 0.0, 0.0, -pi / 2.0, -pi / 2.0])
+        )
 
     def set_attitude(self, attitude):
         self.attitude = attitude
