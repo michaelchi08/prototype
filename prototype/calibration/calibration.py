@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import dot
-from scipy.optimize import least_squares
+from scipy.optimize import minimize
+from scipy.optimize import differential_evolution
 import matplotlib.pyplot as plt
 
 from prototype.models.gimbal import GimbalModel
@@ -54,7 +55,8 @@ class GimbalCalibrator:
         print("Setting up optimization problem ...")
 
         # Parameters to be optimized
-        x_size = 6 + 5 + 3 + self.K * 2
+        # x_size = 6 + 5 + 3 + self.K * 2
+        x_size = 6 + 5 + 3
         x = np.zeros(x_size)
         # -- tau_s
         x[0] = self.gimbal_model.tau_s[0]
@@ -74,7 +76,7 @@ class GimbalCalibrator:
         x[12] = self.gimbal_model.link[2]
         x[13] = self.gimbal_model.link[3]
         # -- Joint angles
-        x[14:] = self.joint_data[:, 0:2].ravel()
+        # x[14:] = self.joint_data[:, 0:2].ravel()
 
         return x, self.Z, self.K_s, self.K_d, self.D_s, self.D_d
 
@@ -108,11 +110,14 @@ class GimbalCalibrator:
         # -- alpha, a, d
         alpha, a, d = x[11:14]
         # -- Joint angles
-        roll_angles = []
-        pitch_angles = []
-        for i in range(self.K):
-            roll_angles.append(x[14 + (2 * i)])
-            pitch_angles.append(x[14 + (2 * i) + 1])
+        # roll_angles = []
+        # pitch_angles = []
+        # for i in range(self.K):
+        #     roll_angles.append(x[14 + (2 * i)])
+        #     pitch_angles.append(x[14 + (2 * i) + 1])
+
+        roll_angles = self.joint_data[:, 0]
+        pitch_angles = self.joint_data[:, 1]
 
         # Set gimbal model
         self.gimbal_model.tau_s = tau_s
@@ -159,27 +164,67 @@ class GimbalCalibrator:
                 # -- Calculate reprojection error
                 err_d[(i * 2):(i * 2 + 2)] = Q_d[i] - Q_d_cal
 
-            # Stack residuals
-            residuals.append(np.block([err_s, err_d]))
+            # # Stack residuals
+            residuals += err_s.tolist() + err_d.tolist()
 
-        result = np.array(residuals).reshape((-1))
-        result = np.hstack(result)
+        # Calculate Sum of Squared Differences (SSD)
+        cost = np.sum(np.array(residuals)**2)
 
-        return result
+        return cost
 
     def optimize(self):
         """ Optimize Gimbal Extrinsics """
         # Setup
         x, Z, K_s, K_d, D_s, D_d = self.setup_problem()
-        args = [Z, K_s, K_d, D_s, D_d]
+        args = (Z, K_s, K_d, D_s, D_d)
 
         # Optimize
         print("Optimizing!")
         print("This can take a while...")
-        result = least_squares(self.reprojection_error,
-                               x,
-                               args=args,
-                               verbose=2)
+        # result = least_squares(fun=self.reprojection_error,
+        #                        x0=x,
+        #                        args=args,
+        #                        method="Nelder-Mead",
+        #                        options={'disp': True})
+
+        tau_s_tx = self.gimbal_model.tau_s[0]
+        tau_s_ty = self.gimbal_model.tau_s[1]
+        tau_s_tz = self.gimbal_model.tau_s[2]
+        tau_s_roll = self.gimbal_model.tau_s[3]
+        tau_s_pitch = self.gimbal_model.tau_s[4]
+        tau_s_yaw = self.gimbal_model.tau_s[5]
+        # -- tau_d
+        tau_d_tx = self.gimbal_model.tau_d[0]
+        tau_d_ty = self.gimbal_model.tau_d[1]
+        tau_d_tz = self.gimbal_model.tau_d[2]
+        tau_d_pitch = self.gimbal_model.tau_d[4]
+        tau_d_yaw = self.gimbal_model.tau_d[5]
+        # -- alpha, a, d
+        alpha = self.gimbal_model.link[1]
+        a = self.gimbal_model.link[2]
+        d = self.gimbal_model.link[3]
+
+        bounds = [
+            (tau_s_tx - 0.2, tau_s_tx + 0.2),
+            (tau_s_ty - 0.2, tau_s_ty + 0.2),
+            (tau_s_tz - 0.2, tau_s_tz + 0.2),
+            (tau_s_roll - 0.2, tau_s_roll + 0.2),
+            (tau_s_pitch - 0.2, tau_s_pitch + 0.2),
+            (tau_s_yaw - 0.2, tau_s_yaw + 0.2),
+            (tau_d_tx - 0.2, tau_d_tx + 0.2),
+            (tau_d_ty - 0.2, tau_d_ty + 0.2),
+            (tau_d_tz - 0.2, tau_d_tz + 0.2),
+            (tau_d_pitch - 0.2, tau_d_pitch + 0.2),
+            (tau_d_yaw - 0.2, tau_d_yaw + 0.2),
+            (alpha - 0.1, alpha + 0.1),
+            (a - 0.1, a + 0.1),
+            (d - 0.1, d + 0.1)
+        ]
+        result = differential_evolution(func=self.reprojection_error,
+                                        bounds=bounds,
+                                        maxiter=1000,
+                                        args=args,
+                                        disp=True)
 
         # Parse results
         tau_s = result.x[0:6]

@@ -33,7 +33,7 @@ class GimbalCalibratorTest(unittest.TestCase):
         args = [Z, K_s, K_d, D_s, D_d]
 
         result = self.calib.reprojection_error(x, *args)
-        # print(result)
+        print(result)
 
     def test_optimize(self):
         self.calib.optimize()

@@ -24,17 +24,17 @@ class GimbalDataGeneratorTest(unittest.TestCase):
                                       D_d=D_d,
                                       joint_data=joint_data)
 
-        calibrator.gimbal_model.tau_s[0] += 0.1
-        calibrator.gimbal_model.tau_s[1] += 0.2
-        calibrator.gimbal_model.tau_s[2] += 0.2
-
-        calibrator.gimbal_model.tau_d[0] += 0.1
-        calibrator.gimbal_model.tau_d[1] += 0.2
-        calibrator.gimbal_model.tau_d[2] += 0.2
+        # calibrator.gimbal_model.tau_s[0] += 0.1
+        # calibrator.gimbal_model.tau_s[1] += 0.2
+        # calibrator.gimbal_model.tau_s[2] += 0.2
+        #
+        # calibrator.gimbal_model.tau_d[0] += 0.1
+        # calibrator.gimbal_model.tau_d[1] += 0.2
+        # calibrator.gimbal_model.tau_d[2] += 0.2
 
         # x, Z, K_s, K_d, D_s, D_d = calibrator.setup_problem()
         # args = [Z, K_s, K_d, D_s, D_d]
         # result = calibrator.reprojection_error(x, *args)
-        # print(max(result))
+        # print(result)
 
         calibrator.optimize()

@@ -115,7 +115,7 @@ class PlotGimbal:
         # Plot coordinate frames
         self.plot_coord_frame(ax, T_gs, length=0.05)
         self.plot_coord_frame(ax, T_gb, length=0.05)
-        # self.plot_coord_frame(ax, T_ge, length=0.05)
+        self.plot_coord_frame(ax, T_ge, length=0.05)
         self.plot_coord_frame(ax, T_gd, length=0.05)
 
         # # Plot settings

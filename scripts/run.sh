@@ -19,7 +19,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 
 # python3 -m unittest prototype.tests.calibration.test_preprocess
 # python3 -m unittest prototype.tests.calibration.test_loader
-python3 -m unittest prototype.tests.calibration.test_dataset.GimbalDataGeneratorTest
+# python3 -m unittest prototype.tests.calibration.test_dataset.GimbalDataGeneratorTest
 # python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_setup_problem
 # python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_reprojection_error
 # python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_optimize

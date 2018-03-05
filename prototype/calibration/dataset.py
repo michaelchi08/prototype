@@ -162,7 +162,7 @@ class GimbalDataGenerator:
 
     def generate(self):
         # Setup
-        nb_images = 16
+        nb_images = 4
         R_CG = euler2rot([-pi / 2.0, 0.0, -pi / 2.0], 123)
 
         # Generate static camera data
