@@ -17,10 +17,14 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python -m unittest discover
 # python3 -m unittest discover -b
 
-# python3 -m unittest prototype.tests.calibration.test_gimbal.GECTest.test_optimize
-# python3 -m unittest prototype.tests.calibration.test_gimbal.GECTest.test_optimize_preprocessed
-# python3 -m unittest prototype.tests.calibration.test_gimbal.GECDataLoaderTest
-# python3 -m unittest prototype.tests.calibration.test_gimbal.GimbalDataGeneratorTest
+# python3 -m unittest prototype.tests.calibration.test_preprocess
+# python3 -m unittest prototype.tests.calibration.test_loader
+python3 -m unittest prototype.tests.calibration.test_dataset.GimbalDataGeneratorTest
+# python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_setup_problem
+# python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_reprojection_error
+# python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_optimize
+# python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorTest.test_optimize_preprocessed
+# python3 -m unittest prototype.tests.calibration.test_calibration.GimbalCalibratorDataLoaderTest
 
 # python3 -m unittest prototype.tests.control.quadrotor.test_attitude
 # python3 -m unittest prototype.tests.control.quadrotor.test_position
@@ -72,6 +76,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.vision.test_apriltag
 # python3 -m unittest prototype.tests.vision.camera.test_camera
 # python3 -m unittest prototype.tests.vision.camera.test_camera_model
+# python3 -m unittest prototype.tests.vision.camera.test_distortion_model
 # python3 -m unittest prototype.tests.vision.data.test_dataset
 # python3 -m unittest prototype.tests.vision.data.test_kitti
 # python3 -m unittest prototype.tests.vision.feature2d.test_fast
@@ -90,7 +95,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-python3 -m unittest prototype.tests.viz.test_plot_gimbal
+# python3 -m unittest prototype.tests.viz.test_plot_gimbal
 # python3 -m unittest prototype.tests.viz.test_plot_chessboard
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 

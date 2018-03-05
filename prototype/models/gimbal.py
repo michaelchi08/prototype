@@ -179,3 +179,42 @@ class GimbalModel:
         links = [T_sb, T_se, T_sd]
 
         return links
+
+    def save(self, output_path):
+        """ Save gimbal configuration as a yaml file
+
+        Parameters
+        ----------
+        output_path : str
+            Output path for gimbal configuration
+
+        """
+        config = """
+tau_s : [{tau_s_tx}, {tau_s_ty}, {tau_s_tz}, {tau_s_roll}, {tau_s_pitch}, {tau_s_yaw}]
+tau_d : [{tau_d_tx}, {tau_d_ty}, {tau_d_tz}, {tau_d_roll}, {tau_d_pitch}, {tau_d_yaw}]
+link : [{link_theta}, {link_alpha}, {link_a}, {link_d}]
+        """.format(
+            # tau_s
+            tau_s_tx=self.tau_s[0],
+            tau_s_ty=self.tau_s[1],
+            tau_s_tz=self.tau_s[2],
+            tau_s_roll=self.tau_s[3],
+            tau_s_pitch=self.tau_s[4],
+            tau_s_yaw=self.tau_s[5],
+            # tau_d
+            tau_d_tx=self.tau_d[0],
+            tau_d_ty=self.tau_d[1],
+            tau_d_tz=self.tau_d[2],
+            tau_d_roll=self.tau_d[3],
+            tau_d_pitch=self.tau_d[4],
+            tau_d_yaw=self.tau_d[5],
+            # link
+            link_theta=self.link[0],
+            link_alpha=self.link[1],
+            link_a=self.link[2],
+            link_d=self.link[3]
+        )
+
+        config_file = open(output_path, "w")
+        config_file.write(config.strip())
+        config_file.close()
