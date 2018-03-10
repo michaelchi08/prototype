@@ -95,7 +95,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-# python3 -m unittest prototype.tests.viz.test_plot_gimbal
+python3 -m unittest prototype.tests.viz.test_plot_gimbal
 # python3 -m unittest prototype.tests.viz.test_plot_chessboard
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 

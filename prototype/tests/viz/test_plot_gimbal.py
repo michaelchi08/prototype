@@ -61,11 +61,33 @@ class PlotGimbalTest(unittest.TestCase):
             plt.show()
 
     def test_plot(self):
-        # tau_s=np.array([0.045, 0.075, -0.085, 0.0, 0.0, 0.0]),
-        # tau_d=np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-        # link=np.array([0.0, 0.0, -0.02, 0.075]),
-        gimbal_model = GimbalModel()
-        plot = PlotGimbal(gimbal=gimbal_model)
+        # Setup gimbal model
+        # -- tau (x, y, z, roll, pitch, yaw)
+        tau_s = np.array([-0.045, -0.085, 0.08, 0.0, 0.0, 0.0])
+        tau_d = np.array([0.01, 0.0, -0.03, pi / 2.0, 0.0, -pi / 2.0])
+        # -- link (theta, alpha, a, d)
+        alpha = pi / 2.0
+        offset = -pi / 2.0
+        roll = 0.0
+        pitch = 0.1
+        link1 = np.array([offset + roll, alpha, 0.0, 0.045])
+        link2 = np.array([pitch, 0.0, 0.0, 0.0])
+        # -- Gimbal model
+        gimbal_model = GimbalModel(
+            tau_s=tau_s,
+            tau_d=tau_d,
+            link1=link1,
+            link2=link2
+        )
+        # T_ds = gimbal_model.T_ds()
+        # p_s = np.array([1.0, 0.0, 0.0, 1.0])
+
+        # Plot gimbal model
+        plot = PlotGimbal(gimbal=gimbal_model,
+                          show_static_frame=True,
+                          show_base_frame=True,
+                          show_end_frame=True,
+                          show_dynamic_frame=True)
         plot.set_attitude([0.0, 0.0])
         plot.plot()
 

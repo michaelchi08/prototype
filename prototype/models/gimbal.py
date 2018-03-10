@@ -45,138 +45,133 @@ class GimbalModel:
         # 6-dof transform from static camera to base mechanism frame
         self.tau_s = kwargs.get(
             "tau_s",
-            np.array([0.045, 0.075, -0.085, 0.0, 0.0, 0.0])
+            np.array([-0.045, -0.085, 0.08, 0.0, 0.0, 0.0])
         )
 
         # 6-dof transform from end-effector frame to dynamic camera
         self.tau_d = kwargs.get(
             "tau_d",
-            np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            np.array([0.0, 0.0, 0.0, pi / 2.0, 0.0, -pi / 2.0])
         )
 
-        # DH-params
-        self.link = kwargs.get("link", np.array([0.0, 0.0, -0.02, 0.075]))
+        # DH-params (theta, alpha, a, d)
+        self.link1 = kwargs.get("link1", np.array([0.0, pi / 2.0, 0.1, 0.0]))
+        self.link2 = kwargs.get("link2", np.array([0.0, 0.0, 0.0, 0.0]))
 
     def set_attitude(self, attitude):
         self.attitude = attitude
-        self.link[0] = attitude[0]
-        self.tau_d[3] = -attitude[1]
+        # self.link1[0] = attitude[0]
+        # self.tau_d[3] = -attitude[1]
 
-    def T_sb(self, tau_s):
-        """ Form transform matrix from static camera to base_frame
+    def T_bs(self, tau_s):
+        """ Form transform matrix from static camera to base mechanism
 
         Parameters
         ----------
         tau_s : np.array
             Parameterization of the transform matrix where the first 3 elements
-            in the vector is `t_G_sb`, the translation from static camera to
-            base frame in global frame. Second 3 elements is `rpy_bs`, roll
-            pitch yaw from static camera to base frame.
+            in the vector is the translation from static camera to base frame.
+            Second 3 elements is rpy, which is the roll pitch yaw from static
+            camera to base frame.
 
         Returns
         -------
-        T_sb : np.array
+        T_bs : np.array
             Transform matrix from static camera to base_frame
 
         """
         # Setup
-        t_G_sb = tau_s[0:3]
-        rpy_bs = tau_s[3:6]
-        R_sb = euler2rot(rpy_bs, 321)
+        t = tau_s[0:3]
+        rpy = tau_s[3:6]
+        R = euler2rot(rpy, 321)
 
         # Create base frame
-        T_sb = np.array([[R_sb[0, 0], R_sb[0, 1], R_sb[0, 2], t_G_sb[0]],
-                         [R_sb[1, 0], R_sb[1, 1], R_sb[1, 2], t_G_sb[1]],
-                         [R_sb[2, 0], R_sb[2, 1], R_sb[2, 2], t_G_sb[2]],
+        T_bs = np.array([[R[0, 0], R[0, 1], R[0, 2], t[0]],
+                         [R[1, 0], R[1, 1], R[1, 2], t[1]],
+                         [R[2, 0], R[2, 1], R[2, 2], t[2]],
                          [0.0, 0.0, 0.0, 1.0]])
 
-        return T_sb
+        return T_bs
 
-    def T_ed(self, tau_d):
+    def T_de(self, tau_d):
         """ Form transform matrix from end-effector to dynamic camera
 
         Parameters
         ----------
         tau_s : np.array
             Parameterization of the transform matrix where the first 3 elements
-            in the vector is `t_G_ed`, the translation from end effector to
-            dynamic camera. Second 3 elements is `rpy_de`, roll pitch yaw from
-            end effector to dynamic camera.
+            in the vector is the translation from end effector to dynamic
+            camera frame. Second 3 elements is rpy, which is the roll pitch yaw
+            from from end effector to dynamic camera frame.
 
         Returns
         -------
-        T_ed : np.array
+        T_de : np.array
             Transform matrix from end effector to dynamic camera
 
         """
         # Setup
-        t_d_de = tau_d[0:3]
-        R_ed = euler2rot(tau_d[3:6], 321)
+        t = tau_d[0:3]
+        R = euler2rot(tau_d[3:6], 321)
 
         # Create transform
-        T_ed = np.array([[R_ed[0, 0], R_ed[0, 1], R_ed[0, 2], t_d_de[0]],
-                         [R_ed[1, 0], R_ed[1, 1], R_ed[1, 2], t_d_de[1]],
-                         [R_ed[2, 0], R_ed[2, 1], R_ed[2, 2], t_d_de[2]],
+        T_de = np.array([[R[0, 0], R[0, 1], R[0, 2], t[0]],
+                         [R[1, 0], R[1, 1], R[1, 2], t[1]],
+                         [R[2, 0], R[2, 1], R[2, 2], t[2]],
                          [0.0, 0.0, 0.0, 1.0]])
 
-        return T_ed
+        return T_de
 
-    def T_be(self, link):
+    def T_eb(self, link1, link2):
         """ Form transform matrix from base_frame to end-effector
 
         Parameters
         ----------
-        Lambda1 : float
-            DH parameter (theta) for the first link
-        w1 : np.array
-            DH parameters for the first link (alpha, a, d)
-        Lambda2 : float
-            DH parameter (theta) for the second link
-        w2 : np.array
-            DH parameters for the second link (alpha, a, d)
+        link1 : np.array
+            DH parameters (theta, alpha, a, d) for the first link
+        link2 : np.array
+            DH parameters (theta, alpha, a, d) for the second link
 
         Returns
         -------
-        T_be : np.array
+        T_eb : np.array
             Transform matrix from base frame to end-effector
 
         """
-        theta, alpha, a, d = self.link
-        T_be = dh_transform(theta, alpha, a, d)
-        return T_be
+        theta1, alpha1, a1, d1 = link1
+        theta2, alpha2, a2, d2 = link2
+        T_1b = np.linalg.inv(dh_transform(theta1, alpha1, a1, d1))
+        T_e1 = np.linalg.inv(dh_transform(theta2, alpha2, a2, d2))
+        return np.dot(T_e1, T_1b)
 
-    def T_sd(self, tau_s, link, tau_d):
+    def T_ds(self):
         # Transform from static camera to base frame
-        T_sb = self.T_sb(tau_s)
+        T_bs = self.T_bs(self.tau_s)
 
         # Transform from base frame to end-effector
-        T_be = self.T_be(link)
+        T_eb = self.T_eb(self.link1, self.link2)
 
         # Transform from end-effector to dynamic camera
-        T_ed = self.T_ed(tau_d)
+        T_de = self.T_de(self.tau_d)
 
-        # Combine transforms
-        T_se = dot(T_sb, T_be)  # Transform static camera to end effector
-        T_sd = dot(T_se, T_ed)  # Transform static camera to dynamic camera
+        # Create transforms
+        T_es = dot(T_eb, T_bs)  # Transform static camera to end effector
+        T_ds = dot(T_de, T_es)  # Transform static camera to dynamic camera
 
-        return T_sd
+        return T_ds
 
     def calc_transforms(self):
         # Transform from static camera to base frame
-        T_sb = self.T_sb(self.tau_s)
+        T_bs = self.T_bs(self.tau_s)
 
         # Transform from base frame to end-effector
-        T_be = self.T_be(self.link)
+        T_eb = self.T_eb(self.link1, self.link2)
 
         # Transform from end-effector to dynamic camera
-        T_ed = self.T_ed(self.tau_d)
-
-        # Create transforms
-        T_se = dot(T_sb, T_be)  # Transform static camera to end effector
-        T_sd = dot(T_se, T_ed)  # Transform static camera to dynamic camera
+        T_de = self.T_de(self.tau_d)
 
         # Create links
-        links = [T_sb, T_se, T_sd]
+        links = [T_bs, T_eb, T_de]
 
         return links
 

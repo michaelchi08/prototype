@@ -14,7 +14,8 @@ class GimbalDataGeneratorTest(unittest.TestCase):
 
     def test_generate(self):
         Z, K_s, K_d, D_s, D_d, joint_data = self.data.generate()
-        # self.data.plot()
+        self.data.gimbal.set_attitude([0.0, 0.0])
+        self.data.plot()
 
         calibrator = GimbalCalibrator(sim_mode=True,
                                       Z=Z,
@@ -37,4 +38,4 @@ class GimbalDataGeneratorTest(unittest.TestCase):
         # result = calibrator.reprojection_error(x, *args)
         # print(result)
 
-        calibrator.optimize()
+        # calibrator.optimize()

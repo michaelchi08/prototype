@@ -86,34 +86,34 @@ def euler2rot(euler, euler_seq):
         Rotation matrix (np.array)
 
     """
-    if euler_seq == 123:  # i.e. XYZ rotation sequence (body to world)
+    if euler_seq == 321:  # i.e. ZYX rotation sequence (world to body)
         phi, theta, psi = euler
 
         R11 = cos(psi) * cos(theta)
-        R12 = sin(psi) * cos(theta)
-        R13 = -sin(theta)
+        R21 = sin(psi) * cos(theta)
+        R31 = -sin(theta)
 
-        R21 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
+        R12 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
         R22 = sin(psi) * sin(theta) * sin(phi) + cos(psi) * cos(phi)
-        R23 = cos(theta) * sin(phi)
+        R32 = cos(theta) * sin(phi)
 
-        R31 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
-        R32 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
+        R13 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
+        R23 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
         R33 = cos(theta) * cos(phi)
 
-    elif euler_seq == 321:  # i.e. ZYX rotation sequence (world to body)
+    elif euler_seq == 123:  # i.e. XYZ rotation sequence (body to world)
         phi, theta, psi = euler
 
         R11 = cos(psi) * cos(theta)
-        R12 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
-        R13 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
+        R21 = cos(psi) * sin(theta) * sin(phi) - sin(psi) * cos(phi)
+        R31 = cos(psi) * sin(theta) * cos(phi) + sin(psi) * sin(phi)
 
-        R21 = sin(psi) * cos(theta)
+        R12 = sin(psi) * cos(theta)
         R22 = sin(psi) * sin(theta) * sin(phi) + cos(psi) * cos(phi)
-        R23 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
+        R32 = sin(psi) * sin(theta) * cos(phi) - cos(psi) * sin(phi)
 
-        R31 = -sin(theta)
-        R32 = cos(theta) * sin(phi)
+        R13 = -sin(theta)
+        R23 = cos(theta) * sin(phi)
         R33 = cos(theta) * cos(phi)
 
     else:
