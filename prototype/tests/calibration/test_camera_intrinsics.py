@@ -7,17 +7,16 @@ import numpy as np
 
 import prototype.tests as test
 from prototype.calibration.chessboard import Chessboard
-from prototype.calibration.gimbal import CameraIntrinsics
+from prototype.calibration.camera_intrinsics import CameraIntrinsics
 
 
 class CameraIntrinsicsTest(unittest.TestCase):
     def setUp(self):
         self.data_path = join(test.TEST_DATA_PATH, "calib_data")
-        self.intrinsics_file = join(self.data_path, "intrinsics_equi.yaml")
-        self.intrinsics = CameraIntrinsics(0, self.intrinsics_file)
+        self.intrinsics_file = join(self.data_path, "static_camera.yaml")
+        self.intrinsics = CameraIntrinsics(self.intrinsics_file)
 
     def test_load(self):
-        self.assertEqual(self.intrinsics.cam_id, "cam0")
         self.assertEqual(self.intrinsics.camera_model, "pinhole")
         self.assertEqual(self.intrinsics.distortion_model, "equidistant")
 
@@ -70,5 +69,5 @@ class CameraIntrinsicsTest(unittest.TestCase):
 
         # Undistort image using equidistant distortion model
         img, K_new = self.intrinsics.undistort_image(img)
-        # cv2.imshow("Image", img)
-        # cv2.waitKey(0)
+        cv2.imshow("Image", img)
+        cv2.waitKey(0)

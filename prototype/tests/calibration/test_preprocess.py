@@ -55,11 +55,11 @@ class PreprocessDataTest(unittest.TestCase):
         self.assertTrue(len(self.data.images) > 0)
         self.assertTrue(len(self.data.images_ud) > 0)
 
-    def test_load_preprocessed(self):
-        self.data_path = "/home/chutsu/Dropbox/calib_data"
-        intrinsics_file = join(self.data_path, "static_camera.yaml")
-        intrinsics = CameraIntrinsics(intrinsics_file)
-        self.data = PreprocessData("PREPROCESSED",
-                                   data_path=join(self.data_path, "cam0"),
-                                   intrinsics=intrinsics)
-        self.data.load()
+    # def test_load_preprocessed(self):
+    #     self.data_path = "/home/chutsu/Dropbox/calib_data"
+    #     intrinsics_file = join(self.data_path, "static_camera.yaml")
+    #     intrinsics = CameraIntrinsics(intrinsics_file)
+    #     self.data = PreprocessData("PREPROCESSED",
+    #                                data_path=join(self.data_path, "cam0"),
+    #                                intrinsics=intrinsics)
+    #     self.data.load()

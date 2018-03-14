@@ -30,11 +30,18 @@ def dh_transform(theta, alpha, a, d):
     c = cos
     s = sin
 
+    # return np.array([
+    #     [c(theta), -s(theta) * c(alpha), s(theta) * s(alpha), a * c(theta)],
+    #     [s(theta), c(theta) * c(alpha), -c(theta) * s(alpha), a * s(theta)],
+    #     [0.0, s(alpha), c(alpha), d],
+    #     [0.0, 0.0, 0.0, 1.0],
+    # ])
+
     return np.array([
-        [c(theta), -s(theta) * c(alpha), s(theta) * s(alpha), a * c(theta)],
-        [s(theta), c(theta) * c(alpha), -c(theta) * s(alpha), a * s(theta)],
-        [0.0, s(alpha), c(alpha), d],
-        [0.0, 0.0, 0.0, 1.0],
+        [c(theta), s(theta), 0.0, -a],
+        [-c(alpha) * s(theta), c(alpha) * c(theta), s(alpha), -d * s(alpha)],
+        [s(alpha) * s(theta), -s(alpha) * c(theta), c(alpha), -d * c(alpha)],
+        [0.0, 0.0, 0.0, 1.0]
     ])
 
 
@@ -140,8 +147,8 @@ class GimbalModel:
         """
         theta1, alpha1, a1, d1 = link1
         theta2, alpha2, a2, d2 = link2
-        T_1b = np.linalg.inv(dh_transform(theta1, alpha1, a1, d1))
-        T_e1 = np.linalg.inv(dh_transform(theta2, alpha2, a2, d2))
+        T_1b = dh_transform(theta1, alpha1, a1, d1)
+        T_e1 = dh_transform(theta2, alpha2, a2, d2)
         return np.dot(T_e1, T_1b)
 
     def T_ds(self):
