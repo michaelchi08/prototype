@@ -131,12 +131,14 @@ class StereoTrackerTest(unittest.TestCase):
             img0 = cv2.resize(img0, img_size)
             img1 = cv2.resize(img1, img_size)
 
-            # Detect features
-            self.tracker.update(img0, img1)
+            # # Detect features
+            # self.tracker.update(img0, img1)
 
-            # # Show images
-            img0 = draw_features(img0, self.tracker.fea0_ref)
-            img1 = draw_features(img1, self.tracker.fea1_ref)
-            cv2.imshow("Image", np.hstack((img0, img1)))
+            # # # Show images
+            # img0 = draw_features(img0, self.tracker.fea0_ref)
+            # img1 = draw_features(img1, self.tracker.fea1_ref)
+            # cv2.imshow("Image", np.hstack((img0, img1)))
+            cv2.imshow("Image", img0)
+            # print(img0)
             if cv2.waitKey(0) == 113:
                 break

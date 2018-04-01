@@ -16,11 +16,8 @@ class PositionControllerTest(unittest.TestCase):
 
     def test_update(self):
         pos_setpoints = np.array([1.0, 2.0, 3.0])
-
         time = []
         pos_true = []
-        vel_true = []
-        acc_true = []
 
         t = 0.0
         dt = 0.01
@@ -63,5 +60,7 @@ class PositionControllerTest(unittest.TestCase):
         plt.subplot(212)
         plt.plot(time, pos_true[:, 2])
 
-        plt.show()
-
+        debug = False
+        # debug = True
+        if debug:
+            plt.show()

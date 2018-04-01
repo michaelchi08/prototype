@@ -1,26 +1,21 @@
 from math import pi
 from math import cos
 from math import sin
-from math import atan2
-from math import asin
 from math import fmod
-from math import sqrt
 
 import numpy as np
-
-from prototype.utils.quaternion.hamiltonian import quatnormalize
 
 
 def deg2rad(d):
     """ Convert degrees to radians
 
-    Args:
+    Parameters
+    ----------
+    d (float): degrees
 
-        d (float): degrees
-
-    Returns:
-
-        Radians
+    Returns
+    -------
+    Radians
 
     """
     return d * (pi / 180.0)
@@ -29,13 +24,13 @@ def deg2rad(d):
 def rad2deg(r):
     """ Convert radians to degrees
 
-    Args:
+    Parameters
+    ----------
+    r (float): Radians
 
-        r (float): Radians
-
-    Returns:
-
-        Degrees
+    Returns
+    -------
+    Degrees
 
     """
     return r * (180.0 / pi)
@@ -44,13 +39,13 @@ def rad2deg(r):
 def wrap180(euler_angle):
     """ Wrap angle to 180
 
-    Args:
+    Parameters
+    ----------
+    euler_angle (float): Euler angle
 
-        euler_angle (float): Euler angle
-
-    Returns:
-
-        Wrapped angle
+    Returns
+    -------
+    Wrapped angle
 
     """
     return fmod((euler_angle + 180.0), 360.0) - 180.0
@@ -59,13 +54,13 @@ def wrap180(euler_angle):
 def wrap360(euler_angle):
     """ Wrap angle to 360
 
-    Args:
+    Parameters
+    ----------
+    euler_angle (float): Euler angle
 
-        euler_angle (float): Euler angle
-
-    Returns:
-
-        Wrapped angle
+    Returns
+    -------
+    Wrapped angle
 
     """
     if euler_angle > 0.0:
@@ -78,13 +73,13 @@ def wrap360(euler_angle):
 def rotx(theta):
     """ Rotation matrix around x-axis (counter-clockwise)
 
-    Args:
+    Parameters
+    ----------
+    theta (float): Rotation around x in radians
 
-        theta (float): Rotation around x in radians
-
-    Returns:
-
-        3 x 3 Rotation matrix
+    Returns
+    -------
+    3 x 3 Rotation matrix
 
     """
     return np.array([[1.0, 0.0, 0.0],
@@ -95,13 +90,13 @@ def rotx(theta):
 def roty(theta):
     """ Rotation matrix around y-axis (counter-clockwise)
 
-    Args:
+    Parameters
+    ----------
+    theta (float): Rotation around y in radians
 
-        theta (float): Rotation around y in radians
-
-    Returns:
-
-        3 x 3 Rotation matrix
+    Returns
+    -------
+    3 x 3 Rotation matrix
 
     """
     return np.array([[cos(theta), 0.0, sin(theta)],
@@ -112,13 +107,13 @@ def roty(theta):
 def rotz(theta):
     """ Rotation matrix around z-axis (counter-clockwise)
 
-    Args:
+    Parameters
+    ----------
+    theta (float): Rotation around y in radians
 
-        theta (float): Rotation around y in radians
-
-    Returns:
-
-        3 x 3 Rotation matrix
+    Returns
+    -------
+    3 x 3 Rotation matrix
 
     """
     return np.array([[cos(theta), -sin(theta), 0.0],
@@ -149,13 +144,13 @@ def rotnormalize(R):
 def enu2nwu(enu):
     """ Convert vector in ENU to NWU coordinate system
 
-    Args:
-
+    Parameters
+    ----------
         enu (np.array or list of size 3)
 
     Returns
-
-        nwu (np.array or list of size 3)
+    -------
+    nwu (np.array or list of size 3)
 
     """
     # ENU frame:  (x - right, y - forward, z - up)
@@ -170,13 +165,13 @@ def enu2nwu(enu):
 def edn2nwu(edn):
     """ Convert vector in EDN to NWU coordinate system
 
-    Args:
-
-        edn (np.array or list of size 3)
+    Parameters
+    ----------
+    edn (np.array or list of size 3)
 
     Returns
-
-        nwu (np.array or list of size 3)
+    -------
+    nwu (np.array or list of size 3)
 
     """
     # camera frame:  (x - right, y - down, z - forward)
@@ -191,13 +186,13 @@ def edn2nwu(edn):
 def edn2enu(edn):
     """ Convert vector in EDN to ENU coordinate system
 
-    Args:
-
-        edn (np.array or list of size 3)
+    Parameters
+    ----------
+    edn (np.array or list of size 3)
 
     Returns
-
-        enu (np.array or list of size 3)
+    -------
+    enu (np.array or list of size 3)
 
     """
     # camera frame:  (x - right, y - down, z - forward)
@@ -212,13 +207,13 @@ def edn2enu(edn):
 def ned2enu(ned):
     """ Convert vector in NED to ENU coordinate system
 
-    Args:
-
-        ned (np.array or list of size 3)
+    Parameters
+    ----------
+    ned (np.array or list of size 3)
 
     Returns
-
-        enu (np.array or list of size 3)
+    -------
+    enu (np.array or list of size 3)
 
     """
     # NED frame:  (x - forward, y - right, z - down)
@@ -233,13 +228,13 @@ def ned2enu(ned):
 def nwu2enu(nwu):
     """ Convert vector in NWU to ENU coordinate system
 
-    Args:
-
-        nwu (np.array or list of size 3)
+    Parameters
+    ----------
+    nwu (np.array or list of size 3)
 
     Returns
-
-        enu (np.array or list of size 3)
+    -------
+    enu (np.array or list of size 3)
 
     """
     # NWU frame:  (x - forward, y - left, z - up)
@@ -254,13 +249,13 @@ def nwu2enu(nwu):
 def nwu2edn(nwu):
     """ Convert vector in NWU to EDN coordinate system
 
-    Args:
-
-        nwu (np.array or list of size 3)
+    Parameters
+    ----------
+    nwu (np.array or list of size 3)
 
     Returns
-
-        edn (np.array or list of size 3)
+    -------
+    edn (np.array or list of size 3)
 
     """
     # NWU frame:  (x - forward, y - left, z - up)

@@ -7,13 +7,14 @@ from numpy import dot
 
 from prototype.utils.utils import rad2deg
 from prototype.utils.utils import deg2rad
+from prototype.control.quadrotor.waypoint import WaypointController
 from prototype.control.quadrotor.position import PositionController
 from prototype.control.quadrotor.attitude import AttitudeController
 
 
 class QuadrotorModel(object):
     """Quadrotor model"""
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.states = [0.0 for i in range(12)]
 
         # Moment of inertia in x, y, z axis
@@ -31,16 +32,77 @@ class QuadrotorModel(object):
         self.m = 1.0    # Mass of quadrotor
         self.g = 10.0   # Gravity
 
-        self.position_controller = PositionController()
-        self.attitude_controller = AttitudeController()
+        self.ctrl_mode = kwargs.get("ctrl_mode", "POSITION_MODE")
 
-    def update_pos_controller(self, pos_setpoints, dt):
+        self.attitude_controller = AttitudeController()
+        self.position_controller = PositionController()
+        if self.ctrl_mode == "WAYPOINT_MODE":
+            waypoints = kwargs["waypoints"]
+            look_ahead_dist = kwargs["look_ahead_dist"]
+            self.waypoint_controller = WaypointController(waypoints,
+                                                          look_ahead_dist)
+
+    @property
+    def rpy(self):
+        """Roll pitch yaw"""
+        return np.array(self.states[0:3])
+
+    @property
+    def angular_velocity(self):
+        """Angular Velocity"""
+        return np.array(self.states[3:6])
+
+    @property
+    def position(self):
+        """Position"""
+        return np.array(self.states[6:9])
+
+    @property
+    def velocity(self):
+        """Velocity"""
+        return np.array(self.states[9:12])
+
+    def update_waypoint_controller(self, dt):
+        """ Update waypoint controller
+
+        Parameters
+        ----------
+        setpoint : np.array
+            Position setpoint (x, y, z, yaw)
+        dt : float
+            Time difference
+
+        Returns
+        -------
+        motor_inputs : np.array
+            Motor inputs (Roll, Pitch, Yaw, Thrust)
+
+        """
+        # Waypoint controller
+        att_setpoints = self.waypoint_controller.update(self.position,
+                                                        self.states[2],
+                                                        dt)
+
+        # Attitude controller
+        att_actual = np.array([self.states[0],   # Roll
+                               self.states[1],   # Pitch
+                               self.states[2],   # Yaw
+                               self.states[8]])  # z
+        motor_inputs = self.attitude_controller.update(
+            att_setpoints,
+            att_actual,
+            dt
+        )
+
+        return motor_inputs
+
+    def update_position_controller(self, setpoint, dt):
         """ Update position controller
 
         Parameters
         ----------
-        pos_setpoints : np.array
-            Position setpoints (x, y, z, yaw)
+        setpoint : np.array
+            Position setpoint (x, y, z, yaw)
         dt : float
             Time difference
 
@@ -55,7 +117,7 @@ class QuadrotorModel(object):
                                self.states[7],   # y
                                self.states[8],   # z
                                self.states[2]])  # Yaw
-        att_setpoints = self.position_controller.update(pos_setpoints,
+        att_setpoints = self.position_controller.update(setpoint,
                                                         pos_actual,
                                                         self.states[2],
                                                         dt)

@@ -15,9 +15,9 @@ class FeatureTrackerTest(unittest.TestCase):
         feature2 = Feature(np.zeros((2, 1)), 21, np.zeros((1, 21)))
 
         self.container.add_track(1, feature1, feature2)
-        self.assertEqual(len(self.container.tracks_tracking), 1)
-        self.assertEqual(len(self.container.tracks_lost), 0)
-        self.assertEqual(len(self.container.tracks_buffer), 1)
+        self.assertEqual(len(self.container.tracking), 1)
+        self.assertEqual(len(self.container.lost), 0)
+        self.assertEqual(len(self.container.data), 1)
         self.assertEqual(self.container.counter_track_id, 0)
 
     def test_remove_track(self):
@@ -28,9 +28,9 @@ class FeatureTrackerTest(unittest.TestCase):
         self.container.add_track(1, feature1, feature2)
         self.container.remove_track(0)
 
-        self.assertEqual(len(self.container.tracks_tracking), 0)
-        self.assertEqual(len(self.container.tracks_lost), 0)
-        self.assertEqual(len(self.container.tracks_buffer), 0)
+        self.assertEqual(len(self.container.tracking), 0)
+        self.assertEqual(len(self.container.lost), 0)
+        self.assertEqual(len(self.container.data), 0)
         self.assertEqual(self.container.counter_track_id, 0)
 
         # Add and remove feature track but this time mark as lost
@@ -40,9 +40,9 @@ class FeatureTrackerTest(unittest.TestCase):
         self.container.add_track(1, feature1, feature2)
         self.container.remove_track(1, True)
 
-        self.assertEqual(len(self.container.tracks_tracking), 0)
-        self.assertEqual(len(self.container.tracks_lost), 1)
-        self.assertEqual(len(self.container.tracks_buffer), 1)
+        self.assertEqual(len(self.container.tracking), 0)
+        self.assertEqual(len(self.container.lost), 1)
+        self.assertEqual(len(self.container.data), 1)
         self.assertEqual(self.container.counter_track_id, 1)
 
     def test_update_track(self):
@@ -56,7 +56,7 @@ class FeatureTrackerTest(unittest.TestCase):
         self.container.counter_frame_id = 2
         self.container.update_track(2, 0, feature3)
 
-        track = self.container.tracks_buffer[0]
+        track = self.container.data[0]
         self.assertEqual(2, track.frame_end)
         self.assertEqual(0, track.frame_start)
         self.assertEqual(3, track.tracked_length())

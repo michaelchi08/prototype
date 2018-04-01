@@ -61,7 +61,7 @@ class PlotGimbalTest(unittest.TestCase):
             plt.show()
 
     def test_plot(self):
-        # # Gimbal initial guess
+        # Gimbal initial guess
         # # -- tau (x, y, z, roll, pitch, yaw)
         # tau_s = np.array([-0.045, -0.085, 0.08, 0.0, 0.0, 0.0])
         # tau_d = np.array([0.01, 0.0, -0.03, pi / 2.0, 0.0, -pi / 2.0])
@@ -73,15 +73,15 @@ class PlotGimbalTest(unittest.TestCase):
         # link1 = np.array([offset + roll, alpha, 0.0, 0.045])
         # link2 = np.array([pitch, 0.0, 0.0, 0.0])
 
-        # Optimized gimbal params
-        offset = -pi / 2.0
-        roll = 0.0
-        pitch = 0.2
-
-        tau_s = np.array([-0.0485, -0.0766, 0.6578, 0.0326, -0.0212, 0.0100])
-        tau_d = np.array([0.0124, 0.0004, -0.0565, 1.5789, 0.0130, -1.5700])
-        link1 = np.array([offset + roll, 1.5645, -0.0035, 0.5])
-        link2 = np.array([pitch, 0.0, 0.0, 0.0])
+        # # Optimized gimbal params
+        # offset = -pi / 2.0
+        # roll = 0.0
+        # pitch = 0.0
+        #
+        # tau_s = np.array([-0.0419, -0.0908, 0.0843, 0.0189, -0.0317, -0.0368])
+        # tau_d = np.array([0.0032, 0.0007, -0.0302, 1.5800, 0.0123, -1.5695])
+        # link1 = np.array([offset + roll, 1.5731, -0.0012, 0.0404])
+        # link2 = np.array([pitch, 0.0, 0.0, 0.0])
 
         # Real 2 initial guess
         # offset = -pi / 2.0
@@ -95,19 +95,19 @@ class PlotGimbalTest(unittest.TestCase):
         #                   0.0])           # d
         # link2 = np.array([pitch, 0.0, 0.0, 0.0])
 
-        # # Real 2 optimized params
-        # offset = -pi / 2.0
-        # roll = 0.0
-        # pitch = 0.0
-        # tau_s = np.array([0.01519, -0.036509, 0.096354,
-        #                   deg2rad(2.15041521), deg2rad(1.41060977), deg2rad(18.52822371)])
-        # link1 = np.array([offset + roll,     # theta
-        #                   deg2rad(83.57483), # alpha
-        #                   -0.0050,           # a
-        #                   0.01683])          # d
-        # link2 = np.array([pitch, 0.0, 0.0, 0.0])
-        # tau_d = np.array([-0.00029, 0.00138, -0.03656,
-        #                   deg2rad(84.14281), deg2rad(0.28527), deg2rad(-91.17418)])
+        # Real 2 optimized params
+        offset = -pi / 2.0
+        roll = 0.0
+        pitch = 0.0
+        tau_s = np.array([0.01519, -0.036509, 0.096354,
+                          deg2rad(2.15041521), deg2rad(1.41060977), deg2rad(18.52822371)])
+        link1 = np.array([offset + roll,     # theta
+                          deg2rad(83.57483), # alpha
+                          -0.0050,           # a
+                          0.01683])          # d
+        link2 = np.array([pitch, 0.0, 0.0, 0.0])
+        tau_d = np.array([-0.00029, 0.00138, -0.03656,
+                          deg2rad(84.14281), deg2rad(0.28527), deg2rad(-91.17418)])
 
         # -- Gimbal model
         gimbal_model = GimbalModel(

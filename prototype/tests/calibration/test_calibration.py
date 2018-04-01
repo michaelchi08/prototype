@@ -40,18 +40,6 @@ class GimbalCalibratorTest(unittest.TestCase):
 
     def test_optimize_preprocessed(self):
         gimbal_model = GimbalModel(
-            # tau_s=np.array([0.045, 0.08, -0.095, 0.0, 0.0, pi / 2.0]),
-            # w1=np.array([pi / 2.0, 0.0, 0.045]),
-            # tau_d=np.array([0.0, -0.03, 0.015, 0.0, pi / 2.0, -pi / 2.0]),
-            # w2=np.array([pi, 0, 0])
-            # tau_s=np.array([0.045, 0.08, -0.095, 0.0, 0.0, pi / 2.0]),
-            # w1=np.array([-pi / 2.0, 0.0, 0.045]),
-            # tau_d=np.array([0.0, 0.0, -0.015, 0.0, -pi / 2.0, -pi / 2.0]),
-            # w2=np.array([pi, 0, 0])
-            # tau_s=np.array([0.0, 0.0, 0.0, 0.0, 0.0, pi / 2.0]),
-            # w1=np.array([-pi / 2.0, 0.0, 0.0]),
-            # tau_d=np.array([0.0, 0.0, 0.0, 0.0, -pi / 2.0, -pi / 2.0]),
-            # w2=np.array([pi, 0, 0])
             tau_s=np.array([0.045, 0.075, -0.085, 0.0, 0.0, pi / 2.0]),
             tau_d=np.array([0.0, 0.015, 0.0, 0.0, 0.0, -pi / 2.0]),
             w1=np.array([0.0, 0.0, 0.075]),

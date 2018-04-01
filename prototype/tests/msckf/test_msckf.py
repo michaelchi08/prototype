@@ -670,3 +670,13 @@ class MSCKFTest(unittest.TestCase):
             # data.plot_accelerometer()
             # data.plot_gyroscope()
             plt.show()
+
+    def test_sandbox(self):
+        p_I_C = np.array([1.0, 2.0, 3.0])
+        p_G_I = np.array([1.0, 0.0, 0.0])
+
+        rpy_IG = np.array([deg2rad(0.0), deg2rad(0.0), deg2rad(0.0)])
+        q_IG = euler2quat(rpy_IG)
+        C_IG = C(q_IG)
+
+        print(p_G_I + np.dot(C_IG, p_I_C))

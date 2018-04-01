@@ -99,7 +99,7 @@ class PlotGimbal:
         T_bs, T_eb, T_de = self.gimbal.calc_transforms()
 
         # Plot static camera frame
-        length = 0.1
+        length = 0.01
         if self.show_static_frame:
             T_gs = np.linalg.inv(T_sg)
             self.plot_coord_frame(ax, T_gs, "S", length=length)

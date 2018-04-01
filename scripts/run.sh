@@ -29,6 +29,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 
 # python3 -m unittest prototype.tests.control.quadrotor.test_attitude
 # python3 -m unittest prototype.tests.control.quadrotor.test_position
+# python3 -m unittest prototype.tests.control.quadrotor.test_waypoint
 # python3 -m unittest prototype.tests.control.test_carrot
 # python3 -m unittest prototype.tests.control.test_pid
 
@@ -50,7 +51,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator.FeatureEstimatorTest.test_triangulate
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator.FeatureEstimatorTest.test_estimate
 # python3 -m unittest prototype.tests.msckf.test_feature_estimator.FeatureEstimatorTest.test_estimate2
-# python3 -m unittest prototype.tests.msckf.test_msckf
+# python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_sandbox
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_init
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_P
 # python3 -m unittest prototype.tests.msckf.test_msckf.MSCKFTest.test_N
@@ -68,6 +69,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.optimization.test_residuals
 
 # python3 -m unittest prototype.tests.utils.test_utils
+python3 -m unittest prototype.tests.utils.test_bezier
 # python3 -m unittest prototype.tests.utils.test_gps
 # python3 -m unittest prototype.tests.utils.test_linalg
 # python3 -m unittest prototype.tests.utils.test_transform
@@ -96,7 +98,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.vision.test_homography
 
 # python3 -m unittest prototype.tests.viz.test_plot_quadrotor
-python3 -m unittest prototype.tests.viz.test_plot_gimbal
+# python3 -m unittest prototype.tests.viz.test_plot_gimbal
 # python3 -m unittest prototype.tests.viz.test_plot_chessboard
 # python3 -m unittest prototype.tests.viz.test_plot_grid
 

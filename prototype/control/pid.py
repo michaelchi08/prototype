@@ -27,14 +27,18 @@ class PID(object):
     def update(self, setpoint, actual, dt):
         """ Update PID controller
 
-        Args:
+        Parameters
+        ----------
+        setupoint : float
+            Setpoint
+        actual : float
+            Actual
+        dt : float
+            Time difference
 
-            setupoint
-            actual
-            dt (float)
-
-        Returns:
-
+        Returns
+        -------
+        output : float
             PID control command
 
         """
