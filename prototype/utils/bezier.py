@@ -1,3 +1,13 @@
+import numpy as np
+from math import factorial as fac
+
+
+def binomial(x, y):
+    try:
+        binom = fac(x) // fac(y) // fac(x - y)
+    except ValueError:
+        binom = 0
+    return binom
 
 
 def bezier_quadratic(P0, C0, P1, t):
@@ -146,6 +156,45 @@ def bezier_cubic_acceleration(P0, C0, C1, P1, t):
     return a
 
 
+def bezier(points, t):
+    """Explicit definition of a bezier curve
+
+    .. math:
+        \begin{align}
+            \mathbf{B}(t) &=
+                \sum_{i=0}^n {n\choose i}(1 - t)^{n - i}t^i\mathbf{P}_i \\
+                &= (1 - t)^n\mathbf{P}_0
+                    + {n\choose 1}(1 - t)^{n - 1} t \mathbf{P}_1
+                    + \cdots
+                    + {n\choose n - 1}(1 - t)t^{n - 1} \mathbf{P}_{n - 1}
+                    + t^n\mathbf{P}_n && 0 \leqslant t \leqslant 1
+        \end{align}
+
+    Parameters
+    ----------
+    points : np.array
+        Bezier curve control points in order
+    t : float
+        Parameter
+
+    Returns
+    -------
+    s : np.array
+        Position on bezier curve at t
+
+    """
+    n = len(points) - 1
+
+    result = np.array([0.0, 0.0, 0.0])
+    for i in range(0, n + 1):
+        binomial_term = binomial(n, i)
+        polynomial_term = (1 - t)**(n - i) * t**i
+        weight = points[i]
+        result = result + binomial_term * polynomial_term * weight
+
+    return result
+
+
 def decasteljau(points, t):
     """De Casteljau's algorithm
 
@@ -175,3 +224,37 @@ def decasteljau(points, t):
 
     s = decasteljau(new_points, t)
     return s
+
+
+def bezier_derivative(points, t, order):
+    """Derivative of an arbitrary order Bezier curve
+
+    Source: https://pomax.github.io/bezierinfo/#derivatives
+
+    Parameters
+    ----------
+    points : np.array
+        Bezier curve control points in order
+    t : float
+        Parameter
+
+    Returns
+    -------
+    s : np.array
+        Position on bezier curve at t
+
+    """
+    n = len(points) - 1
+    k = n - 1
+
+    new_points = []
+    for i in range(0, k + 1):
+        binomial_term = binomial(k, i)
+        polynomial_term = (1 - t)**(k - i) * t**i
+        derivative_weight = n * (points[i + 1] - points[i])
+        new_points.append(binomial_term * polynomial_term * derivative_weight)
+
+    if order == 1:
+        return np.sum(new_points, axis=0)
+    else:
+        return bezier_derivative(new_points, t, order - 1)
