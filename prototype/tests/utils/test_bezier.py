@@ -13,6 +13,7 @@ from prototype.utils.bezier import decasteljau
 from prototype.utils.bezier import bezier_derivative
 from prototype.utils.bezier import bezier_tangent
 from prototype.utils.bezier import bezier_normal
+from prototype.utils.bezier import bezier_interpolate
 
 
 class BezierTest(unittest.TestCase):
@@ -54,10 +55,14 @@ class BezierTest(unittest.TestCase):
 
     def test_bezier_cubic(self):
         # Setup anchor and control points
+        # P0 = np.array([0, 0, 0])
+        # C0 = np.array([0, 1, 0])
+        # C1 = np.array([1, 1, 3])
+        # P1 = np.array([1, 0, 3])
         P0 = np.array([0, 0, 0])
-        C0 = np.array([0, 1, 0])
-        C1 = np.array([1, 1, 3])
-        P1 = np.array([1, 0, 3])
+        C0 = np.array([1, 1, 0])
+        C1 = np.array([2, 2, 0])
+        P1 = np.array([3, 3, 0])
 
         # Setup book keeping
         t = 0.0
@@ -161,19 +166,27 @@ class BezierTest(unittest.TestCase):
     def test_bezier_derivative(self):
         # Setup anchor and control points
         P0 = np.array([0, 0, 0])
-        C0 = np.array([1, 1, 1])
-        C1 = np.array([2, 2, 2])
-        P1 = np.array([3, 3, 3])
+        C0 = np.array([0, 1, 0])
+        C1 = np.array([1, 1, 3])
+        P1 = np.array([1, 0, 3])
 
-        # Check first bezier derivative
-        expected = bezier_cubic_velocity(P0, C0, C1, P1, 0.5)
-        observed = bezier_derivative([P0, C0, C1, P1], 0.5, 1)
-        self.assertTrue(np.array_equal(expected, observed))
+        t = 0.0
+        dt = 0.001
+        while t < 1.0:
+            # Check first bezier derivative
+            expected = bezier_cubic_velocity(P0, C0, C1, P1, t)
+            observed = bezier_derivative([P0, C0, C1, P1], t, 1)
+            # print(expected, observed)
+            self.assertTrue(np.allclose(expected, observed))
 
-        # Check second bezier derivative
-        expected = bezier_cubic_acceleration(P0, C0, C1, P1, 0.5)
-        observed = bezier_derivative([P0, C0, C1, P1], 0.5, 2)
-        self.assertTrue(np.array_equal(expected, observed))
+            # Check second bezier derivative
+            expected = bezier_cubic_acceleration(P0, C0, C1, P1, t)
+            observed = bezier_derivative([P0, C0, C1, P1], t, 2)
+            # print(expected, observed)
+            self.assertTrue(np.allclose(expected, observed))
+
+            # Update t
+            t += dt
 
     def test_bezier_tangent_normal(self):
         # Setup anchor and control points
@@ -253,3 +266,31 @@ class BezierTest(unittest.TestCase):
             plt.ylim([-0.1, 3.1])
             plt.axes().set_aspect('equal', 'datalim')
             plt.show()
+
+    def test_bezier_interpolate(self):
+        # Setup anchor and control points
+        P0 = np.array([0, 0, 0])
+        P1 = np.array([1, 2, 0])
+        P2 = np.array([2, 2, 0])
+        P3 = np.array([3, 3, 0])
+
+        # Setup book keeping
+        t = 0.0
+        dt = 0.01
+        track = []
+
+        # Loop through Bezier curve
+        control_points = bezier_interpolate([P0, P1, P2, P3], 0.5)
+
+        while t < 1.0:
+            s = bezier(control_points, t)
+            t += dt
+            track.append(s)
+
+        track = np.array(track)
+        plt.plot(P0[0], P0[1], marker="o", color="red")
+        plt.plot(P1[0], P1[1], marker="o", color="red")
+        plt.plot(P2[0], P2[1], marker="o", color="red")
+        plt.plot(P3[0], P3[1], marker="o", color="red")
+        plt.plot(track[:, 0], track[:, 1], label="Bezier curve")
+        plt.show()

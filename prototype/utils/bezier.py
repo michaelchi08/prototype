@@ -247,20 +247,19 @@ def bezier_derivative(points, t, order):
         Position on bezier curve at t
 
     """
+    # Form Bezier curve
+    if order == 0:
+        return decasteljau(points, t)
+
+    # Form derivative of weights
     n = len(points) - 1
     k = n - 1
-
     new_points = []
     for i in range(0, k + 1):
-        binomial_term = binomial(k, i)
-        polynomial_term = (1 - t)**(k - i) * t**i
         derivative_weight = n * (points[i + 1] - points[i])
-        new_points.append(binomial_term * polynomial_term * derivative_weight)
+        new_points.append(derivative_weight)
 
-    if order == 1:
-        return np.sum(new_points, axis=0)
-    else:
-        return bezier_derivative(new_points, t, order - 1)
+    return bezier_derivative(new_points, t, order - 1)
 
 
 def bezier_tangent(points, t):
@@ -281,3 +280,51 @@ def bezier_normal(points, t):
     normal = np.dot(R, tangent)
 
     return normal
+
+
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0:
+        return v
+    return v / norm
+
+
+def bezier_interpolate(points, scale):
+    control_points = []
+
+    if len(points) < 2:
+        return control_points
+
+    for i in range(len(points)):
+        if i == 0:  # First point
+            p1 = points[i]
+            p2 = points[i + 1]
+
+            tangent = (p2 - p1)
+            q1 = p1 + scale * tangent
+
+            control_points.append(p1)
+            control_points.append(q1)
+
+        elif i == len(points) - 1:  # Last point
+            p0 = points[i - 1]
+            p1 = points[i]
+            tangent = (p1 - p0)
+            q0 = p1 - scale * tangent
+
+            control_points.append(q0)
+            control_points.append(p1)
+
+        else:
+            p0 = points[i - 1]
+            p1 = points[i]
+            p2 = points[i + 1]
+            tangent = normalize(p2 - p0)
+            q0 = p1 - scale * tangent * np.linalg.norm(p1 - p0)
+            q1 = p1 + scale * tangent * np.linalg.norm(p2 - p1)
+
+            control_points.append(q0)
+            control_points.append(p1)
+            control_points.append(q1)
+
+    return control_points
