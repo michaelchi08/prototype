@@ -23,15 +23,15 @@ def bezier_quadratic(P0, C0, P1, t):
 
     Returns
     -------
-    R0 : np.array
+    r : np.array
         Position on bezier curve at t
 
     """
     Q0 = (1 - t) * P0 + t * C0
     Q1 = (1 - t) * C0 + t * P1
-    R0 = (1 - t) * Q0 + t * Q1
+    r = (1 - t) * Q0 + t * Q1
 
-    return R0
+    return r
 
 
 def bezier_cubic(P0, C0, C1, P1, t):
@@ -60,16 +60,16 @@ def bezier_cubic(P0, C0, C1, P1, t):
 
     Returns
     -------
-    S0 : np.array
+    s : np.array
         Position on bezier curve at t
 
     """
-    S0 = (1 - t)**3 * P0
-    S0 += 3 * (1 - t)**2 * t * C0
-    S0 += 3 * (1 - t) * t**2 * C1
-    S0 += t**3 * P1
+    s = (1 - t)**3 * P0
+    s += 3 * (1 - t)**2 * t * C0
+    s += 3 * (1 - t) * t**2 * C1
+    s += t**3 * P1
 
-    return S0
+    return s
 
 
 def bezier_cubic_velocity(P0, C0, C1, P1, t):
@@ -99,8 +99,8 @@ def bezier_cubic_velocity(P0, C0, C1, P1, t):
 
     Returns
     -------
-    S0 : np.array
-        Position on bezier curve at t
+    v : np.array
+        Velocity on bezier curve at t
 
     """
     v = (1 - t)**2 * (C0 - P0)
@@ -136,11 +136,42 @@ def bezier_cubic_acceleration(P0, C0, C1, P1, t):
 
     Returns
     -------
-    S0 : np.array
-        Position on bezier curve at t
+    a : np.array
+        Acceleration on bezier curve at t
 
     """
     a = (1 - t) * (C1 - 2 * C0 + P0)
     a += t * (P1 - 2 * C1 + C0)
     a = 6 * a
     return a
+
+
+def decasteljau(points, t):
+    """De Casteljau's algorithm
+
+    A recursive method to evaluate polynomials in Bernstein form or Bezier
+    curves. This algorithm can also be used to split a single Bezier curve into
+    two at an arbitrary parameter value.
+
+    Parameters
+    ----------
+    points : np.array
+        Bezier curve control points in order
+    t : float
+        Parameter
+
+    Returns
+    -------
+    s : np.array
+        Position on bezier curve at t
+
+    """
+    if len(points) == 1:
+        return points[0]
+
+    new_points = []
+    for i in range(len(points) - 1):
+        new_points.append((1 - t) * points[i] + t * points[i + 1])
+
+    s = decasteljau(new_points, t)
+    return s

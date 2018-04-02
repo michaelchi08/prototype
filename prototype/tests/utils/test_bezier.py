@@ -7,7 +7,7 @@ from prototype.utils.bezier import bezier_quadratic
 from prototype.utils.bezier import bezier_cubic
 from prototype.utils.bezier import bezier_cubic_velocity
 from prototype.utils.bezier import bezier_cubic_acceleration
-
+from prototype.utils.bezier import decasteljau
 
 class BezierTest(unittest.TestCase):
     def test_bezier_cubic(self):
@@ -27,7 +27,8 @@ class BezierTest(unittest.TestCase):
 
         # Loop through Bezier curve
         while t < 1.0:
-            s = bezier_cubic(P0, C0, C1, P1, t)
+            # s = bezier_cubic(P0, C0, C1, P1, t)
+            s = decasteljau([P0, C0, C1, P1], t)
             v = bezier_cubic_velocity(P0, C0, C1, P1, t)
             a = bezier_cubic_acceleration(P0, C0, C1, P1, t)
             time.append(t)
