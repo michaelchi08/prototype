@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import matplotlib.pylab as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from prototype.utils.bezier import bezier_quadratic
 from prototype.utils.bezier import bezier_cubic
@@ -10,6 +11,8 @@ from prototype.utils.bezier import bezier_cubic_acceleration
 from prototype.utils.bezier import bezier
 from prototype.utils.bezier import decasteljau
 from prototype.utils.bezier import bezier_derivative
+from prototype.utils.bezier import bezier_tangent
+from prototype.utils.bezier import bezier_normal
 
 
 class BezierTest(unittest.TestCase):
@@ -171,3 +174,82 @@ class BezierTest(unittest.TestCase):
         expected = bezier_cubic_acceleration(P0, C0, C1, P1, 0.5)
         observed = bezier_derivative([P0, C0, C1, P1], 0.5, 2)
         self.assertTrue(np.array_equal(expected, observed))
+
+    def test_bezier_tangent_normal(self):
+        # Setup anchor and control points
+        P0 = np.array([0, 0, 0])
+        C0 = np.array([1, 1, 1])
+        C1 = np.array([2, 2, 2])
+        P1 = np.array([3, 3, 3])
+
+        # Setup book keeping
+        t = 0.0
+        dt = 0.1
+
+        # Setup plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Loop through Bezier curve
+        while t < 1.0:
+            s = bezier_cubic(P0, C0, C1, P1, t)
+
+            tangent = bezier_tangent([P0, C0, C1, P1], t)
+            tangent = 0.2 * tangent
+
+            normal = bezier_normal([P0, C0, C1, P1], t)
+            normal = 0.2 * normal
+
+            ax.plot([s[0]], [s[1]], [s[2]], marker="o", color="blue")
+            ax.plot([s[0], (s[0] + tangent[0])],
+                    [s[1], (s[1] + tangent[1])],
+                    [s[2], (s[2] + tangent[2])],
+                    color="blue")
+            ax.plot([s[0], (s[0] + normal[0])],
+                    [s[1], (s[1] + normal[1])],
+                    [s[2], (s[2] + normal[2])],
+                    color="red")
+            t += dt
+
+        debug = True
+        # debug = False
+        if debug:
+            plt.show()
+
+    def test_bezier_tangent_normal2(self):
+        # Setup anchor and control points
+        P0 = np.array([0, 0, 0])
+        C0 = np.array([1, -1, 0])
+        C1 = np.array([2, 4, 0])
+        P1 = np.array([3, 3, 0])
+
+        # Setup book keeping
+        t = 0.0
+        dt = 0.1
+
+        # Loop through Bezier curve
+        while t < 1.0:
+            s = bezier_cubic(P0, C0, C1, P1, t)
+
+            tangent = bezier_tangent([P0, C0, C1, P1], t)
+            tangent = 0.2 * tangent
+
+            normal = bezier_normal([P0, C0, C1, P1], t)
+            normal = 0.2 * normal
+
+            plt.plot([s[0]], [s[1]], marker="o", color="blue")
+            plt.plot([s[0], (s[0] + tangent[0])],
+                     [s[1], (s[1] + tangent[1])],
+                     color="blue")
+            plt.plot([s[0], (s[0] + normal[0])],
+                     [s[1], (s[1] + normal[1])],
+                     color="red")
+            t += dt
+
+        debug = True
+        # debug = False
+        if debug:
+            plt.xlim([-0.1, 3.1])
+            plt.ylim([-0.1, 3.1])
+            plt.axes().set_aspect('equal', 'datalim')
+            plt.show()

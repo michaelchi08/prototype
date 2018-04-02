@@ -69,7 +69,7 @@ export PYTHONPATH=/usr/local/lib/python3.5/dist-packages
 # python3 -m unittest prototype.tests.optimization.test_residuals
 
 # python3 -m unittest prototype.tests.utils.test_utils
-python3 -m unittest prototype.tests.utils.test_bezier
+python3 -m unittest prototype.tests.utils.test_bezier.BezierTest
 # python3 -m unittest prototype.tests.utils.test_gps
 # python3 -m unittest prototype.tests.utils.test_linalg
 # python3 -m unittest prototype.tests.utils.test_transform

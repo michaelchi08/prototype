@@ -1,4 +1,7 @@
 import numpy as np
+from math import pi
+from math import cos
+from math import sin
 from math import factorial as fac
 
 
@@ -258,3 +261,23 @@ def bezier_derivative(points, t, order):
         return np.sum(new_points, axis=0)
     else:
         return bezier_derivative(new_points, t, order - 1)
+
+
+def bezier_tangent(points, t):
+    point = bezier_derivative(points, t, 1)
+    d = np.linalg.norm(point)
+    tangent = point / d
+
+    return tangent
+
+
+def bezier_normal(points, t):
+    tangent = bezier_tangent(points, t)
+
+    theta = pi / 2.0
+    R = np.array([[cos(theta), -sin(theta), 0.0],
+                  [sin(theta), cos(theta), 0.0],
+                  [0.0, 0.0, 1.0]])
+    normal = np.dot(R, tangent)
+
+    return normal
